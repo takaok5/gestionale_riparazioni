@@ -1,5 +1,10 @@
 import 'package:meta/meta.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'base_model.dart';
+import 'garanzia_info.dart';
+import 'enums/stato_dispositivo.dart';
+import 'enums/tipo_dispositivo.dart';
+import 'enums/stato_accessorio.dart';
 
 @immutable
 class Dispositivo extends BaseModel {
@@ -20,7 +25,7 @@ class Dispositivo extends BaseModel {
   final List<String>? fotoProdotto;
 
   const Dispositivo({
-    required super.id,
+    required String id,
     required this.tipo,
     required this.marca,
     required this.modello,
@@ -36,18 +41,23 @@ class Dispositivo extends BaseModel {
     this.note,
     this.garanzia,
     this.fotoProdotto,
-    super.createdAt,
-    super.updatedAt,
+    required DateTime createdAt,
+    required DateTime updatedAt,
   }) : assert(
           imei == null || RegExp(r'^\d{15}$').hasMatch(imei),
           'IMEI deve essere di 15 cifre',
-        );
+        ),
+       super(
+         id: id,
+         createdAt: createdAt,
+         updatedAt: updatedAt,
+       );
 
   @override
   Map<String, dynamic> toMap() {
     return {
       ...super.toMap(),
-      'tipo': tipo.name,
+      'tipo': tipo.toString().split('.').last,
       'marca': marca,
       'modello': modello,
       'serialNumber': serialNumber,
@@ -57,7 +67,7 @@ class Dispositivo extends BaseModel {
       'riparazioniIds': riparazioniIds,
       'specificheTecniche': specificheTecniche,
       'accessoriInclusi': accessoriInclusi.map((a) => a.toMap()).toList(),
-      'stato': stato.name,
+      'stato': stato.toString().split('.').last,
       'ultimaRiparazione': ultimaRiparazione?.toIso8601String(),
       'note': note,
       'garanzia': garanzia?.toMap(),
@@ -69,7 +79,7 @@ class Dispositivo extends BaseModel {
     return Dispositivo(
       id: map['id'] as String,
       tipo: TipoDispositivo.values.firstWhere(
-        (e) => e.name == (map['tipo'] as String),
+        (e) => e.toString().split('.').last == map['tipo'],
         orElse: () => TipoDispositivo.altro,
       ),
       marca: map['marca'] as String,
@@ -79,14 +89,13 @@ class Dispositivo extends BaseModel {
       clienteId: map['clienteId'] as String,
       problemiRicorrenti: List<String>.from(map['problemiRicorrenti'] ?? []),
       riparazioniIds: List<String>.from(map['riparazioniIds'] ?? []),
-      specificheTecniche:
-          Map<String, String>.from(map['specificheTecniche'] ?? {}),
+      specificheTecniche: Map<String, String>.from(map['specificheTecniche'] ?? {}),
       accessoriInclusi: (map['accessoriInclusi'] as List<dynamic>?)
               ?.map((a) => Accessorio.fromMap(a as Map<String, dynamic>))
               .toList() ??
           const [],
       stato: StatoDispositivo.values.firstWhere(
-        (e) => e.name == (map['stato'] as String),
+        (e) => e.toString().split('.').last == map['stato'],
         orElse: () => StatoDispositivo.funzionante,
       ),
       ultimaRiparazione: map['ultimaRiparazione'] != null
@@ -97,12 +106,11 @@ class Dispositivo extends BaseModel {
           ? GaranziaInfo.fromMap(map['garanzia'] as Map<String, dynamic>)
           : null,
       fotoProdotto: List<String>.from(map['fotoProdotto'] ?? []),
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      updatedAt: DateTime.parse(map['updatedAt'] as String),
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
     );
   }
 
-  @override
   Dispositivo copyWith({
     String? id,
     TipoDispositivo? tipo,
@@ -169,85 +177,17 @@ class Accessorio {
   });
 
   Map<String, dynamic> toMap() => {
-        'nome': nome,
-        'descrizione': descrizione,
-        'stato': stato.name,
-      };
+    'nome': nome,
+    'descrizione': descrizione,
+    'stato': stato.toString().split('.').last,
+  };
 
   factory Accessorio.fromMap(Map<String, dynamic> map) => Accessorio(
-        nome: map['nome'] as String,
-        descrizione: map['descrizione'] as String?,
-        stato: StatoAccessorio.values.firstWhere(
-          (e) => e.name == (map['stato'] as String),
-          orElse: () => StatoAccessorio.presente,
-        ),
-      );
+    nome: map['nome'] as String,
+    descrizione: map['descrizione'] as String?,
+    stato: StatoAccessorio.values.firstWhere(
+      (e) => e.toString().split('.').last == map['stato'],
+      orElse: () => StatoAccessorio.presente,
+    ),
+  );
 }
-
-@immutable
-class GaranziaInfo {
-  final DateTime dataInizio;
-  final DateTime dataFine;
-  final String? numeroGaranzia;
-  final String? fornitore;
-  final TipoGaranzia tipo;
-  final String? note;
-
-  const GaranziaInfo({
-    required this.dataInizio,
-    required this.dataFine,
-    this.numeroGaranzia,
-    this.fornitore,
-    this.tipo = TipoGaranzia.standard,
-    this.note,
-  }) : assert(
-          dataFine.isAfter(dataInizio),
-          'La data di fine garanzia deve essere successiva alla data di inizio',
-        );
-
-  Map<String, dynamic> toMap() => {
-        'dataInizio': dataInizio.toIso8601String(),
-        'dataFine': dataFine.toIso8601String(),
-        'numeroGaranzia': numeroGaranzia,
-        'fornitore': fornitore,
-        'tipo': tipo.name,
-        'note': note,
-      };
-
-  factory GaranziaInfo.fromMap(Map<String, dynamic> map) => GaranziaInfo(
-        dataInizio: DateTime.parse(map['dataInizio'] as String),
-        dataFine: DateTime.parse(map['dataFine'] as String),
-        numeroGaranzia: map['numeroGaranzia'] as String?,
-        fornitore: map['fornitore'] as String?,
-        tipo: TipoGaranzia.values.firstWhere(
-          (e) => e.name == (map['tipo'] as String),
-          orElse: () => TipoGaranzia.standard,
-        ),
-        note: map['note'] as String?,
-      );
-
-  bool get isValid => DateTime.now().isBefore(dataFine);
-  int get giorniRimanenti => dataFine.difference(DateTime.now()).inDays;
-}
-
-enum TipoDispositivo {
-  smartphone,
-  tablet,
-  computer,
-  console,
-  televisore,
-  stampante,
-  altro
-}
-
-enum StatoDispositivo {
-  funzionante,
-  malfunzionante,
-  inRiparazione,
-  irreparabile,
-  dismesso
-}
-
-enum StatoAccessorio { presente, mancante, danneggiato }
-
-enum TipoGaranzia { standard, estesa, commerciale, legale }

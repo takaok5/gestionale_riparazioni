@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/cliente.dart';
 import '../models/riparazione.dart';
 import '../utils/form_validators.dart';
+import '../models/enums/priorita_riparazione.dart';
+import '../models/enums/stato_riparazione.dart';
 
 class FormNuovaRichiesta extends StatefulWidget {
   final List<Cliente> clienti;
@@ -22,27 +24,30 @@ class _FormNuovaRichiestaState extends State<FormNuovaRichiesta> {
   Cliente? _selectedCliente;
   final _descrizioneController = TextEditingController();
   final _noteController = TextEditingController();
-  final _prioritaController = TextEditingController();
+  PrioritaRiparazione _priorita = PrioritaRiparazione.normale;
 
   @override
   void dispose() {
     _descrizioneController.dispose();
     _noteController.dispose();
-    _prioritaController.dispose();
     super.dispose();
   }
 
   void _submitForm() {
     if (_formKey.currentState!.validate() && _selectedCliente != null) {
       final riparazione = Riparazione(
-        id: '',
-        cliente: _selectedCliente!,
+        clienteId: _selectedCliente!.id,
+        tipoDispositivo: _selectedCliente!.dispositivi.first.tipo,
+        modelloDispositivo: _selectedCliente!.dispositivi.first.modello,
         descrizione: _descrizioneController.text,
         note: _noteController.text,
-        priorita: int.parse(_prioritaController.text),
+        priorita: _priorita,
         stato: StatoRiparazione.nuovaRichiesta,
         dataIngresso: DateTime.now(),
-        ricambi: [],
+        ricambi: const [],
+        prezzo: 0,
+        costoRicambi: 0,
+        tipoRiparazione: TipoRiparazione.standard,
       );
 
       widget.onSubmit(riparazione);
@@ -62,7 +67,7 @@ class _FormNuovaRichiestaState extends State<FormNuovaRichiesta> {
             items: widget.clienti.map((cliente) {
               return DropdownMenuItem(
                 value: cliente,
-                child: Text(cliente.nomeCompleto),
+                child: Text('${cliente.nome} ${cliente.cognome}'),
               );
             }).toList(),
             onChanged: (value) {
@@ -80,8 +85,7 @@ class _FormNuovaRichiestaState extends State<FormNuovaRichiesta> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _descrizioneController,
-            decoration:
-                const InputDecoration(labelText: 'Descrizione problema'),
+            decoration: const InputDecoration(labelText: 'Descrizione problema'),
             maxLines: 3,
             validator: FormValidators.required,
           ),
@@ -92,22 +96,22 @@ class _FormNuovaRichiestaState extends State<FormNuovaRichiesta> {
             maxLines: 2,
           ),
           const SizedBox(height: 16),
-          TextFormField(
-            controller: _prioritaController,
+          DropdownButtonFormField<PrioritaRiparazione>(
+            value: _priorita,
             decoration: const InputDecoration(
               labelText: 'Priorità',
-              helperText: 'Da 1 (bassa) a 5 (alta)',
+              helperText: 'Seleziona la priorità della riparazione',
             ),
-            keyboardType: TextInputType.number,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Inserisci la priorità';
-              }
-              final priorita = int.tryParse(value);
-              if (priorita == null || priorita < 1 || priorita > 5) {
-                return 'La priorità deve essere un numero da 1 a 5';
-              }
-              return null;
+            items: PrioritaRiparazione.values.map((priorita) {
+              return DropdownMenuItem(
+                value: priorita,
+                child: Text(priorita.toString()),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _priorita = value ?? PrioritaRiparazione.normale;
+              });
             },
           ),
           const SizedBox(height: 24),
