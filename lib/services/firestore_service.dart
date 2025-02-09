@@ -8,8 +8,8 @@ class FirestoreService extends BaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   
   // Singleton pattern
-  static final FirestoreService _instance = FirestoreService._internal();
   static final AppContextService _appContextService = AppContextService();
+  static final FirestoreService _instance = FirestoreService._internal();
 
   factory FirestoreService() {
     return _instance;
@@ -20,19 +20,23 @@ class FirestoreService extends BaseService {
   @override
   Future<void> initialize() async {
     // Implementazione dell'inizializzazione
-    await _db.settings.persistenceEnabled;
+    await _db.enablePersistence();
   }
 
+  @override
+  Future<void> dispose() async {
+    // Cleanup code
+  }
 
-  // Utility methods
-  Map<String, dynamic> addMetadata(Map<String, dynamic> data,
-      {bool isNew = true}) {
+  // Metodi di utility
+  Map<String, dynamic> addMetadata(Map<String, dynamic> data, {bool isNew = true}) {
     data['updatedAt'] = FieldValue.serverTimestamp();
     if (isNew && !data.containsKey('createdAt')) {
       data['createdAt'] = FieldValue.serverTimestamp();
     }
     return data;
   }
+
 
   Future<void> logOperation(
       String collection, String operation, String docId) async {
@@ -170,7 +174,7 @@ class FirestoreService extends BaseService {
       if (doc.exists) {
         return ImpostazioniColori.fromMap({...doc.data()!, 'id': doc.id});
       }
-      return ImpostazioniColori.createDefault();
+      return ImpostazioniColori.defaultSettings(); // Cambiato da createDefault a defaultSettings
     } catch (e) {
       throw FirestoreException(
           'Errore durante il recupero delle impostazioni colori: $e');
