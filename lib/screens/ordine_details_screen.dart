@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/ordine.dart';
-import '../services/ordini_service.dart';
-import '../widgets/status_badge.dart';
+// Rimuovere gli import non utilizzati di ordini_service.dart e status_badge.dart
 import '../utils/validators.dart';
 
 class OrdineDetailsScreen extends StatelessWidget {
@@ -22,9 +21,9 @@ class OrdineDetailsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          children: const [
             _buildInfoCard(),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             _buildProdottiList(),
           ],
         ),
@@ -39,7 +38,7 @@ class OrdineDetailsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Informazioni Ordine',
               style: TextStyle(
                 fontSize: 18,
@@ -51,8 +50,8 @@ class OrdineDetailsScreen extends StatelessWidget {
             _buildInfoRow('Stato:', ordine.stato.display),
             _buildInfoRow('Data:', Validators.formatDate(ordine.dataOrdine)),
             _buildInfoRow('Totale:', '€${ordine.totale.toStringAsFixed(2)}'),
-            if (ordine.note != null && ordine.note!.isNotEmpty)
-              _buildInfoRow('Note:', ordine.note!),
+            if (ordine.note.isNotEmpty) // Rimosso il check null non necessario
+              _buildInfoRow('Note:', ordine.note),
           ],
         ),
       ),
@@ -66,7 +65,7 @@ class OrdineDetailsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Prodotti Ordinati',
               style: TextStyle(
                 fontSize: 18,
@@ -76,15 +75,15 @@ class OrdineDetailsScreen extends StatelessWidget {
             const SizedBox(height: 8),
             ListView.builder(
               shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: ordine.prodotti.length,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: ordine.ricambi.length, // Cambiato da prodotti a ricambi
               itemBuilder: (context, index) {
-                final prodotto = ordine.prodotti[index];
+                final ricambio = ordine.ricambi[index];
                 return ListTile(
-                  title: Text(prodotto.nome),
-                  subtitle: Text('Quantità: ${prodotto.quantita}'),
+                  title: Text(ricambio.nome),
+                  subtitle: Text('Quantità: ${ricambio.quantita}'),
                   trailing: Text(
-                    '€${(prodotto.prezzo * prodotto.quantita).toStringAsFixed(2)}',
+                    '€${ricambio.totale.toStringAsFixed(2)}',
                   ),
                 );
               },
@@ -105,7 +104,7 @@ class OrdineDetailsScreen extends StatelessWidget {
             width: 100,
             child: Text(
               label,
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
           Expanded(

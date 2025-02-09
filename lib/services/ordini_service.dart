@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/ordine.dart';
 import '../models/fornitore.dart';
+import '../models/enums.dart';
 
 class OrdiniService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -26,19 +27,11 @@ class OrdiniService {
           ordini.add(Ordine.fromMap({
             ...doc.data(),
             'id': doc.id,
-            'fornitore': fornitore,
-          }));
+          }, fornitore: fornitore));
         }
       }
       return ordini;
     });
-  }
-
-  Future<void> updateStatoOrdine(String ordineId, StatoOrdine nuovoStato) {
-    return _firestore
-        .collection('ordini')
-        .doc(ordineId)
-        .update({'stato': nuovoStato.toString().split('.').last});
   }
 
   Future<void> addOrdine(Ordine ordine) {
@@ -52,32 +45,38 @@ class OrdiniService {
         .update(ordine.toMap());
   }
 
-  Future<Map<String, dynamic>> getStatisticheOrdini() async {
-    final querySnapshot = await _firestore
+  Future<void> updateStatoOrdine(String ordineId, StatoOrdine nuovoStato) {
+    return _firestore
         .collection('ordini')
-        .orderBy('dataOrdine', descending: true)
-        .get();
+        .doc(ordineId)
+        .update({'stato': nuovoStato.toString()});
+  }
 
-    double totaleOrdini = 0;
-    int ordiniInAttesa = 0;
-    int ordiniCompletati = 0;
+  Stream<Map<String, dynamic>> getStatisticheOrdini() {
+    return _firestore.collection('ordini').snapshots().map((snapshot) {
+      double totaleOrdini = 0;
+      int ordiniInAttesa = 0;
+      int ordiniCompletati = 0;
 
-    for (var doc in querySnapshot.docs) {
-      final ordine = Ordine.fromMap({...doc.data(), 'id': doc.id});
-      totaleOrdini += ordine.totale;
+      for (var doc in snapshot.docs) {
+        final stato = StatoOrdine.values.firstWhere(
+          (s) => s.toString() == doc.data()['stato'],
+        );
 
-      if (ordine.stato == StatoOrdine.inAttesa) {
-        ordiniInAttesa++;
-      } else if (ordine.stato == StatoOrdine.consegnato) {
-        ordiniCompletati++;
+        if (stato == StatoOrdine.inAttesa) {
+          ordiniInAttesa++;
+        } else if (stato == StatoOrdine.consegnato) {
+          ordiniCompletati++;
+        }
       }
-    }
 
-    return {
-      'totaleOrdini': totaleOrdini,
-      'ordiniInAttesa': ordiniInAttesa,
-      'ordiniCompletati': ordiniCompletati,
-      'mediaOrdine': ordiniCompletati > 0 ? totaleOrdini / ordiniCompletati : 0,
-    };
+      return {
+        'totaleOrdini': totaleOrdini,
+        'ordiniInAttesa': ordiniInAttesa,
+        'ordiniCompletati': ordiniCompletati,
+        'spesaTotale': totaleOrdini,
+        'tempoMedioConsegna': 0, // TODO: implementare il calcolo
+      };
+    });
   }
 }

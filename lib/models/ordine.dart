@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'ricambio.dart';
 import 'fornitore.dart';
+import 'enums.dart';
 
 class Ordine {
   final String id;
-  final String numero;
-  final String fornitoreId;
+  final String numeroOrdine; // Cambiato da numero a numeroOrdine
+  final Fornitore
+      fornitore; // Aggiunto fornitore come oggetto invece di fornitoreId
   final String note;
   final List<OrdineRicambio> ricambi;
   final StatoOrdine stato;
@@ -16,8 +18,8 @@ class Ordine {
 
   const Ordine({
     required this.id,
-    required this.numero,
-    required this.fornitoreId,
+    required this.numeroOrdine,
+    required this.fornitore,
     required this.note,
     required this.ricambi,
     required this.stato,
@@ -32,8 +34,8 @@ class Ordine {
 
   Map<String, dynamic> toMap() {
     return {
-      'numero': numero,
-      'fornitoreId': fornitoreId,
+      'numeroOrdine': numeroOrdine,
+      'fornitoreId': fornitore.id,
       'note': note,
       'ricambi': ricambi.map((r) => r.toMap()).toList(),
       'stato': stato.toString(),
@@ -44,11 +46,12 @@ class Ordine {
     };
   }
 
-  factory Ordine.fromMap(Map<String, dynamic> map) {
+  factory Ordine.fromMap(Map<String, dynamic> map,
+      {required Fornitore fornitore}) {
     return Ordine(
       id: map['id'] as String,
-      numero: map['numero'] as String,
-      fornitoreId: map['fornitoreId'] as String,
+      numeroOrdine: map['numeroOrdine'] as String,
+      fornitore: fornitore,
       note: map['note'] as String,
       ricambi: (map['ricambi'] as List)
           .map((r) => OrdineRicambio.fromMap(r))

@@ -24,3 +24,26 @@ enum TipoRiparazione {
 }
 
 enum PrioritaRiparazione { bassa, normale, alta, urgente }
+
+enum StatoOrdine {
+  inAttesa,
+  confermato,
+  spedito,
+  consegnato,
+  annullato;
+
+  String get display {
+    switch (this) {
+      case StatoOrdine.inAttesa:
+        return 'In Attesa';
+      case StatoOrdine.confermato:
+        return 'Confermato';
+      case StatoOrdine.spedito:
+        return 'Spedito';
+      case StatoOrdine.consegnato:
+        return 'Consegnato';
+      case StatoOrdine.annullato:
+        return 'Annullato';
+    }
+  }
+}

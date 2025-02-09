@@ -3,7 +3,7 @@ import '../models/riparazione.dart';
 import '../models/stato_riparazione.dart';
 import '../services/firestore_service.dart';
 import '../widgets/riparazione_card.dart';
-import '../widgets/form_appuntamento.dart';
+
 
 class KanbanRiparazioniScreen extends StatefulWidget {
   final FirestoreService firestoreService;
@@ -72,7 +72,7 @@ class _KanbanRiparazioniScreenState extends State<KanbanRiparazioniScreen> {
     );
   }
 
-  Widget _buildColonna(StatoRiparazione stato) {
+    Widget _buildColonna(StatoRiparazione stato) {
     return Container(
       width: 300,
       margin: const EdgeInsets.all(8),
@@ -85,9 +85,8 @@ class _KanbanRiparazioniScreenState extends State<KanbanRiparazioniScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: stato.color.withOpacity(0.2),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(8)),
+              color: stato.color.withValues(opacity: 0.2), // Aggiornato da withOpacity
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -120,9 +119,10 @@ class _KanbanRiparazioniScreenState extends State<KanbanRiparazioniScreen> {
           ),
           Expanded(
             child: DragTarget<Riparazione>(
-              onWillAccept: (riparazione) =>
-                  riparazione != null && riparazione.stato != stato,
-              onAccept: (riparazione) => _updateStato(riparazione, stato),
+              onWillAcceptWithDetails: (details) => // Aggiornato da onWillAccept
+                  details.data.stato != stato,
+              onAcceptWithDetails: (details) => // Aggiornato da onAccept
+                  _updateStato(details.data, stato),
               builder: (context, candidateData, rejectedData) {
                 return ListView.builder(
                   padding: const EdgeInsets.all(8),
