@@ -17,6 +17,8 @@ import '../services/garanzia_service.dart';
 import '../services/ordini_service.dart';
 import '../services/inventory_service.dart';
 import 'package:get_it/get_it.dart';
+import '../models/cliente.dart';
+import '../models/garanzia_info.dart';
 
 class RouteGenerator {
   static final GetIt locator = GetIt.instance;
@@ -36,9 +38,11 @@ class RouteGenerator {
 
     if (settings.name != login && !AuthProvider().isAuthenticated) {
       return MaterialPageRoute(
-        builder: (_) => const LoginScreen(),
-        settings: const RouteSettings(name: login),
-      );
+        builder: (_) => LoginScreen(
+         firestoreService: locator.get<FirestoreService>(),  // Aggiunto questo
+    ),
+    settings: const RouteSettings(name: login),
+  );
     }
 
     try {

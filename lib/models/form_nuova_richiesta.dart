@@ -6,7 +6,8 @@ import '../models/enums/priorita_riparazione.dart';
 import '../models/enums/stato_riparazione.dart';
 import '../models/enums/tipo_riparazione.dart';
 
-enum TipoRiparazione { hardware, software, misto }
+// Rimuovere questa definizione perché è già importata da tipo_riparazione.dart
+// enum TipoRiparazione { hardware, software, misto }
 
 class FormNuovaRichiesta extends StatefulWidget {
   final List<Cliente> clienti;
@@ -25,45 +26,46 @@ class FormNuovaRichiesta extends StatefulWidget {
 class _FormNuovaRichiestaState extends State<FormNuovaRichiesta> {
   final _formKey = GlobalKey<FormState>();
   Cliente? _selectedCliente;
+  String? _selectedDispositivoId;  // Aggiunto per gestire il dispositivo selezionato
   final _descrizioneController = TextEditingController();
   final _noteController = TextEditingController();
-  PrioritaRiparazione _priorita = PrioritaRiparazione.normale;
+  final _prezzoController = TextEditingController();  // Aggiunto per il prezzo
+  final _costoRicambiController = TextEditingController();  // Aggiunto per il costo ricambi
+  PrioritaRiparazione _priorita = PrioritaRiparazione.bassa;  // Cambiato da 'normale' a 'bassa'
+  TipoRiparazione _tipoRiparazione = TipoRiparazione.standard;
 
   @override
   void dispose() {
     _descrizioneController.dispose();
     _noteController.dispose();
+    _prezzoController.dispose();
+    _costoRicambiController.dispose();
     super.dispose();
   }
 
   void _submitForm() {
     if (_formKey.currentState!.validate() && _selectedCliente != null) {
+      final dispositivo = _selectedCliente!.dispositivi
+          .firstWhere((d) => d.id == _selectedDispositivoId);
+
       final riparazione = Riparazione(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
         clienteId: _selectedCliente!.id,
-        tipoDispositivo: _selectedCliente!.dispositivi.first.tipo,
-        modelloDispositivo: _selectedCliente!.dispositivi.first.modello,
+        dispositivoId: _selectedDispositivoId!,
+        tipoDispositivo: dispositivo.tipo,
+        modelloDispositivo: dispositivo.modello,
         descrizione: _descrizioneController.text,
         note: _noteController.text,
         priorita: _priorita,
-        stato: StatoRiparazione.nuovaRichiesta,
+        stato: StatoRiparazione.inAttesa,
         dataIngresso: DateTime.now(),
         ricambi: const [],
-        prezzo: 0,
-        costoRicambi: 0,
-        tipoRiparazione: TipoRiparazione.standard,
+        prezzo: double.parse(_prezzoController.text),
+        costoRicambi: double.parse(_costoRicambiController.text),
+        tipoRiparazione: _tipoRiparazione,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
-      void createRiparazione() {
-        final riparazione = Riparazione(
-          id: DateTime.now().millisecondsSinceEpoch.toString(), // temporary ID
-          clienteId: cliente.id,
-          dispositivoId:
-              cliente.dispositivi.first.id, // Add dispositivi field to Cliente
-          stato: StatoRiparazione.inAttesa,
-          tipoIntervento: tipoIntervento,
-          ricambi: [], // Add this parameter
-          // ... other fields ...
-        );
-      }
 
       widget.onSubmit(riparazione);
     }
@@ -88,21 +90,61 @@ class _FormNuovaRichiestaState extends State<FormNuovaRichiesta> {
             onChanged: (value) {
               setState(() {
                 _selectedCliente = value;
+                _selectedDispositivoId = null;  // Reset dispositivo quando cambia il cliente
               });
             },
             validator: (value) {
-              if (value == null) {
-                return 'Seleziona un cliente';
-              }
+              if (value == null) return 'Seleziona un cliente';
               return null;
             },
           ),
+          if (_selectedCliente != null) ...[
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _selectedDispositivoId,
+              decoration: const InputDecoration(labelText: 'Dispositivo'),
+              items: _selectedCliente!.dispositivi.map((dispositivo) {
+                return DropdownMenuItem(
+                  value: dispositivo.id,
+                  child: Text('${dispositivo.marca} ${dispositivo.modello}'),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedDispositivoId = value;
+                });
+              },
+              validator: (value) {
+                if (value == null) return 'Seleziona un dispositivo';
+                return null;
+              },
+            ),
+          ],
           const SizedBox(height: 16),
           TextFormField(
             controller: _descrizioneController,
-            decoration:
-                const InputDecoration(labelText: 'Descrizione problema'),
+            decoration: const InputDecoration(labelText: 'Descrizione problema'),
             maxLines: 3,
+            validator: FormValidators.required,
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _prezzoController,
+            decoration: const InputDecoration(
+              labelText: 'Prezzo',
+              prefixText: '€ ',
+            ),
+            keyboardType: TextInputType.number,
+            validator: FormValidators.required,
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _costoRicambiController,
+            decoration: const InputDecoration(
+              labelText: 'Costo Ricambi',
+              prefixText: '€ ',
+            ),
+            keyboardType: TextInputType.number,
             validator: FormValidators.required,
           ),
           const SizedBox(height: 16),
@@ -121,12 +163,30 @@ class _FormNuovaRichiestaState extends State<FormNuovaRichiesta> {
             items: PrioritaRiparazione.values.map((priorita) {
               return DropdownMenuItem(
                 value: priorita,
-                child: Text(priorita.toString()),
+                child: Text(priorita.toString().split('.').last),
               );
             }).toList(),
             onChanged: (value) {
               setState(() {
-                _priorita = value ?? PrioritaRiparazione.normale;
+                _priorita = value ?? PrioritaRiparazione.bassa;
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<TipoRiparazione>(
+            value: _tipoRiparazione,
+            decoration: const InputDecoration(
+              labelText: 'Tipo Riparazione',
+            ),
+            items: TipoRiparazione.values.map((tipo) {
+              return DropdownMenuItem(
+                value: tipo,
+                child: Text(tipo.toString().split('.').last),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _tipoRiparazione = value ?? TipoRiparazione.standard;
               });
             },
           ),
