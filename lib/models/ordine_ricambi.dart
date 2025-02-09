@@ -26,8 +26,8 @@ class OrdineRicambi extends BaseModel {
     required this.totale,
     required this.userId,
     this.note,
-    required DateTime createdAt,  // Changed from DateTime? to DateTime
-    required DateTime updatedAt,  // Changed from DateTime? to DateTime
+    required DateTime createdAt, // Changed from DateTime? to DateTime
+    required DateTime updatedAt, // Changed from DateTime? to DateTime
   }) : super(
           id: id,
           createdAt: createdAt,
@@ -36,20 +36,39 @@ class OrdineRicambi extends BaseModel {
 
   @override
   Map<String, dynamic> toMap() {
-    final baseMap = super.toMap();  // Call super.toMap() first
+    final baseMap = super.toMap();
     return {
-      ...baseMap,  // Spread the base map
+      ...baseMap,
       'numeroOrdine': numeroOrdine,
       'fornitoreId': fornitoreId,
       'fornitoreNome': fornitoreNome,
-      'dataOrdine': dataOrdine.toIso8601String(),  // Use DateTime's method directly
+      'dataOrdine': dataOrdine.toIso8601String(),
       'stato': stato.index,
       'ricambi': ricambi.map((r) => r.toMap()).toList(),
       'totale': totale,
       'note': note,
       'userId': userId,
     };
-  }}
+  }
+
+  static OrdineRicambi fromMap(Map<String, dynamic> map) {
+    return OrdineRicambi(
+      id: map['id'] as String,
+      numeroOrdine: map['numeroOrdine'] as String,
+      fornitoreId: map['fornitoreId'] as String,
+      fornitoreNome: map['fornitoreNome'] as String,
+      dataOrdine: DateTime.parse(map['dataOrdine'] as String),
+      stato: StatoOrdine.values[map['stato'] as int],
+      ricambi: (map['ricambi'] as List)
+          .map((r) => RicambioOrdine.fromMap(r as Map<String, dynamic>))
+          .toList(),
+      totale: map['totale'] as double,
+      note: map['note'] as String?,
+      userId: map['userId'] as String,
+      createdAt: DateTime.parse(map['createdAt'] as String),
+      updatedAt: DateTime.parse(map['updatedAt'] as String),
+    );
+  }
 
   factory OrdineRicambi.fromMap(Map<String, dynamic> map) {
     return OrdineRicambi(

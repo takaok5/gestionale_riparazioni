@@ -20,7 +20,6 @@ import 'package:get_it/get_it.dart';
 
 class RouteGenerator {
   static final GetIt locator = GetIt.instance;
-
   static const String home = '/';
   static const String login = '/login';
   static const String kanban = '/kanban';
@@ -44,7 +43,6 @@ class RouteGenerator {
 
     try {
       switch (settings.name) {
-        // ... (previous cases remain the same until KanbanRiparazioniScreen)
         case '/kanban':
           return MaterialPageRoute(
             builder: (_) => KanbanRiparazioniScreen(
@@ -54,25 +52,24 @@ class RouteGenerator {
 
         case '/riparazioni':
           return MaterialPageRoute(
-            builder: (_) =>
-                const RiparazioniScreen(), // Rimosso il parametro non necessario
+            builder: (_) => const RiparazioniScreen(),
           );
 
         case '/magazzino':
           return MaterialPageRoute(
-            builder: (_) =>
-                const GestioneMagazzinoScreen(), // Rimosso il parametro non necessario
+            builder: (_) => const GestioneMagazzinoScreen(),
           );
+
         case '/ordini':
           return MaterialPageRoute(
-            builder: (_) =>
-                const OrdiniScreen(), // Rimosso il parametro non necessario
+            builder: (_) => const OrdiniScreen(),
           );
+
         case '/garanzie':
           return MaterialPageRoute(
-            builder: (_) =>
-                const GaranzieScreen(), // Rimosso il parametro non necessario
+            builder: (_) => const GaranzieScreen(),
           );
+
         case '/garanzia_details':
           if (args == null) throw ArgumentError('Richiesto ID garanzia');
           return MaterialPageRoute(
@@ -86,29 +83,34 @@ class RouteGenerator {
                   garanziaId: args as String,
                   garanzia: snapshot.data,
                   garanziaService: locator<GaranziaService>(),
+                );
+              },
             ),
           );
+
         case '/storico_cliente':
           if (args == null) throw ArgumentError('Richiesto ID cliente');
           return MaterialPageRoute(
-            builder: (_) => StoricoClienteScreen(
             builder: (_) => FutureBuilder<Cliente>(
-             future: locator<FirestoreService>().getCliente(args as String),
-             builder: (context, snapshot) {
-               if (snapshot.connectionState == ConnectionState.waiting) {
-                 return const CircularProgressIndicator();
-               }
-               return StoricoClienteScreen(
-                 clienteId: args as String,
-                 cliente: snapshot.data!,
-                 firestoreService: locator<FirestoreService>(),
-             );,
+              future: locator<FirestoreService>().getCliente(args as String),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
+                }
+                return StoricoClienteScreen(
+                  clienteId: args as String,
+                  cliente: snapshot.data!,
+                  firestoreService: locator<FirestoreService>(),
+                );
+              },
             ),
           );
+
         case '/impostazioni':
           return MaterialPageRoute(
             builder: (_) => const ImpostazioniScreen(),
           );
+
         default:
           return MaterialPageRoute(
             builder: (_) => Scaffold(
