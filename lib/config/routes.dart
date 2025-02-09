@@ -90,6 +90,8 @@ class RouteGenerator {
           return MaterialPageRoute(
             builder: (_) => GaranziaDetailsScreen(
               garanziaId: args as String,
+              garanzia: locator<GaranziaService>().getGaranzia(args as String),
+              garanziaService: locator<GaranziaService>(),
             ),
           );
         case '/storico_cliente':
@@ -97,6 +99,8 @@ class RouteGenerator {
           return MaterialPageRoute(
             builder: (_) => StoricoClienteScreen(
               clienteId: args as String,
+              cliente: locator<FirestoreService>().getCliente(args as String),
+              firestoreService: locator<FirestoreService>(),
             ),
           );
         case '/impostazioni':

@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import '../models/ordine.dart';  // Cambiato da ordine_ricambi.dart
+import '../models/ordine.dart'; // Cambiato da ordine_ricambi.dart
 import '../services/ordini_service.dart';
 import '../models/enums.dart';
 
@@ -52,7 +52,8 @@ class OrdiniController extends GetxController {
       isLoading.value = true;
       error.value = '';
 
-      await _ordiniService.addOrdine(ordine);  // Cambiato da createOrdine a addOrdine
+      await _ordiniService
+          .addOrdine(ordine); // Cambiato da createOrdine a addOrdine
       Get.snackbar('Successo', 'Ordine creato correttamente');
     } catch (e) {
       error.value = 'Errore nella creazione dell\'ordine: $e';
