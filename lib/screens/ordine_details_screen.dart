@@ -76,7 +76,8 @@ class OrdineDetailsScreen extends StatelessWidget {
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: ordine.ricambi.length, // Cambiato da prodotti a ricambi
+              itemCount:
+                  ordine.ricambi.length, // Cambiato da prodotti a ricambi
               itemBuilder: (context, index) {
                 final ricambio = ordine.ricambi[index];
                 return ListTile(
