@@ -57,11 +57,7 @@ class RouteGenerator {
             builder: (_) =>
                 const RiparazioniScreen(), // Rimosso il parametro non necessario
           );
-        case '/kanban':
-          return MaterialPageRoute(
-            builder: (_) =>
-                const KanbanRiparazioniScreen(), // Rimosso il parametro non necessario
-          );
+
         case '/magazzino':
           return MaterialPageRoute(
             builder: (_) =>

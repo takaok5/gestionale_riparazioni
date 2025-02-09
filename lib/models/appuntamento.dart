@@ -30,19 +30,8 @@ class Appuntamento extends BaseModel {
     this.tecnicoAssegnato,
     required DateTime createdAt,
     required DateTime updatedAt,
-  })  : assert(
-          clienteId.isNotEmpty,
-          'ID cliente non valido',
-        ),
-        assert(
-          descrizione.isNotEmpty,
-          'La descrizione non può essere vuota',
-        ),
-        assert(
-          dataOra.isAfter(DateTime.now()) ||
-              stato != StatoAppuntamento.programmato,
-          'La data deve essere futura per appuntamenti programmati',
-        ),
+  })  : assert(clienteId != ''),
+        assert(descrizione != ''),
         super(
           id: id,
           createdAt: createdAt,

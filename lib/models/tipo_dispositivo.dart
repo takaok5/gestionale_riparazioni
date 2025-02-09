@@ -5,7 +5,7 @@ enum TipoDispositivo {
   console,
   altro;
 
-  String get displayName {
+  String get label {
     switch (this) {
       case TipoDispositivo.smartphone:
         return 'Smartphone';
@@ -16,7 +16,7 @@ enum TipoDispositivo {
       case TipoDispositivo.console:
         return 'Console';
       case TipoDispositivo.altro:
-        return 'Altro dispositivo';
+        return 'Altro';
     }
   }
 }

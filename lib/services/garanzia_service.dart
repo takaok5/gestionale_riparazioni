@@ -6,6 +6,17 @@ class GaranziaService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final NotificationService _notificationService;
 
+  Future<GaranziaInfo?> getGaranzia(String id) async {
+    try {
+      // Implement your garanzia fetching logic here
+      // This is just a placeholder implementation
+      return null;
+    } catch (e) {
+      print('Error getting garanzia: $e');
+      return null;
+    }
+  }
+}
   GaranziaService(this._notificationService);
 
   // Stream delle garanzie con possibilità di filtraggio
@@ -62,7 +73,14 @@ class GaranziaService {
 
     await addGaranzia(garanzia);
   }
-
+// Aggiungi questo metodo in GaranziaService
+Future<Garanzia> getGaranziaById(String id) async {
+  final doc = await _db.collection('garanzie').doc(id).get();
+  if (!doc.exists) {
+    throw Exception('Garanzia non trovata');
+  }
+  return Garanzia.fromMap({...doc.data()!, 'id': doc.id});
+}
   Future<void> _scheduleNotificaScadenza(Garanzia garanzia) async {
     final dataNotifica = garanzia.dataFine.subtract(const Duration(days: 7));
 

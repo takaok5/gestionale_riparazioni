@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Cliente {
   final String id;
   final String nome;
@@ -41,6 +43,10 @@ class Cliente {
     String? note,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? codiceFiscale,
+    String? partitaIva,
+    String? pec,
+    String? stato,
   }) {
     return Cliente(
       id: id ?? this.id,
@@ -52,19 +58,24 @@ class Cliente {
       note: note ?? this.note,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      codiceFiscale: codiceFiscale ?? this.codiceFiscale,
+      partitaIva: partitaIva ?? this.partitaIva,
+      pec: pec ?? this.pec,
+      stato: stato ?? this.stato,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'nome': nome,
       'cognome': cognome,
       'email': email,
       'telefono': telefono,
       'indirizzo': indirizzo,
       'note': note,
-      'createdAt': createdAt,
-      'updatedAt': updatedAt,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
       'codiceFiscale': codiceFiscale,
       'partitaIva': partitaIva,
       'pec': pec,

@@ -11,10 +11,10 @@ class NotificationService {
   Future<void> initialize() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    
+
     const InitializationSettings initializationSettings =
         InitializationSettings(android: initializationSettingsAndroid);
-    
+
     await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 

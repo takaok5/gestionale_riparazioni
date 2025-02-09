@@ -42,7 +42,7 @@ Future<void> main() async {
   final settingsProvider = SettingsProvider();
   final appContextService = AppContextService()
     ..updateContext(
-      date: DateTime.utc(2025, 2, 9, 11, 9, 24),
+      date: DateTime.now().toUtc(),
       user: 'takaok5',
     );
 
@@ -51,11 +51,11 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => appContextService),
         ChangeNotifierProvider(
-          create: (_) => ThemeProvider(isDark: false),  // Added required parameter
+          create: (_) => ThemeProvider(isDark: false),
         ),
         ChangeNotifierProvider(
           create: (_) => AuthProvider(
-            firestoreService: locator<FirestoreService>(),  // Use locator from service_locator.dart
+            firestoreService: locator<FirestoreService>(),
           ),
         ),
         ChangeNotifierProvider.value(
@@ -77,8 +77,8 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       title: 'Gestionale Riparazioni',
-      theme: AppTheme.lightTheme(),  // Make sure these are defined in AppTheme
-      darkTheme: AppTheme.darkTheme(),  // Make sure these are defined in AppTheme
+      theme: AppTheme.lightTheme(),
+      darkTheme: AppTheme.darkTheme(),
       themeMode: themeProvider.themeMode,
       locale: settingsProvider.locale,
       navigatorKey: NotificationService.navigatorKey,

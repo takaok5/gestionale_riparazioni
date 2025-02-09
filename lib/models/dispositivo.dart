@@ -21,7 +21,7 @@ class Dispositivo extends BaseModel {
   final StatoDispositivo stato;
   final DateTime? ultimaRiparazione;
   final String? note;
-  final GaranziaInfo? garanzia;
+  final Garanzia? garanzia;
   final List<String>? fotoProdotto;
 
   const Dispositivo({
@@ -104,7 +104,7 @@ class Dispositivo extends BaseModel {
           : null,
       note: map['note'] as String?,
       garanzia: map['garanzia'] != null
-          ? GaranziaInfo.fromMap(map['garanzia'] as Map<String, dynamic>)
+          ? Garanzia.fromMap(map['garanzia'] as Map<String, dynamic>)
           : null,
       fotoProdotto: List<String>.from(map['fotoProdotto'] ?? []),
       createdAt: (map['createdAt'] as Timestamp).toDate(),
@@ -127,7 +127,7 @@ class Dispositivo extends BaseModel {
     StatoDispositivo? stato,
     DateTime? ultimaRiparazione,
     String? note,
-    GaranziaInfo? garanzia,
+    Garanzia? garanzia,
     List<String>? fotoProdotto,
     DateTime? createdAt,
     DateTime? updatedAt,

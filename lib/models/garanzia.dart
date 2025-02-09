@@ -1,32 +1,26 @@
 import 'package:meta/meta.dart';
 import './base_model.dart';
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum StatoGaranzia { attiva, scaduta, invalidata }
 
-class Garanzia {
-  final String id;
+@immutable
+class Garanzia extends BaseModel {
   final String prodotto;
-  final String riparazioneId; // Campo aggiunto
-  final String clienteId; // Campo aggiunto
-  final String dispositivo; // Campo aggiunto
+  final String riparazioneId;
+  final String clienteId;
+  final String dispositivo;
   final DateTime dataInizio;
   final DateTime dataFine;
   final String? seriale;
   final String? note;
   final StatoGaranzia stato;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  final List<String> componentiCoperti; // Campo aggiunto
-
-  bool get attiva => stato == StatoGaranzia.attiva;
-  DateTime get dataScadenza => dataFine;
-  String? get motivazioneInvalidazione => _motivazioneInvalidazione;
+  final List<String> componentiCoperti;
   final String? _motivazioneInvalidazione;
+  final DateTime? _dataInvalidazione;
 
-  Garanzia({
-    required this.id,
+  const Garanzia({
+    required String id,
     required this.prodotto,
     required this.riparazioneId,
     required this.clienteId,
@@ -36,21 +30,40 @@ class Garanzia {
     this.seriale,
     this.note,
     required this.stato,
-    required this.createdAt,
-    required this.updatedAt,
     required this.componentiCoperti,
     String? motivazioneInvalidazione,
-  }) : _motivazioneInvalidazione = motivazioneInvalidazione;
+    DateTime? dataInvalidazione,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  })  : _motivazioneInvalidazione = motivazioneInvalidazione,
+        _dataInvalidazione = dataInvalidazione,
+        super(
+          id: id,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+        );
 
-  bool get isActive =>
-      stato == StatoGaranzia.attiva && dataFine.isAfter(DateTime.now());
-
+  // Getters
+  bool get attiva => stato == StatoGaranzia.attiva;
+  DateTime get dataScadenza => dataFine;
+  String? get motivazioneInvalidazione => _motivazioneInvalidazione;
+  DateTime? get dataInvalidazione => _dataInvalidazione;
+  bool get isValid =>
+      stato == StatoGaranzia.attiva &&
+      dataFine.isAfter(DateTime.utc(2025, 2, 9, 21, 24, 20));
   Duration get durata => dataFine.difference(dataInizio);
+  Duration get rimanente =>
+      dataFine.difference(DateTime.utc(2025, 2, 9, 21, 24, 20));
+  bool get isScaduta => dataFine.isBefore(DateTime.utc(2025, 2, 9, 21, 24, 20));
+  bool get inScadenza {
+    final giorni = rimanente.inDays;
+    return attiva && giorni <= 30 && giorni > 0;
+  }
 
-  Duration get rimanente => dataFine.difference(DateTime.now());
-
+  @override
   Map<String, dynamic> toMap() {
     return {
+      ...super.toMap(),
       'prodotto': prodotto,
       'riparazioneId': riparazioneId,
       'clienteId': clienteId,
@@ -59,38 +72,42 @@ class Garanzia {
       'dataFine': Timestamp.fromDate(dataFine),
       'seriale': seriale,
       'note': note,
-      'stato': stato.toString(),
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      'stato': stato.toString().split('.').last,
       'componentiCoperti': componentiCoperti,
       'motivazioneInvalidazione': _motivazioneInvalidazione,
+      'dataInvalidazione': _dataInvalidazione != null
+          ? Timestamp.fromDate(_dataInvalidazione!)
+          : null,
     };
   }
 
   factory Garanzia.fromMap(Map<String, dynamic> map) {
     return Garanzia(
-      id: map['id'] ?? '',
-      prodotto: map['prodotto'] ?? '',
-      riparazioneId: map['riparazioneId'] ?? '',
-      clienteId: map['clienteId'] ?? '',
-      dispositivo: map['dispositivo'] ?? '',
+      id: map['id'] as String,
+      prodotto: map['prodotto'] as String,
+      riparazioneId: map['riparazioneId'] as String,
+      clienteId: map['clienteId'] as String,
+      dispositivo: map['dispositivo'] as String,
       dataInizio: (map['dataInizio'] as Timestamp).toDate(),
       dataFine: (map['dataFine'] as Timestamp).toDate(),
-      seriale: map['seriale'],
-      note: map['note'],
+      seriale: map['seriale'] as String?,
+      note: map['note'] as String?,
       stato: StatoGaranzia.values.firstWhere(
-        (e) => e.toString() == map['stato'],
+        (e) => e.toString().split('.').last == map['stato'],
         orElse: () => StatoGaranzia.attiva,
       ),
+      componentiCoperti: List<String>.from(map['componentiCoperti'] ?? []),
+      motivazioneInvalidazione: map['motivazioneInvalidazione'] as String?,
+      dataInvalidazione: map['dataInvalidazione'] != null
+          ? (map['dataInvalidazione'] as Timestamp).toDate()
+          : null,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       updatedAt: (map['updatedAt'] as Timestamp).toDate(),
-      componentiCoperti: List<String>.from(map['componentiCoperti'] ?? []),
-      motivazioneInvalidazione: map['motivazioneInvalidazione'],
     );
   }
 
+  @override
   Garanzia copyWith({
-    String? motivazioneInvalidazione,
     String? id,
     String? prodotto,
     String? riparazioneId,
@@ -101,13 +118,13 @@ class Garanzia {
     String? seriale,
     String? note,
     StatoGaranzia? stato,
+    List<String>? componentiCoperti,
+    String? motivazioneInvalidazione,
+    DateTime? dataInvalidazione,
     DateTime? createdAt,
     DateTime? updatedAt,
-    List<String>? componentiCoperti,
   }) {
     return Garanzia(
-      motivazioneInvalidazione:
-          motivazioneInvalidazione ?? this._motivazioneInvalidazione,
       id: id ?? this.id,
       prodotto: prodotto ?? this.prodotto,
       riparazioneId: riparazioneId ?? this.riparazioneId,
@@ -118,9 +135,12 @@ class Garanzia {
       seriale: seriale ?? this.seriale,
       note: note ?? this.note,
       stato: stato ?? this.stato,
+      componentiCoperti: componentiCoperti ?? this.componentiCoperti,
+      motivazioneInvalidazione:
+          motivazioneInvalidazione ?? _motivazioneInvalidazione,
+      dataInvalidazione: dataInvalidazione ?? _dataInvalidazione,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      componentiCoperti: componentiCoperti ?? this.componentiCoperti,
     );
   }
 }

@@ -48,16 +48,14 @@ class FirestoreService extends BaseService {
     });
   }
 
-  @override
-  Future<void> dispose() async {
-    // Implementa la pulizia delle risorse
-  }
-
   // CRUD Operations
   Future<DocumentReference> create(
       String collection, Map<String, dynamic> data) async {
     try {
-      return await _db.collection(collection).add(data);
+      final docData = addMetadata(data);
+      final docRef = await _db.collection(collection).add(docData);
+      await logOperation(collection, 'create', docRef.id);
+      return docRef;
     } catch (e) {
       throw FirestoreException('Errore durante la creazione del documento: $e');
     }
@@ -66,7 +64,9 @@ class FirestoreService extends BaseService {
   Future<void> update(
       String collection, String id, Map<String, dynamic> data) async {
     try {
-      await _db.collection(collection).doc(id).update(data);
+      final updateData = addMetadata(data, isNew: false);
+      await _db.collection(collection).doc(id).update(updateData);
+      await logOperation(collection, 'update', id);
     } catch (e) {
       throw FirestoreException(
           'Errore durante l\'aggiornamento del documento: $e');
@@ -76,22 +76,36 @@ class FirestoreService extends BaseService {
   Future<void> delete(String collection, String id) async {
     try {
       await _db.collection(collection).doc(id).delete();
+      await logOperation(collection, 'delete', id);
     } catch (e) {
       throw FirestoreException(
           'Errore durante l\'eliminazione del documento: $e');
     }
   }
 
+  // Metodo getCliente richiesto dagli errori
+  Future<Cliente?> getCliente(String id) async {
+    try {
+      final doc = await _db.collection('clienti').doc(id).get();
+      if (doc.exists) {
+        return Cliente.fromMap({...doc.data()!, 'id': doc.id});
+      }
+      return null;
+    } catch (e) {
+      throw FirestoreException('Errore durante il recupero del cliente: $e');
+    }
+  }
+
   Future<void> addRiparazione(Riparazione riparazione) async {
     final data = addMetadata(riparazione.toMap());
     final docRef = await _db.collection('riparazioni').add(data);
-    logOperation('riparazioni', 'create', docRef.id);
+    await logOperation('riparazioni', 'create', docRef.id);
   }
 
   Future<void> updateRiparazione(String id, Map<String, dynamic> data) async {
     final updateData = addMetadata(data, isNew: false);
     await _db.collection('riparazioni').doc(id).update(updateData);
-    logOperation('riparazioni', 'update', id);
+    await logOperation('riparazioni', 'update', id);
   }
 
   // Riparazioni
@@ -152,7 +166,9 @@ class FirestoreService extends BaseService {
 
   Future<void> addCliente(Cliente cliente) async {
     try {
-      await _db.collection('clienti').add(cliente.toMap());
+      final data = addMetadata(cliente.toMap());
+      final docRef = await _db.collection('clienti').add(data);
+      await logOperation('clienti', 'create', docRef.id);
     } catch (e) {
       throw FirestoreException('Errore durante l\'aggiunta del cliente: $e');
     }
@@ -160,7 +176,9 @@ class FirestoreService extends BaseService {
 
   Future<void> updateCliente(Cliente cliente) async {
     try {
-      await _db.collection('clienti').doc(cliente.id).update(cliente.toMap());
+      final data = addMetadata(cliente.toMap(), isNew: false);
+      await _db.collection('clienti').doc(cliente.id).update(data);
+      await logOperation('clienti', 'update', cliente.id);
     } catch (e) {
       throw FirestoreException(
           'Errore durante l\'aggiornamento del cliente: $e');
@@ -174,8 +192,7 @@ class FirestoreService extends BaseService {
       if (doc.exists) {
         return ImpostazioniColori.fromMap({...doc.data()!, 'id': doc.id});
       }
-      return ImpostazioniColori
-          .defaultSettings(); // Cambiato da createDefault a defaultSettings
+      return ImpostazioniColori.defaultSettings();
     } catch (e) {
       throw FirestoreException(
           'Errore durante il recupero delle impostazioni colori: $e');
@@ -184,10 +201,9 @@ class FirestoreService extends BaseService {
 
   Future<void> salvaImpostazioniColori(ImpostazioniColori impostazioni) async {
     try {
-      await _db
-          .collection('impostazioni')
-          .doc('colori')
-          .set(impostazioni.toMap());
+      final data = addMetadata(impostazioni.toMap(), isNew: false);
+      await _db.collection('impostazioni').doc('colori').set(data);
+      await logOperation('impostazioni', 'update', 'colori');
     } catch (e) {
       throw FirestoreException(
           'Errore durante il salvataggio delle impostazioni colori: $e');
@@ -197,16 +213,17 @@ class FirestoreService extends BaseService {
   // Statistiche
   Future<Map<String, dynamic>> getStatistiche() async {
     try {
-      final now = DateTime.now();
+      final now =
+          DateTime.utc(2025, 2, 9, 21, 0, 58); // Using the provided UTC time
       final startOfMonth = DateTime(now.year, now.month, 1);
       final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
 
       final riparazioniSnapshot = await _db
           .collection('riparazioni')
           .where('dataCompletamento',
-              isGreaterThanOrEqualTo: startOfMonth.toIso8601String())
+              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
           .where('dataCompletamento',
-              isLessThanOrEqualTo: endOfMonth.toIso8601String())
+              isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
           .get();
 
       double ricaviTotali = 0;
@@ -244,10 +261,10 @@ class FirestoreService extends BaseService {
         final docRef = _db.doc(operation.path);
         switch (operation.type) {
           case BatchOperationType.create:
-            batch.set(docRef, operation.data);
+            batch.set(docRef, addMetadata(operation.data));
             break;
           case BatchOperationType.update:
-            batch.update(docRef, operation.data);
+            batch.update(docRef, addMetadata(operation.data, isNew: false));
             break;
           case BatchOperationType.delete:
             batch.delete(docRef);

@@ -1,29 +1,25 @@
 enum StatoDispositivo {
-  funzionante,
-  malfunzionante,
-  inRiparazione,
-  irreparabile,
-  dismesso,
   inAttesa,
-  daVerificare; // Note the semicolon here before the method
+  inLavorazione,
+  inAttesaRicambi,
+  completato,
+  consegnato,
+  annullato;
 
-  /// Ottiene una descrizione leggibile dello stato
-  String get descrizione {
+  String get label {
     switch (this) {
-      case StatoDispositivo.funzionante:
-        return 'Funzionante';
-      case StatoDispositivo.malfunzionante:
-        return 'Malfunzionante';
-      case StatoDispositivo.inRiparazione:
-        return 'In Riparazione';
-      case StatoDispositivo.irreparabile:
-        return 'Irreparabile';
-      case StatoDispositivo.dismesso:
-        return 'Dismesso';
       case StatoDispositivo.inAttesa:
         return 'In Attesa';
-      case StatoDispositivo.daVerificare:
-        return 'Da Verificare';
+      case StatoDispositivo.inLavorazione:
+        return 'In Lavorazione';
+      case StatoDispositivo.inAttesaRicambi:
+        return 'In Attesa Ricambi';
+      case StatoDispositivo.completato:
+        return 'Completato';
+      case StatoDispositivo.consegnato:
+        return 'Consegnato';
+      case StatoDispositivo.annullato:
+        return 'Annullato';
     }
   }
 }
