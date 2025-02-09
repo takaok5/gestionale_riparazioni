@@ -1,23 +1,28 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/models.dart';
-import '../utils/exceptions.dart';
 import 'base_service.dart';
 import '../models/stato_riparazione.dart';
 import '../services/app_context_service.dart';
 
 class FirestoreService extends BaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-
+  
   // Singleton pattern
   static final FirestoreService _instance = FirestoreService._internal();
+  static final AppContextService _appContextService = AppContextService();
 
   factory FirestoreService() {
     return _instance;
   }
 
-  FirestoreService._internal() : super(AppContextService()) {
-    // Inizializzazione del singleton se necessaria
+  FirestoreService._internal() : super(_appContextService);
+
+  @override
+  Future<void> initialize() async {
+    // Implementazione dell'inizializzazione
+    await _db.settings.persistenceEnabled;
   }
+
 
   // Utility methods
   Map<String, dynamic> addMetadata(Map<String, dynamic> data,
