@@ -15,12 +15,13 @@ class FirestoreService extends BaseService {
     return _instance;
   }
 
-  FirestoreService._internal() {
+  FirestoreService._internal() : super(AppContextService()) {
     // Inizializzazione del singleton se necessaria
   }
 
   // Utility methods
-  Map<String, dynamic> addMetadata(Map<String, dynamic> data, {bool isNew = true}) {
+  Map<String, dynamic> addMetadata(Map<String, dynamic> data,
+      {bool isNew = true}) {
     data['updatedAt'] = FieldValue.serverTimestamp();
     if (isNew && !data.containsKey('createdAt')) {
       data['createdAt'] = FieldValue.serverTimestamp();
@@ -28,7 +29,8 @@ class FirestoreService extends BaseService {
     return data;
   }
 
-  Future<void> logOperation(String collection, String operation, String docId) async {
+  Future<void> logOperation(
+      String collection, String operation, String docId) async {
     await _db.collection('logs').add({
       'collection': collection,
       'documentId': docId,
@@ -36,13 +38,11 @@ class FirestoreService extends BaseService {
       'timestamp': FieldValue.serverTimestamp(),
     });
   }
+
   @override
   Future<void> dispose() async {
     // Implementa la pulizia delle risorse
   }
-}
-
-  FirestoreService._internal();
 
   // CRUD Operations
   Future<DocumentReference> create(
@@ -66,7 +66,7 @@ class FirestoreService extends BaseService {
 
   Future<void> delete(String collection, String id) async {
     try {
-      await _firestore.collection(collection).doc(id).delete();
+      await _db.collection(collection).doc(id).delete();
     } catch (e) {
       throw FirestoreException(
           'Errore durante l\'eliminazione del documento: $e');
@@ -87,7 +87,7 @@ class FirestoreService extends BaseService {
 
   // Riparazioni
   Stream<List<Riparazione>> getRiparazioni() {
-    return _firestore
+    return _db
         .collection('riparazioni')
         .orderBy('dataIngresso', descending: true)
         .snapshots()
@@ -99,7 +99,7 @@ class FirestoreService extends BaseService {
   }
 
   Stream<List<Riparazione>> getRiparazioniByStato(StatoRiparazione stato) {
-    return _firestore
+    return _db
         .collection('riparazioni')
         .where('stato', isEqualTo: stato.toString())
         .orderBy('dataIngresso', descending: true)
@@ -112,7 +112,7 @@ class FirestoreService extends BaseService {
   }
 
   Stream<List<Riparazione>> getRiparazioniArchiviate(String clienteId) {
-    return _firestore
+    return _db
         .collection('riparazioni')
         .where('clienteId', isEqualTo: clienteId)
         .where('stato', whereIn: [
@@ -130,7 +130,7 @@ class FirestoreService extends BaseService {
 
   // Clienti
   Stream<List<Cliente>> getClienti() {
-    return _firestore
+    return _db
         .collection('clienti')
         .orderBy('cognome')
         .snapshots()
@@ -143,7 +143,7 @@ class FirestoreService extends BaseService {
 
   Future<void> addCliente(Cliente cliente) async {
     try {
-      await _firestore.collection('clienti').add(cliente.toMap());
+      await _db.collection('clienti').add(cliente.toMap());
     } catch (e) {
       throw FirestoreException('Errore durante l\'aggiunta del cliente: $e');
     }
@@ -151,10 +151,7 @@ class FirestoreService extends BaseService {
 
   Future<void> updateCliente(Cliente cliente) async {
     try {
-      await _firestore
-          .collection('clienti')
-          .doc(cliente.id)
-          .update(cliente.toMap());
+      await _db.collection('clienti').doc(cliente.id).update(cliente.toMap());
     } catch (e) {
       throw FirestoreException(
           'Errore durante l\'aggiornamento del cliente: $e');
@@ -168,7 +165,7 @@ class FirestoreService extends BaseService {
       if (doc.exists) {
         return ImpostazioniColori.fromMap({...doc.data()!, 'id': doc.id});
       }
-      return ImpostazioniColori.createDefault(); // Cambia il nome del metodo
+      return ImpostazioniColori.createDefault();
     } catch (e) {
       throw FirestoreException(
           'Errore durante il recupero delle impostazioni colori: $e');
@@ -177,7 +174,7 @@ class FirestoreService extends BaseService {
 
   Future<void> salvaImpostazioniColori(ImpostazioniColori impostazioni) async {
     try {
-      await _firestore
+      await _db
           .collection('impostazioni')
           .doc('colori')
           .set(impostazioni.toMap());
@@ -194,7 +191,7 @@ class FirestoreService extends BaseService {
       final startOfMonth = DateTime(now.year, now.month, 1);
       final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
 
-      final riparazioniSnapshot = await _firestore
+      final riparazioniSnapshot = await _db
           .collection('riparazioni')
           .where('dataCompletamento',
               isGreaterThanOrEqualTo: startOfMonth.toIso8601String())
@@ -231,10 +228,10 @@ class FirestoreService extends BaseService {
   // Batch Operations
   Future<void> executeBatch(List<BatchOperation> operations) async {
     try {
-      final batch = _firestore.batch();
+      final batch = _db.batch();
 
       for (var operation in operations) {
-        final docRef = _firestore.doc(operation.path);
+        final docRef = _db.doc(operation.path);
         switch (operation.type) {
           case BatchOperationType.create:
             batch.set(docRef, operation.data);
@@ -255,59 +252,6 @@ class FirestoreService extends BaseService {
   }
 }
 
-enum BatchOperationType { create, update, delete }
-
-class BatchOperation {
-  final String path;
-  final BatchOperationType type;
-  final Map<String, dynamic> data;
-
-  BatchOperation({
-    required this.path,
-    required this.type,
-    this.data = const {},
-  });
-}
-
-class FirestoreException implements Exception {
-  final String message;
-
-  FirestoreException(this.message);
-
-  @override
-  String toString() => message;
-}
-
-class FirestoreService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  // Singleton pattern
-  static final FirestoreService _instance = FirestoreService._internal();
-
-  factory FirestoreService() {
-    return _instance;
-  }
-
-  FirestoreService._internal();
-
-  // Aggiungi i metodi mancanti
-  void addMetadata(Map<String, dynamic> data) {
-    data['updatedAt'] = FieldValue.serverTimestamp();
-    if (!data.containsKey('createdAt')) {
-      data['createdAt'] = FieldValue.serverTimestamp();
-    }
-  }
-
-  Future<void> logOperation(
-      String collection, String docId, String operation) async {
-    await _firestore.collection('logs').add({
-      'collection': collection,
-      'documentId': docId,
-      'operation': operation,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-  }
-}
 enum BatchOperationType { create, update, delete }
 
 class BatchOperation {
