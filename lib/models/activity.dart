@@ -25,12 +25,15 @@ class Activity {
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'tipo': tipo,
+      'titolo': titolo,
       'descrizione': descrizione,
       'riferimentoId': riferimentoId,
       'riferimentoTipo': riferimentoTipo,
       'timestamp': Timestamp.fromDate(timestamp),
       'userId': userId,
+      'metadata': metadata,
     };
   }
 
@@ -39,10 +42,12 @@ class Activity {
       id: map['id'] as String,
       tipo: map['tipo'] as String,
       titolo: map['titolo'] as String,
-      descrizione: map['descrizione'] as String,  // Aggiunto questo
+      descrizione: map['descrizione'] as String,
       riferimentoId: map['riferimentoId'] ?? '',
       riferimentoTipo: map['riferimentoTipo'] ?? '',
       timestamp: (map['timestamp'] as Timestamp).toDate(),
       userId: map['userId'] ?? '',
+      metadata: map['metadata'] as Map<String, dynamic>?,
     );
   }
+}
