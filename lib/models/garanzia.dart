@@ -42,7 +42,6 @@ class Garanzia {
     String? motivazioneInvalidazione,
   }) : _motivazioneInvalidazione = motivazioneInvalidazione;
 
-
   bool get isActive =>
       stato == StatoGaranzia.attiva && dataFine.isAfter(DateTime.now());
 
@@ -107,7 +106,8 @@ class Garanzia {
     List<String>? componentiCoperti,
   }) {
     return Garanzia(
-      motivazioneInvalidazione: motivazioneInvalidazione ?? this._motivazioneInvalidazione,
+      motivazioneInvalidazione:
+          motivazioneInvalidazione ?? this._motivazioneInvalidazione,
       id: id ?? this.id,
       prodotto: prodotto ?? this.prodotto,
       riparazioneId: riparazioneId ?? this.riparazioneId,

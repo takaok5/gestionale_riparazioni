@@ -15,7 +15,9 @@ class GaranziaService {
     if (soloAttive == true) {
       final now = DateTime.now();
       query = query
-          .where('dataFine', isGreaterThan: now) // Corretto da dataScadenza a dataFine per match con il modello
+          .where('dataFine',
+              isGreaterThan:
+                  now) // Corretto da dataScadenza a dataFine per match con il modello
           .where('stato', isEqualTo: StatoGaranzia.attiva.toString());
     }
 
@@ -104,14 +106,17 @@ class GaranziaService {
   }
 
   // Ottieni statistiche garanzie
-  Stream<Map<String, int>> getStatisticheGaranzie() {  // Cambiato tipo di ritorno per match con l'interfaccia
+  Stream<Map<String, int>> getStatisticheGaranzie() {
+    // Cambiato tipo di ritorno per match con l'interfaccia
     return _db.collection('garanzie').snapshots().map((snapshot) {
       final total = snapshot.docs.length;
       final active = snapshot.docs
-          .where((doc) => doc.data()['stato'] == StatoGaranzia.attiva.toString())
+          .where(
+              (doc) => doc.data()['stato'] == StatoGaranzia.attiva.toString())
           .length;
       final inScadenza = snapshot.docs.where((doc) {
-        if (doc.data()['stato'] != StatoGaranzia.attiva.toString()) return false;
+        if (doc.data()['stato'] != StatoGaranzia.attiva.toString())
+          return false;
         final scadenza = (doc.data()['dataFine'] as Timestamp).toDate();
         final now = DateTime.now();
         final giorniAllaScadenza = scadenza.difference(now).inDays;

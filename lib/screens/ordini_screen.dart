@@ -4,6 +4,7 @@ import '../models/fornitore.dart';
 import '../services/ordini_service.dart';
 import '../widgets/ordine_form.dart';
 import '../utils/validators.dart';
+import '../models/enums.dart';  // Per StatoOrdine
 
 class OrdiniScreen extends StatefulWidget {
   const OrdiniScreen({Key? key}) : super(key: key);
@@ -322,4 +323,53 @@ class _OrdiniScreenState extends State<OrdiniScreen> {
       );
     }
   }
+}
+void _showDettagliOrdine(Ordine ordine) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Dettagli Ordine ${ordine.numeroOrdine}'),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Fornitore: ${ordine.fornitore.ragioneSociale}'),
+            Text('Stato: ${ordine.stato.toString().split('.').last}'),
+            Text('Data: ${Validators.formatDate(ordine.dataOrdine)}'),
+            Text('Totale: €${ordine.totale.toStringAsFixed(2)}'),
+            const SizedBox(height: 16),
+            const Text('Ricambi ordinati:', style: TextStyle(fontWeight: FontWeight.bold)),
+            ...ordine.ricambi.map((r) => Padding(
+              padding: const EdgeInsets.only(left: 8.0),
+              child: Text('- ${r.nome} (${r.quantita} pz)'),
+            )).toList(),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Chiudi'),
+        ),
+      ],
+    ),
+  );
+}
+
+// Modifica il metodo _showNuovoOrdineDialog per includere ricambi
+void _showNuovoOrdineDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Nuovo Ordine'),
+      content: OrdineForm(
+        ricambi: [], // Fornisci una lista vuota iniziale
+        onSubmit: (ordine) async {
+          Navigator.pop(context);
+          await _ordiniService.addOrdine(ordine);
+        },
+      ),
+    ),
+  );
 }
