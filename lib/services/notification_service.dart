@@ -4,30 +4,18 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
 
 class NotificationService {
-  static final NotificationService _instance = NotificationService._internal();
-  factory NotificationService() => _instance;
-
-  final FlutterLocalNotificationsPlugin _notifications =
+  static final navigatorKey = GlobalKey<NavigatorState>();
+  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  NotificationService._internal() {
-    _initNotifications();
-  }
-
-  Future<void> _initNotifications() async {
-    const initializationSettingsAndroid =
+  Future<void> initialize() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initializationSettingsIOS = DarwinInitializationSettings();
-
-    const initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
-
-    await _notifications.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: _onNotificationTapped,
-    );
+    
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+    
+    await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
   void _onNotificationTapped(NotificationResponse response) {

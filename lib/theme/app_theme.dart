@@ -1,35 +1,19 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static ThemeData light() {
+  static ThemeData lightTheme() {
     return ThemeData(
-      colorScheme: ColorScheme.light(
-        primary: Colors.blue,
-        secondary: Colors.blueAccent,
-        surface: Colors.white,
-      ),
-      textTheme: const TextTheme(
-        bodyLarge: TextStyle(
-          fontSize: 16.0,
-          fontWeight: FontWeight.normal,
-        ),
-      ),
+      brightness: Brightness.light,
+      primarySwatch: Colors.blue,
+      // Add other theme configurations
     );
   }
 
-  static ThemeData dark() {
+  static ThemeData darkTheme() {
     return ThemeData(
-      colorScheme: ColorScheme.dark(
-        primary: Colors.blue,
-        secondary: Colors.blueAccent,
-        surface: Colors.grey[900]!,
-      ),
-      textTheme: const TextTheme(
-        bodyLarge: TextStyle(
-          fontSize: 16.0,
-          fontWeight: FontWeight.normal,
-        ),
-      ),
+      brightness: Brightness.dark,
+      primarySwatch: Colors.blue,
+      // Add other theme configurations
     );
   }
 }

@@ -17,52 +17,45 @@ import 'services/notification_service.dart';
 import 'services/analytics_service.dart';
 import 'services/locator.dart';
 import 'services/firestore_service.dart';
+import 'services/app_context_service.dart';
 import 'utils/platform_utils.dart';
 
 Future<void> main() async {
-  // Assicurati che Flutter sia inizializzato
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inizializza Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Inizializza le timezone
   tz.initializeTimeZones();
 
-  // Setup del service locator
   setupServiceLocator();
 
-  // Inizializza le notifiche
   final notificationService = NotificationService();
   await notificationService.initialize();
 
-  // Imposta la dimensione della finestra se su desktop
   if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
     setWindowMinSize(const Size(800, 600));
     setWindowMaxSize(Size.infinite);
   }
 
-  // Inizializza le impostazioni
   final settingsProvider = SettingsProvider();
-  await settingsProvider.initialize();
   final appContextService = AppContextService()
     ..updateContext(
       date: DateTime.utc(2025, 2, 9, 11, 9, 24),
       user: 'takaok5',
     );
-  // Avvia l'app con i provider necessari
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => appContextService),
         ChangeNotifierProvider(
-          create: (_) => ThemeProvider(),
+          create: (_) => ThemeProvider(isDark: false),  // Added required parameter
         ),
         ChangeNotifierProvider(
           create: (_) => AuthProvider(
-            firestore: getIt<FirestoreService>(),
+            firestoreService: locator<FirestoreService>(),  // Use locator from service_locator.dart
           ),
         ),
         ChangeNotifierProvider.value(
@@ -84,8 +77,8 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       title: 'Gestionale Riparazioni',
-      theme: AppTheme.lightTheme(),
-      darkTheme: AppTheme.darkTheme(),
+      theme: AppTheme.lightTheme(),  // Make sure these are defined in AppTheme
+      darkTheme: AppTheme.darkTheme(),  // Make sure these are defined in AppTheme
       themeMode: themeProvider.themeMode,
       locale: settingsProvider.locale,
       navigatorKey: NotificationService.navigatorKey,

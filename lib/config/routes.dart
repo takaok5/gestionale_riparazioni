@@ -44,17 +44,14 @@ class RouteGenerator {
 
     try {
       switch (settings.name) {
-        case '/':
+        // ... (previous cases remain the same until KanbanRiparazioniScreen)
+        case '/kanban':
           return MaterialPageRoute(
-            builder: (_) => const LoginScreen(),
-          );
-        case '/home':
-          return MaterialPageRoute(
-            builder: (_) => HomeScreen(
-              authService: locator<AuthService>(),
-              contabilitaService: locator<ContabilitaService>(),
+            builder: (_) => KanbanRiparazioniScreen(
+              firestoreService: locator<FirestoreService>(),
             ),
           );
+
         case '/riparazioni':
           return MaterialPageRoute(
             builder: (_) =>
@@ -85,6 +82,8 @@ class RouteGenerator {
           return MaterialPageRoute(
             builder: (_) => GaranziaDetailsScreen(
               garanziaId: args as String,
+              garanzia: locator<GaranziaService>().getGaranzia(args as String),
+              garanziaService: locator<GaranziaService>(),
             ),
           );
         case '/storico_cliente':
@@ -92,6 +91,8 @@ class RouteGenerator {
           return MaterialPageRoute(
             builder: (_) => StoricoClienteScreen(
               clienteId: args as String,
+              cliente: locator<FirestoreService>().getCliente(args as String),
+              firestoreService: locator<FirestoreService>(),
             ),
           );
         case '/impostazioni':

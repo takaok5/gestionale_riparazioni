@@ -1,4 +1,4 @@
-import 'package:cloud_firestore_cloud/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';  // Fixed package name
 
 class Activity {
   final String id;
