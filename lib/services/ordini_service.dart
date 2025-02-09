@@ -33,12 +33,14 @@ class OrdiniService {
       return ordini;
     });
   }
+
   Future<void> updateStatoOrdine(String ordineId, StatoOrdine nuovoStato) {
-  return _firestore
-      .collection('ordini')
-      .doc(ordineId)
-      .update({'stato': nuovoStato.toString().split('.').last});
+    return _firestore
+        .collection('ordini')
+        .doc(ordineId)
+        .update({'stato': nuovoStato.toString().split('.').last});
   }
+
   Future<void> addOrdine(Ordine ordine) {
     return _firestore.collection('ordini').add(ordine.toMap());
   }

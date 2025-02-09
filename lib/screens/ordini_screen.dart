@@ -4,7 +4,7 @@ import '../models/fornitore.dart';
 import '../services/ordini_service.dart';
 import '../widgets/ordine_form.dart';
 import '../utils/validators.dart';
-import '../models/enums.dart';  // Per StatoOrdine
+import '../models/enums.dart'; // Per StatoOrdine
 
 class OrdiniScreen extends StatefulWidget {
   const OrdiniScreen({Key? key}) : super(key: key);
@@ -324,6 +324,7 @@ class _OrdiniScreenState extends State<OrdiniScreen> {
     }
   }
 }
+
 void _showDettagliOrdine(Ordine ordine) {
   showDialog(
     context: context,
@@ -339,11 +340,14 @@ void _showDettagliOrdine(Ordine ordine) {
             Text('Data: ${Validators.formatDate(ordine.dataOrdine)}'),
             Text('Totale: €${ordine.totale.toStringAsFixed(2)}'),
             const SizedBox(height: 16),
-            const Text('Ricambi ordinati:', style: TextStyle(fontWeight: FontWeight.bold)),
-            ...ordine.ricambi.map((r) => Padding(
-              padding: const EdgeInsets.only(left: 8.0),
-              child: Text('- ${r.nome} (${r.quantita} pz)'),
-            )).toList(),
+            const Text('Ricambi ordinati:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            ...ordine.ricambi
+                .map((r) => Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: Text('- ${r.nome} (${r.quantita} pz)'),
+                    ))
+                .toList(),
           ],
         ),
       ),

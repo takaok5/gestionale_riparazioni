@@ -1,3 +1,5 @@
+import 'package:cloud_firestore_cloud/cloud_firestore.dart';
+
 class Activity {
   final String id;
   final String tipo;
@@ -37,10 +39,10 @@ class Activity {
       id: map['id'] as String,
       tipo: map['tipo'] as String,
       titolo: map['titolo'] as String,
+      descrizione: map['descrizione'] as String,  // Aggiunto questo
       riferimentoId: map['riferimentoId'] ?? '',
       riferimentoTipo: map['riferimentoTipo'] ?? '',
       timestamp: (map['timestamp'] as Timestamp).toDate(),
       userId: map['userId'] ?? '',
     );
   }
-}
