@@ -3,7 +3,7 @@ import '../utils/exceptions.dart';
 import 'tipo_riparazione.dart';
 import 'stato_riparazione.dart';
 import 'tipo_dispositivo.dart';
-import '../utils/imports.dart'; // Usa l'import centralizzato invece dei singoli file
+import 'package:gestionale_riparazioni/utils/imports.dart'; // Usa l'import centralizzato invece dei singoli file
 
 enum PrioritaRiparazione { bassa, normale, alta, urgente }
 
@@ -31,6 +31,11 @@ class Riparazione extends Equatable {
   final Map<String, dynamic>? metadati;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? dispositivo;  // Aggiungi questo campo
+  final DateTime? dataApertura;
+  final DateTime? dataChiusura;
+  final String? tecnicoId;
+  final double? costoTotale;
 
   const Riparazione({
     required this.id,
@@ -56,6 +61,11 @@ class Riparazione extends Equatable {
     this.metadati,
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.dispositivo,
+    this.dataApertura,
+    this.dataChiusura,
+    this.tecnicoId,
+    this.costoTotale,
   })  : ricambiUtilizzati = ricambiUtilizzati ?? const [],
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
@@ -131,6 +141,11 @@ class Riparazione extends Equatable {
       'metadati': metadati,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'dispositivo': dispositivo,
+      'dataApertura': dataApertura?.toIso8601String(),
+      'dataChiusura': dataChiusura?.toIso8601String(),
+      'tecnicoId': tecnicoId,
+      'costoTotale': costoTotale,
     };
   }
 
@@ -186,6 +201,12 @@ class Riparazione extends Equatable {
         metadati: map['metadati'] as Map<String, dynamic>?,
         createdAt: DateTime.parse(map['createdAt'] as String),
         updatedAt: DateTime.parse(map['updatedAt'] as String),
+        dispositivo: map['dispositivo'],
+        dataApertura: map['dataApertura'] != null ? DateTime.parse(map['dataApertura']) : null,
+        dataChiusura: map['dataChiusura'] != null ? DateTime.parse(map['dataChiusura']) : null,
+        tecnicoId: map['tecnicoId'],
+        costoTotale: map['costoTotale']?.toDouble(),
+
       );
     } catch (e) {
       throw ValidationException(

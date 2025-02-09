@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../models/appuntamento.dart';
-import '../utils/validators.dart';
+import 'package:gestionale_riparazioni/utils/imports.dart';
 
 class CalendarAppuntamenti extends StatefulWidget {
   final List<Appuntamento> appuntamenti;
