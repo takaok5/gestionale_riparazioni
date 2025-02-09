@@ -6,7 +6,7 @@ import '../services/app_context_service.dart';
 
 class FirestoreService extends BaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  
+
   // Singleton pattern
   static final AppContextService _appContextService = AppContextService();
   static final FirestoreService _instance = FirestoreService._internal();
@@ -29,14 +29,14 @@ class FirestoreService extends BaseService {
   }
 
   // Metodi di utility
-  Map<String, dynamic> addMetadata(Map<String, dynamic> data, {bool isNew = true}) {
+  Map<String, dynamic> addMetadata(Map<String, dynamic> data,
+      {bool isNew = true}) {
     data['updatedAt'] = FieldValue.serverTimestamp();
     if (isNew && !data.containsKey('createdAt')) {
       data['createdAt'] = FieldValue.serverTimestamp();
     }
     return data;
   }
-
 
   Future<void> logOperation(
       String collection, String operation, String docId) async {
@@ -174,7 +174,8 @@ class FirestoreService extends BaseService {
       if (doc.exists) {
         return ImpostazioniColori.fromMap({...doc.data()!, 'id': doc.id});
       }
-      return ImpostazioniColori.defaultSettings(); // Cambiato da createDefault a defaultSettings
+      return ImpostazioniColori
+          .defaultSettings(); // Cambiato da createDefault a defaultSettings
     } catch (e) {
       throw FirestoreException(
           'Errore durante il recupero delle impostazioni colori: $e');

@@ -20,8 +20,12 @@ class ImpostazioniColori {
       colorePrimario: Colors.blue,
       coloreSecondario: Colors.blueAccent,
       coloreSfondo: Colors.white,
-      id: map['id'] ?? '',
-      colori: Map<String, String>.from(map['colori'] ?? {}),
+      id: 'default',
+      colori: {
+        'primary': '#1976D2',
+        'secondary': '#424242',
+        'accent': '#FF4081',
+      },
     );
   }
 
@@ -40,11 +44,13 @@ class ImpostazioniColori {
       colorePrimario: Color(map['colorePrimario'] as int),
       coloreSecondario: Color(map['coloreSecondario'] as int),
       coloreSfondo: Color(map['coloreSfondo'] as int),
-      id: 'default',
-      colori: {
-        'primary': '#1976D2',
-        'secondary': '#424242',
-        'accent': '#FF4081',
+      id: map['id'] ?? 'default',
+      colori: Map<String, String>.from(map['colori'] ??
+          {
+            'primary': '#1976D2',
+            'secondary': '#424242',
+            'accent': '#FF4081',
+          }),
     );
   }
 
@@ -52,11 +58,15 @@ class ImpostazioniColori {
     Color? colorePrimario,
     Color? coloreSecondario,
     Color? coloreSfondo,
+    String? id,
+    Map<String, String>? colori,
   }) {
     return ImpostazioniColori(
       colorePrimario: colorePrimario ?? this.colorePrimario,
       coloreSecondario: coloreSecondario ?? this.coloreSecondario,
       coloreSfondo: coloreSfondo ?? this.coloreSfondo,
+      id: id ?? this.id,
+      colori: colori ?? this.colori,
     );
   }
 }
