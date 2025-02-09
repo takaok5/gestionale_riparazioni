@@ -85,7 +85,8 @@ class _FormNuovaRichiestaState extends State<FormNuovaRichiesta> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _descrizioneController,
-            decoration: const InputDecoration(labelText: 'Descrizione problema'),
+            decoration:
+                const InputDecoration(labelText: 'Descrizione problema'),
             maxLines: 3,
             validator: FormValidators.required,
           ),

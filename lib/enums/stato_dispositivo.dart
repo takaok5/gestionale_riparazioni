@@ -5,8 +5,8 @@ enum StatoDispositivo {
   irreparabile,
   dismesso,
   inAttesa,
-  daVerificare,
-  
+  daVerificare; // Note the semicolon here before the method
+
   /// Ottiene una descrizione leggibile dello stato
   String get descrizione {
     switch (this) {

@@ -1,6 +1,6 @@
 enum TipoCliente {
   privato,
   azienda,
-  pubblica_amministrazione,
+  pubblicaAmministrazione,
   altro,
 }

@@ -88,7 +88,7 @@ Future<void> generateLogo({
   final picture = recorder.endRecording();
   final img = await picture.toImage(size.width.toInt(), size.height.toInt());
   final data = await img.toByteData(format: ui.ImageByteFormat.png);
-  
+
   if (data != null) {
     await File(outputPath).writeAsBytes(data.buffer.asUint8List());
     print('Generated: $outputPath');

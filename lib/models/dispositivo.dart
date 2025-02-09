@@ -43,15 +43,15 @@ class Dispositivo extends BaseModel {
     this.fotoProdotto,
     required DateTime createdAt,
     required DateTime updatedAt,
-  }) : assert(
+  })  : assert(
           imei == null || RegExp(r'^\d{15}$').hasMatch(imei),
           'IMEI deve essere di 15 cifre',
         ),
-       super(
-         id: id,
-         createdAt: createdAt,
-         updatedAt: updatedAt,
-       );
+        super(
+          id: id,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+        );
 
   @override
   Map<String, dynamic> toMap() {
@@ -89,7 +89,8 @@ class Dispositivo extends BaseModel {
       clienteId: map['clienteId'] as String,
       problemiRicorrenti: List<String>.from(map['problemiRicorrenti'] ?? []),
       riparazioniIds: List<String>.from(map['riparazioniIds'] ?? []),
-      specificheTecniche: Map<String, String>.from(map['specificheTecniche'] ?? {}),
+      specificheTecniche:
+          Map<String, String>.from(map['specificheTecniche'] ?? {}),
       accessoriInclusi: (map['accessoriInclusi'] as List<dynamic>?)
               ?.map((a) => Accessorio.fromMap(a as Map<String, dynamic>))
               .toList() ??
@@ -177,17 +178,17 @@ class Accessorio {
   });
 
   Map<String, dynamic> toMap() => {
-    'nome': nome,
-    'descrizione': descrizione,
-    'stato': stato.toString().split('.').last,
-  };
+        'nome': nome,
+        'descrizione': descrizione,
+        'stato': stato.toString().split('.').last,
+      };
 
   factory Accessorio.fromMap(Map<String, dynamic> map) => Accessorio(
-    nome: map['nome'] as String,
-    descrizione: map['descrizione'] as String?,
-    stato: StatoAccessorio.values.firstWhere(
-      (e) => e.toString().split('.').last == map['stato'],
-      orElse: () => StatoAccessorio.presente,
-    ),
-  );
+        nome: map['nome'] as String,
+        descrizione: map['descrizione'] as String?,
+        stato: StatoAccessorio.values.firstWhere(
+          (e) => e.toString().split('.').last == map['stato'],
+          orElse: () => StatoAccessorio.presente,
+        ),
+      );
 }

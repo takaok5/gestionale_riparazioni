@@ -3,7 +3,7 @@ enum StatoAccessorio {
   mancante,
   danneggiato,
   daVerificare,
-  nonNecessario,
+  nonNecessario; // Note the semicolon here before the method
 
   /// Ottiene una descrizione leggibile dello stato
   String get descrizione {
@@ -22,8 +22,8 @@ enum StatoAccessorio {
   }
 
   /// Controlla se l'accessorio richiede attenzione
-  bool get requiresAttention => 
-      this == StatoAccessorio.mancante || 
-      this == StatoAccessorio.danneggiato || 
+  bool get requiresAttention =>
+      this == StatoAccessorio.mancante ||
+      this == StatoAccessorio.danneggiato ||
       this == StatoAccessorio.daVerificare;
 }

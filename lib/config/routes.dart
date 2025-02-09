@@ -57,41 +57,34 @@ class RouteGenerator {
           );
         case '/riparazioni':
           return MaterialPageRoute(
-            builder: (_) => RiparazioniScreen(
-              firestoreService: locator<FirestoreService>(),
-            ),
+            builder: (_) =>
+                const RiparazioniScreen(), // Rimosso il parametro non necessario
           );
         case '/kanban':
           return MaterialPageRoute(
-            builder: (_) => KanbanRiparazioniScreen(
-              firestoreService: locator<FirestoreService>(),
-            ),
+            builder: (_) =>
+                const KanbanRiparazioniScreen(), // Rimosso il parametro non necessario
           );
         case '/magazzino':
           return MaterialPageRoute(
-            builder: (_) => GestioneMagazzinoScreen(
-              inventoryService: locator<InventoryService>(),
-            ),
+            builder: (_) =>
+                const GestioneMagazzinoScreen(), // Rimosso il parametro non necessario
           );
         case '/ordini':
           return MaterialPageRoute(
-            builder: (_) => OrdiniScreen(
-              ordiniService: locator<OrdiniService>(),
-            ),
+            builder: (_) =>
+                const OrdiniScreen(), // Rimosso il parametro non necessario
           );
         case '/garanzie':
           return MaterialPageRoute(
-            builder: (_) => GaranzieScreen(
-              garanziaService: locator<GaranziaService>(),
-            ),
+            builder: (_) =>
+                const GaranzieScreen(), // Rimosso il parametro non necessario
           );
         case '/garanzia_details':
           if (args == null) throw ArgumentError('Richiesto ID garanzia');
           return MaterialPageRoute(
             builder: (_) => GaranziaDetailsScreen(
               garanziaId: args as String,
-              garanzia: locator<GaranziaService>().getGaranzia(args as String),
-              garanziaService: locator<GaranziaService>(),
             ),
           );
         case '/storico_cliente':
@@ -99,8 +92,6 @@ class RouteGenerator {
           return MaterialPageRoute(
             builder: (_) => StoricoClienteScreen(
               clienteId: args as String,
-              cliente: locator<FirestoreService>().getCliente(args as String),
-              firestoreService: locator<FirestoreService>(),
             ),
           );
         case '/impostazioni':

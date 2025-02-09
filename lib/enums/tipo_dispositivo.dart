@@ -7,7 +7,7 @@ enum TipoDispositivo {
   televisore,
   monitor,
   stampante,
-  altro,
+  altro; // Note the semicolon here before the method
 
   /// Ottiene una descrizione leggibile del tipo
   String get descrizione {
@@ -34,8 +34,10 @@ enum TipoDispositivo {
   }
 
   /// Controlla se il dispositivo è un computer (desktop o laptop)
-  bool get isComputer => this == TipoDispositivo.computer || this == TipoDispositivo.laptop;
+  bool get isComputer =>
+      this == TipoDispositivo.computer || this == TipoDispositivo.laptop;
 
   /// Controlla se il dispositivo è mobile
-  bool get isMobile => this == TipoDispositivo.smartphone || this == TipoDispositivo.tablet;
+  bool get isMobile =>
+      this == TipoDispositivo.smartphone || this == TipoDispositivo.tablet;
 }
