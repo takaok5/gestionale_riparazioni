@@ -2,6 +2,7 @@ import 'package:meta/meta.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'base_model.dart';
 import 'garanzia_info.dart';
+import 'garanzia.dart';
 import 'enums/stato_dispositivo.dart';
 import 'enums/tipo_dispositivo.dart';
 import 'enums/stato_accessorio.dart';
@@ -73,6 +74,7 @@ class Dispositivo extends BaseModel {
       'ultimaRiparazione': ultimaRiparazione?.toIso8601String(),
       'note': note,
       'garanzia': garanzia?.toMap(),
+      'garanziaInfo': garanziaInfo?.toMap(),
       'fotoProdotto': fotoProdotto,
     };
   }
@@ -108,6 +110,9 @@ class Dispositivo extends BaseModel {
       garanzia: map['garanzia'] != null
           ? Garanzia.fromMap(map['garanzia'] as Map<String, dynamic>)
           : null,
+      garanziaInfo: map['garanziaInfo'] != null
+          ? GaranziaInfo.fromMap(map['garanziaInfo'] as Map<String, dynamic>)
+          : null,
       fotoProdotto: List<String>.from(map['fotoProdotto'] ?? []),
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       updatedAt: (map['updatedAt'] as Timestamp).toDate(),
@@ -130,6 +135,7 @@ class Dispositivo extends BaseModel {
     DateTime? ultimaRiparazione,
     String? note,
     Garanzia? garanzia,
+    GaranziaInfo? garanziaInfo,
     List<String>? fotoProdotto,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -150,6 +156,7 @@ class Dispositivo extends BaseModel {
       ultimaRiparazione: ultimaRiparazione ?? this.ultimaRiparazione,
       note: note ?? this.note,
       garanzia: garanzia ?? this.garanzia,
+      garanziaInfo: garanziaInfo ?? this.garanziaInfo,
       fotoProdotto: fotoProdotto ?? this.fotoProdotto,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

@@ -48,13 +48,24 @@ class Garanzia extends BaseModel {
   DateTime get dataScadenza => dataFine;
   String? get motivazioneInvalidazione => _motivazioneInvalidazione;
   DateTime? get dataInvalidazione => _dataInvalidazione;
-  bool get isValid =>
-      stato == StatoGaranzia.attiva &&
-      dataFine.isAfter(DateTime.utc(2025, 2, 9, 21, 24, 20));
+
+  bool get isValid {
+    final now = DateTime.now().toUtc();
+    return stato == StatoGaranzia.attiva && dataFine.isAfter(now);
+  }
+
   Duration get durata => dataFine.difference(dataInizio);
-  Duration get rimanente =>
-      dataFine.difference(DateTime.utc(2025, 2, 9, 21, 24, 20));
-  bool get isScaduta => dataFine.isBefore(DateTime.utc(2025, 2, 9, 21, 24, 20));
+
+  Duration get rimanente {
+    final now = DateTime.now().toUtc();
+    return dataFine.difference(now);
+  }
+
+  bool get isScaduta {
+    final now = DateTime.now().toUtc();
+    return dataFine.isBefore(now);
+  }
+
   bool get inScadenza {
     final giorni = rimanente.inDays;
     return attiva && giorni <= 30 && giorni > 0;

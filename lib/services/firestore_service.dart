@@ -9,7 +9,8 @@ class FirestoreService {
   final FirebaseFirestore _firestore;
   final AppContextService _appContextService;
 
-  FirestoreService(this._appContextService) : _firestore = FirebaseFirestore.instance;
+  FirestoreService(this._appContextService)
+      : _firestore = FirebaseFirestore.instance;
 
   // Singleton pattern
   static final AppContextService _appContextService = AppContextService();

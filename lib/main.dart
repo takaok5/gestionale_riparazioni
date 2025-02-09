@@ -23,7 +23,7 @@ import 'utils/platform_utils.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Correzione inizializzazione SharedPreferences
   final prefs = await SharedPreferences.getInstance();
   final themeProvider = ThemeProvider(prefs);
