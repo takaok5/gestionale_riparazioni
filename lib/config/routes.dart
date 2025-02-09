@@ -35,7 +35,8 @@ class RouteGenerator {
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final args = settings.arguments;
-    final authProvider = locator<AuthProvider>(); // Get AuthProvider from locator
+    final authProvider =
+        locator<AuthProvider>(); // Get AuthProvider from locator
 
     if (settings.name != login && !authProvider.isAuthenticated) {
       return MaterialPageRoute(

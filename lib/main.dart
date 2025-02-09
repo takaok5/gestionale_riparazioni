@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:window_size/window_size.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Add this import
+import 'package:shared_preferences/shared_preferences.dart'; // Aggiunto
 import 'dart:io';
 import 'package:timezone/data/latest_all.dart' as tz;
 
@@ -19,13 +19,15 @@ import 'services/analytics_service.dart';
 import 'services/locator.dart';
 import 'services/firestore_service.dart';
 import 'services/app_context_service.dart';
-import 'services/settings_service.dart'; // Add this import
 import 'utils/platform_utils.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Correzione inizializzazione SharedPreferences
   final prefs = await SharedPreferences.getInstance();
-  final settingsService = SettingsService(prefs);
+  final themeProvider = ThemeProvider(prefs);
+  final settingsProvider = SettingsProvider(prefs);
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -43,52 +45,25 @@ void main() async {
     setWindowMaxSize(Size.infinite);
   }
 
-  final settingsProvider = SettingsProvider(settingsService); // Pass the service
-  final appContextService = AppContextService()
-    ..updateContext(
-      date: DateTime.now().toUtc(),
-      user: 'takaok5',
-    );
+  final appContextService = AppContextService();
+  appContextService.updateContext(
+    date: DateTime.now().toUtc(),
+    user: 'takaok5',
+  );
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => appContextService),
-        ChangeNotifierProvider(
-          create: (_) => ThemeProvider(settingsService.isDarkMode), // Pass the initial theme value
-        ),
+        ChangeNotifierProvider.value(value: themeProvider),
         ChangeNotifierProvider(
           create: (_) => AuthProvider(
             firestoreService: locator<FirestoreService>(),
           ),
         ),
-        ChangeNotifierProvider.value(
-          value: settingsProvider,
-        ),
+        ChangeNotifierProvider.value(value: settingsProvider),
       ],
       child: const MyApp(),
     ),
   );
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
-    final settingsProvider = context.watch<SettingsProvider>();
-
-    return MaterialApp(
-      title: 'Gestionale Riparazioni',
-      theme: AppTheme.lightTheme(),
-      darkTheme: AppTheme.darkTheme(),
-      themeMode: themeProvider.themeMode,
-      locale: settingsProvider.locale,
-      navigatorKey: NotificationService.navigatorKey,
-      onGenerateRoute: RouteGenerator.generateRoute,
-      initialRoute: '/',
-      debugShowCheckedModeBanner: false,
-    );
-  }
 }

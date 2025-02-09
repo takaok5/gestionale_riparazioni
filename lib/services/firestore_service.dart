@@ -3,9 +3,13 @@ import '../models/models.dart';
 import 'base_service.dart';
 import '../models/stato_riparazione.dart';
 import '../services/app_context_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class FirestoreService extends BaseService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+class FirestoreService {
+  final FirebaseFirestore _firestore;
+  final AppContextService _appContextService;
+
+  FirestoreService(this._appContextService) : _firestore = FirebaseFirestore.instance;
 
   // Singleton pattern
   static final AppContextService _appContextService = AppContextService();
