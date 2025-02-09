@@ -18,8 +18,9 @@ class NotificationPayload {
   });
 
   factory NotificationPayload.fromString(String? payload) {
-    if (payload == null)
+    if (payload == null) {
       return NotificationPayload(type: NotificationType.generic);
+    }
 
     try {
       final parts = payload.split(':');

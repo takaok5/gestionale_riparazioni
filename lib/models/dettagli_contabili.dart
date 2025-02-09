@@ -1,11 +1,5 @@
 import 'package:meta/meta.dart';
 
-double get totale => importoTotale;
-double get costoRicambi => 0.0; // Implementa la logica appropriata
-double get costoManodopera => 0.0; // Implementa la logica appropriata
-bool get pagato => pagato;
-double? get scontoApplicato => scontoApplicato;
-
 @immutable
 class DettagliContabili {
   final double importo;
@@ -14,10 +8,17 @@ class DettagliContabili {
   final String? metodoPagamento;
   final DateTime? dataPagamento;
 
+  // Rimossi i getter ricorsivi e aggiunti correttamente
   double get importoTotale {
     if (scontoApplicato == null) return importo;
     return importo - (importo * scontoApplicato! / 100);
   }
+
+  double get totale => importoTotale;
+  double get costoRicambi => 0.0; // Implementa la logica appropriata
+  double get costoManodopera => 0.0; // Implementa la logica appropriata
+  // Rimosso il getter ricorsivo pagato
+  // Rimosso il getter ricorsivo scontoApplicato
 
   const DettagliContabili({
     required this.importo,
