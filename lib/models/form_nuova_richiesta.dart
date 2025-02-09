@@ -26,12 +26,15 @@ class FormNuovaRichiesta extends StatefulWidget {
 class _FormNuovaRichiestaState extends State<FormNuovaRichiesta> {
   final _formKey = GlobalKey<FormState>();
   Cliente? _selectedCliente;
-  String? _selectedDispositivoId;  // Aggiunto per gestire il dispositivo selezionato
+  String?
+      _selectedDispositivoId; // Aggiunto per gestire il dispositivo selezionato
   final _descrizioneController = TextEditingController();
   final _noteController = TextEditingController();
-  final _prezzoController = TextEditingController();  // Aggiunto per il prezzo
-  final _costoRicambiController = TextEditingController();  // Aggiunto per il costo ricambi
-  PrioritaRiparazione _priorita = PrioritaRiparazione.bassa;  // Cambiato da 'normale' a 'bassa'
+  final _prezzoController = TextEditingController(); // Aggiunto per il prezzo
+  final _costoRicambiController =
+      TextEditingController(); // Aggiunto per il costo ricambi
+  PrioritaRiparazione _priorita =
+      PrioritaRiparazione.bassa; // Cambiato da 'normale' a 'bassa'
   TipoRiparazione _tipoRiparazione = TipoRiparazione.standard;
 
   @override
@@ -90,7 +93,8 @@ class _FormNuovaRichiestaState extends State<FormNuovaRichiesta> {
             onChanged: (value) {
               setState(() {
                 _selectedCliente = value;
-                _selectedDispositivoId = null;  // Reset dispositivo quando cambia il cliente
+                _selectedDispositivoId =
+                    null; // Reset dispositivo quando cambia il cliente
               });
             },
             validator: (value) {
@@ -123,7 +127,8 @@ class _FormNuovaRichiestaState extends State<FormNuovaRichiesta> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _descrizioneController,
-            decoration: const InputDecoration(labelText: 'Descrizione problema'),
+            decoration:
+                const InputDecoration(labelText: 'Descrizione problema'),
             maxLines: 3,
             validator: FormValidators.required,
           ),

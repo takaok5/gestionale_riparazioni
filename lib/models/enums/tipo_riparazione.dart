@@ -1,5 +1,1 @@
-enum TipoRiparazione {
-  standard,
-  garanzia,
-  assistenza
-}
+enum TipoRiparazione { standard, garanzia, assistenza }

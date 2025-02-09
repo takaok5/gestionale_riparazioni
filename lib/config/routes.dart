@@ -39,10 +39,10 @@ class RouteGenerator {
     if (settings.name != login && !AuthProvider().isAuthenticated) {
       return MaterialPageRoute(
         builder: (_) => LoginScreen(
-         firestoreService: locator.get<FirestoreService>(),  // Aggiunto questo
-    ),
-    settings: const RouteSettings(name: login),
-  );
+          firestoreService: locator.get<FirestoreService>(), // Aggiunto questo
+        ),
+        settings: const RouteSettings(name: login),
+      );
     }
 
     try {

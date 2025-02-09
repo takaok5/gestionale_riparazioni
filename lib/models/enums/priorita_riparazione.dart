@@ -1,6 +1,1 @@
-enum PrioritaRiparazione {
-  bassa,
-  media,
-  alta,
-  urgente
-}
+enum PrioritaRiparazione { bassa, media, alta, urgente }
