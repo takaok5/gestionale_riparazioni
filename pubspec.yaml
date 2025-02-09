@@ -23,6 +23,7 @@ dependencies:
   firebase_analytics: ^10.7.4
   decimal: ^2.3.3
   equatable: ^2.0.5
+  shared_preferences: ^2.2.0
 
   # UI Packages
   fl_chart: ^0.65.0
@@ -44,10 +45,7 @@ dependencies:
       url: https://github.com/google/flutter-desktop-embedding.git
       path: plugins/window_size
   uuid: ^3.0.7
-
-  # Utility Packages
   provider: ^6.0.5
-  shared_preferences: ^2.2.0
   path_provider: ^2.1.1
   url_launcher: ^6.2.2
   pdf: ^3.10.7

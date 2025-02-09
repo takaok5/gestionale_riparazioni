@@ -20,8 +20,10 @@ import 'services/firestore_service.dart';
 import 'services/app_context_service.dart';
 import 'utils/platform_utils.dart';
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  final settingsService = SettingsService(prefs);
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
