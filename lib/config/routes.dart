@@ -1,12 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
-import '../screens/screens.dart';
-import '../services/services.dart';
+import '../screens/chat_screen.dart';
+import '../screens/dashboard_screen.dart';
+import '../screens/garanzia_details_screen.dart';
+import '../screens/garanzie_screen.dart';
+import '../screens/gestione_fornitori_screen.dart';
+import '../screens/gestione_magazzino_screen.dart';
+import '../screens/home_screen.dart';
+import '../screens/impostazioni_screen.dart';
+import '../screens/kanban_riparazioni_screen.dart';
+import '../screens/login_screen.dart';
+import '../screens/report_contabilita_screen.dart';
+import '../screens/riparazioni_screen.dart';
+import '../screens/storico_cliente_screen.dart';
+import '../screens/error_screen.dart';
+import '../screens/ordini_screen.dart';
 import '../providers/auth_provider.dart';
+import '../models/garanzia.dart';  // Aggiunto per il tipo Garanzia
+import '../services/firestore_service.dart';
+import '../services/garanzia_service.dart';
+import '../services/auth_service.dart';
+import '../services/ordini_service.dart';
+import '../services/inventory_service.dart';
+import 'package:get_it/get_it.dart';
 
 class RouteGenerator {
-  static final locator = GetIt.instance;  // Aggiunto per risolvere l'errore del locator
-
+  static final locator = GetIt.instance;
+  
   static const String home = '/';
   static const String login = '/login';
   static const String dashboard = '/dashboard';
@@ -42,7 +61,6 @@ class RouteGenerator {
           return MaterialPageRoute(
             builder: (_) => HomeScreen(
               authService: locator<AuthService>(),
-              contabilitaService: locator<ContabilitaService>(), // Aggiunto parametro mancante
             ),
           );
         case '/riparazioni':
@@ -51,48 +69,68 @@ class RouteGenerator {
               firestoreService: locator<FirestoreService>(),
             ),
           );
-        // ... resto dei case esistenti ...
-
-        case garanziaDetails:
-          if (args is! String) throw ArgumentError('Richiesto ID garanzia');
-          return _buildRoute(
-            GaranziaDetailsScreen(
-              garanziaId: args,
-              garanziaService: locator<GaranziaService>(), // Aggiunto servizio mancante
-            ), 
-            settings
+        case '/kanban':
+          return MaterialPageRoute(
+            builder: (_) => KanbanRiparazioniScreen(
+              firestoreService: locator<FirestoreService>(),
+            ),
           );
-        case storicoCliente:
+        case '/magazzino':
+          return MaterialPageRoute(
+            builder: (_) => GestioneMagazzinoScreen(
+              inventoryService: locator<InventoryService>(),
+            ),
+          );
+        case '/ordini':
+          return MaterialPageRoute(
+            builder: (_) => OrdiniScreen(
+              ordiniService: locator<OrdiniService>(),
+            ),
+          );
+        case '/garanzie':
+          return MaterialPageRoute(
+            builder: (_) => GaranzieScreen(
+              garanziaService: locator<GaranziaService>(),
+            ),
+          );
+        case '/garanzia_details':
+          if (args is! Garanzia) throw ArgumentError('Richiesta garanzia');
+          return MaterialPageRoute(
+            builder: (_) => GaranziaDetailsScreen(
+              garanzia: args,
+            ),
+          );
+        case '/storico_cliente':
           if (args is! String) throw ArgumentError('Richiesto ID cliente');
-          return _buildRoute(
-            StoricoClienteScreen(
+          return MaterialPageRoute(
+            builder: (_) => StoricoClienteScreen(
               clienteId: args,
-              firestoreService: locator<FirestoreService>(), // Aggiunto servizio mancante
-            ), 
-            settings
+              firestoreService: locator<FirestoreService>(),
+            ),
+          );
+        case '/impostazioni':
+          return MaterialPageRoute(
+            builder: (_) => const ImpostazioniScreen(),
           );
         default:
-          return _buildRoute(
-            ErrorScreen(
+          return MaterialPageRoute(
+            builder: (_) => ErrorScreen(
               message: 'Route ${settings.name} non trovata',
-              routeName: settings.name ?? 'sconosciuta',
             ),
-            settings,
           );
       }
     } catch (e) {
       return MaterialPageRoute(
         builder: (_) => ErrorScreen(
           message: 'Errore durante la navigazione: ${e.toString()}',
-          routeName: settings.name ?? 'sconosciuta',
         ),
       );
     }
   }
 
-  static PageRoute<T> _buildRoute<T>(Widget page, RouteSettings settings) {
+  static Route<T> _buildRoute<T>(Widget widget, RouteSettings settings) {
     return MaterialPageRoute<T>(
-      builder: (_) => page,
+      builder: (_) => widget,
       settings: settings,
       maintainState: true,
       fullscreenDialog: settings.name == settings || settings.name == chat,
