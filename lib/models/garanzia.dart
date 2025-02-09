@@ -20,6 +20,11 @@ class Garanzia {
   final DateTime updatedAt;
   final List<String> componentiCoperti; // Campo aggiunto
 
+  bool get attiva => stato == StatoGaranzia.attiva;
+  DateTime get dataScadenza => dataFine;
+  String? get motivazioneInvalidazione => _motivazioneInvalidazione;
+  final String? _motivazioneInvalidazione;
+
   Garanzia({
     required this.id,
     required this.prodotto,
@@ -34,7 +39,9 @@ class Garanzia {
     required this.createdAt,
     required this.updatedAt,
     required this.componentiCoperti,
-  });
+    String? motivazioneInvalidazione,
+  }) : _motivazioneInvalidazione = motivazioneInvalidazione;
+
 
   bool get isActive =>
       stato == StatoGaranzia.attiva && dataFine.isAfter(DateTime.now());
@@ -57,6 +64,7 @@ class Garanzia {
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'componentiCoperti': componentiCoperti,
+      'motivazioneInvalidazione': _motivazioneInvalidazione,
     };
   }
 
@@ -78,10 +86,12 @@ class Garanzia {
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       updatedAt: (map['updatedAt'] as Timestamp).toDate(),
       componentiCoperti: List<String>.from(map['componentiCoperti'] ?? []),
+      motivazioneInvalidazione: map['motivazioneInvalidazione'],
     );
   }
 
   Garanzia copyWith({
+    String? motivazioneInvalidazione,
     String? id,
     String? prodotto,
     String? riparazioneId,
@@ -97,6 +107,7 @@ class Garanzia {
     List<String>? componentiCoperti,
   }) {
     return Garanzia(
+      motivazioneInvalidazione: motivazioneInvalidazione ?? this._motivazioneInvalidazione,
       id: id ?? this.id,
       prodotto: prodotto ?? this.prodotto,
       riparazioneId: riparazioneId ?? this.riparazioneId,
