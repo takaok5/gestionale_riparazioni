@@ -4,11 +4,15 @@ class ImpostazioniColori {
   final Color colorePrimario;
   final Color coloreSecondario;
   final Color coloreSfondo;
+  final String id;
+  final Map<String, String> colori;
 
   const ImpostazioniColori({
     required this.colorePrimario,
     required this.coloreSecondario,
     required this.coloreSfondo,
+    required this.id,
+    required this.colori,
   });
 
   factory ImpostazioniColori.predefinito() {
@@ -16,6 +20,8 @@ class ImpostazioniColori {
       colorePrimario: Colors.blue,
       coloreSecondario: Colors.blueAccent,
       coloreSfondo: Colors.white,
+      id: map['id'] ?? '',
+      colori: Map<String, String>.from(map['colori'] ?? {}),
     );
   }
 
@@ -24,6 +30,8 @@ class ImpostazioniColori {
       'colorePrimario': colorePrimario.value,
       'coloreSecondario': coloreSecondario.value,
       'coloreSfondo': coloreSfondo.value,
+      'id': id,
+      'colori': colori,
     };
   }
 
@@ -32,6 +40,11 @@ class ImpostazioniColori {
       colorePrimario: Color(map['colorePrimario'] as int),
       coloreSecondario: Color(map['coloreSecondario'] as int),
       coloreSfondo: Color(map['coloreSfondo'] as int),
+      id: 'default',
+      colori: {
+        'primary': '#1976D2',
+        'secondary': '#424242',
+        'accent': '#FF4081',
     );
   }
 
