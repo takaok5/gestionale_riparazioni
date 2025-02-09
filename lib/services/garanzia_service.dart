@@ -6,6 +6,8 @@ class GaranziaService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final NotificationService _notificationService;
 
+  GaranziaService(this._notificationService);
+
   Future<GaranziaInfo?> getGaranzia(String id) async {
     try {
       // Implement your garanzia fetching logic here
@@ -16,8 +18,6 @@ class GaranziaService {
       return null;
     }
   }
-}
-  GaranziaService(this._notificationService);
 
   // Stream delle garanzie con possibilità di filtraggio
   Stream<List<Garanzia>> getGaranzie({bool? soloAttive}) {
@@ -73,14 +73,15 @@ class GaranziaService {
 
     await addGaranzia(garanzia);
   }
-// Aggiungi questo metodo in GaranziaService
-Future<Garanzia> getGaranziaById(String id) async {
-  final doc = await _db.collection('garanzie').doc(id).get();
-  if (!doc.exists) {
-    throw Exception('Garanzia non trovata');
+
+  Future<Garanzia> getGaranziaById(String id) async {
+    final doc = await _db.collection('garanzie').doc(id).get();
+    if (!doc.exists) {
+      throw Exception('Garanzia non trovata');
+    }
+    return Garanzia.fromMap({...doc.data()!, 'id': doc.id});
   }
-  return Garanzia.fromMap({...doc.data()!, 'id': doc.id});
-}
+
   Future<void> _scheduleNotificaScadenza(Garanzia garanzia) async {
     final dataNotifica = garanzia.dataFine.subtract(const Duration(days: 7));
 
@@ -125,7 +126,6 @@ Future<Garanzia> getGaranziaById(String id) async {
 
   // Ottieni statistiche garanzie
   Stream<Map<String, int>> getStatisticheGaranzie() {
-    // Cambiato tipo di ritorno per match con l'interfaccia
     return _db.collection('garanzie').snapshots().map((snapshot) {
       final total = snapshot.docs.length;
       final active = snapshot.docs
