@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import '../models/garanzia.dart';
 
 class GaranziaDetailsScreen extends StatelessWidget {
-  final Garanzia garanzia;
+  final String garanziaId;
+  final GaranziaService garanziaService;
 
   const GaranziaDetailsScreen({
-    super.key,
+    Key? key,
+    required this.garanziaId,
     required this.garanzia,
-  });
+    required this.garanziaService,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

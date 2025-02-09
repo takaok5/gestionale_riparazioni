@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static ThemeData get lightTheme {
+  static ThemeData lightTheme() {
     return ThemeData(
-      primarySwatch: Colors.blue,
-      brightness: Brightness.light,
-      scaffoldBackgroundColor: Colors.grey[100],
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: Colors.blue,
+        brightness: Brightness.light,
+      ),
       appBarTheme: const AppBarTheme(
         elevation: 0,
         centerTitle: true,
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
       ),
       cardTheme: CardTheme(
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -31,25 +31,27 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
         ),
         filled: true,
-        fillColor: Colors.white,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
 
-  static ThemeData get darkTheme {
+  static ThemeData darkTheme() {
     return ThemeData(
-      primarySwatch: Colors.blue,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF121212),
-      appBarTheme: AppBarTheme(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: Colors.blue,
+        brightness: Brightness.dark,
+      ),
+      appBarTheme: const AppBarTheme(
         elevation: 0,
         centerTitle: true,
-        backgroundColor: Colors.grey[900],
       ),
       cardTheme: CardTheme(
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -65,7 +67,8 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
         ),
         filled: true,
-        fillColor: Colors.grey[800],
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }

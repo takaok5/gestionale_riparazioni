@@ -123,11 +123,13 @@ class RouteGenerator {
     }
   }
 
-  static void navigateTo(BuildContext context, String routeName, {Object? arguments}) {
+  static void navigateTo(BuildContext context, String routeName,
+      {Object? arguments}) {
     Navigator.of(context).pushNamed(routeName, arguments: arguments);
   }
 
-  static void replaceTo(BuildContext context, String routeName, {Object? arguments}) {
+  static void replaceTo(BuildContext context, String routeName,
+      {Object? arguments}) {
     Navigator.of(context).pushReplacementNamed(routeName, arguments: arguments);
   }
 

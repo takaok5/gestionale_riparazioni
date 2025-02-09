@@ -5,14 +5,16 @@ import '../services/firestore_service.dart';
 import 'package:intl/intl.dart';
 
 class StoricoClienteScreen extends StatelessWidget {
+  final String clienteId;
   final Cliente cliente;
-  final FirestoreService _firestoreService = FirestoreService();
+  final FirestoreService firestoreService;
 
-  StoricoClienteScreen({
-    super.key,
+  const StoricoClienteScreen({
+    Key? key,
+    required this.clienteId,
     required this.cliente,
-  });
-
+    required this.firestoreService,
+  }) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return Scaffold(

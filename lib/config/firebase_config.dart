@@ -73,11 +73,12 @@ class FirebaseConfig {
   static Future<void> setPersistence(bool enabled) async {
     if (PlatformUtils.isWindows) {
       try {
-        await FirebaseFirestore.instance.settings = const Settings(
+        // Impostazione corretta delle settings
+        FirebaseFirestore.instance.settings = Settings(
           persistenceEnabled: enabled,
           cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
           sslEnabled: true,
-);
+        );
       } catch (e) {
         debugPrint('Errore durante la configurazione della persistenza: $e');
         rethrow;

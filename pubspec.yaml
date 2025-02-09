@@ -36,6 +36,8 @@ dependencies:
   path: ^1.8.3
   image_picker: ^1.0.2
   get_it: ^7.6.0
+  meta: ^1.9.1
+  cloud_firestore_platform_interface: ^5.15.4
   window_size:
     git:
       url: https://github.com/google/flutter-desktop-embedding.git

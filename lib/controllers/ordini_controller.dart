@@ -1,14 +1,18 @@
 import 'package:get/get.dart';
-import '../models/ordine_ricambi.dart';
+import '../models/ordine.dart';  // Cambiato da ordine_ricambi.dart
 import '../services/ordini_service.dart';
+import '../models/enums.dart';
 
 class OrdiniController extends GetxController {
   final OrdiniService _ordiniService = OrdiniService();
 
-  final RxList<OrdineRicambi> ordini = <OrdineRicambi>[].obs;
-  final Rx<OrdineRicambi?> selectedOrdine = Rx<OrdineRicambi?>(null);
+  // Cambiato il tipo da OrdineRicambi a Ordine
+  final RxList<Ordine> ordini = <Ordine>[].obs;
+  final Rx<Ordine?> selectedOrdine = Rx<Ordine?>(null);
   final RxBool isLoading = false.obs;
   final RxString error = ''.obs;
+
+  StreamSubscription<List<Ordine>>? _ordiniSubscription;
 
   @override
   void onInit() {
@@ -16,12 +20,18 @@ class OrdiniController extends GetxController {
     loadOrdini();
   }
 
+  @override
+  void onClose() {
+    _ordiniSubscription?.cancel();
+    super.onClose();
+  }
+
   void loadOrdini() {
     isLoading.value = true;
     error.value = '';
 
     try {
-      _ordiniService.getOrdini().listen(
+      _ordiniSubscription = _ordiniService.getOrdini().listen(
         (ordiniList) {
           ordini.value = ordiniList;
           isLoading.value = false;
@@ -37,12 +47,12 @@ class OrdiniController extends GetxController {
     }
   }
 
-  Future<void> createOrdine(OrdineRicambi ordine) async {
+  Future<void> createOrdine(Ordine ordine) async {
     try {
       isLoading.value = true;
       error.value = '';
 
-      await _ordiniService.createOrdine(ordine);
+      await _ordiniService.addOrdine(ordine);  // Cambiato da createOrdine a addOrdine
       Get.snackbar('Successo', 'Ordine creato correttamente');
     } catch (e) {
       error.value = 'Errore nella creazione dell\'ordine: $e';
@@ -52,7 +62,7 @@ class OrdiniController extends GetxController {
     }
   }
 
-  Future<void> updateOrdine(OrdineRicambi ordine) async {
+  Future<void> updateOrdine(Ordine ordine) async {
     try {
       isLoading.value = true;
       error.value = '';
@@ -62,21 +72,6 @@ class OrdiniController extends GetxController {
     } catch (e) {
       error.value = 'Errore nell\'aggiornamento dell\'ordine: $e';
       Get.snackbar('Errore', 'Impossibile aggiornare l\'ordine');
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> deleteOrdine(String id) async {
-    try {
-      isLoading.value = true;
-      error.value = '';
-
-      await _ordiniService.deleteOrdine(id);
-      Get.snackbar('Successo', 'Ordine eliminato correttamente');
-    } catch (e) {
-      error.value = 'Errore nell\'eliminazione dell\'ordine: $e';
-      Get.snackbar('Errore', 'Impossibile eliminare l\'ordine');
     } finally {
       isLoading.value = false;
     }
@@ -97,7 +92,7 @@ class OrdiniController extends GetxController {
     }
   }
 
-  void selectOrdine(OrdineRicambi? ordine) {
+  void selectOrdine(Ordine? ordine) {
     selectedOrdine.value = ordine;
   }
 }
