@@ -35,11 +35,12 @@ class RouteGenerator {
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final args = settings.arguments;
+    final authProvider = locator<AuthProvider>(); // Get AuthProvider from locator
 
-    if (settings.name != login && !AuthProvider().isAuthenticated) {
+    if (settings.name != login && !authProvider.isAuthenticated) {
       return MaterialPageRoute(
         builder: (_) => LoginScreen(
-          firestoreService: locator.get<FirestoreService>(), // Aggiunto questo
+          firestoreService: locator<FirestoreService>(),
         ),
         settings: const RouteSettings(name: login),
       );

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:window_size/window_size.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Add this import
 import 'dart:io';
 import 'package:timezone/data/latest_all.dart' as tz;
 
@@ -18,6 +19,7 @@ import 'services/analytics_service.dart';
 import 'services/locator.dart';
 import 'services/firestore_service.dart';
 import 'services/app_context_service.dart';
+import 'services/settings_service.dart'; // Add this import
 import 'utils/platform_utils.dart';
 
 void main() async {
@@ -41,7 +43,7 @@ void main() async {
     setWindowMaxSize(Size.infinite);
   }
 
-  final settingsProvider = SettingsProvider();
+  final settingsProvider = SettingsProvider(settingsService); // Pass the service
   final appContextService = AppContextService()
     ..updateContext(
       date: DateTime.now().toUtc(),
@@ -53,7 +55,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => appContextService),
         ChangeNotifierProvider(
-          create: (_) => ThemeProvider(isDarkMode: false),
+          create: (_) => ThemeProvider(settingsService.isDarkMode), // Pass the initial theme value
         ),
         ChangeNotifierProvider(
           create: (_) => AuthProvider(
