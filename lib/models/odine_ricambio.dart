@@ -37,7 +37,7 @@ class OrdineRicambio {
       quantita: map['quantita'] as int,
       prezzoUnitario: map['prezzoUnitario'] as double,
       dataOrdine: DateTime.parse(map['dataOrdine'] as String),
-      dataConsegna: map['dataConsegna'] != null 
+      dataConsegna: map['dataConsegna'] != null
           ? DateTime.parse(map['dataConsegna'] as String)
           : null,
     );

@@ -4,7 +4,13 @@ enum StatoDispositivo {
   inAttesaRicambi,
   completato,
   consegnato,
-  annullato;
+  annullato,
+  nuovo,
+  usato,
+  funzionante,
+  danneggiato,
+  riparato,
+  nonRiparabile;
 
   String get label {
     switch (this) {

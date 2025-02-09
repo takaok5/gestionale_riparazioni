@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/riparazione.dart';
 import '../utils/date_formatter.dart';
 
+Text(dispositivo.tipo.toString()), 
+
 class RiparazioneCard extends StatelessWidget {
   final Riparazione riparazione;
   final VoidCallback onTap;

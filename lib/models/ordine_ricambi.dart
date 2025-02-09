@@ -13,9 +13,9 @@ class OrdineRicambi extends BaseModel {
   final List<RicambioOrdine> ricambi;
   final double totale;
   final String? note;
-  final String userId; // ID dell'utente che ha creato l'ordine
+  final String userId;
 
-  const OrdineRicambi({
+  OrdineRicambi({
     required String id,
     required this.numeroOrdine,
     required this.fornitoreId,
@@ -26,8 +26,8 @@ class OrdineRicambi extends BaseModel {
     required this.totale,
     required this.userId,
     this.note,
-    DateTime? createdAt,
-    DateTime? updatedAt,
+    required DateTime createdAt,  // Changed from DateTime? to DateTime
+    required DateTime updatedAt,  // Changed from DateTime? to DateTime
   }) : super(
           id: id,
           createdAt: createdAt,
@@ -36,19 +36,20 @@ class OrdineRicambi extends BaseModel {
 
   @override
   Map<String, dynamic> toMap() {
+    final baseMap = super.toMap();  // Call super.toMap() first
     return {
-      ...super.toMap(),
+      ...baseMap,  // Spread the base map
       'numeroOrdine': numeroOrdine,
       'fornitoreId': fornitoreId,
       'fornitoreNome': fornitoreNome,
-      'dataOrdine': DateUtils.toIso8601String(dataOrdine),
+      'dataOrdine': dataOrdine.toIso8601String(),  // Use DateTime's method directly
       'stato': stato.index,
       'ricambi': ricambi.map((r) => r.toMap()).toList(),
       'totale': totale,
       'note': note,
       'userId': userId,
     };
-  }
+  }}
 
   factory OrdineRicambi.fromMap(Map<String, dynamic> map) {
     return OrdineRicambi(

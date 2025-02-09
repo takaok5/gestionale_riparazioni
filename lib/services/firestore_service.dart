@@ -94,8 +94,8 @@ class FirestoreService extends BaseService {
     } catch (e) {
       print('Error getting cliente: $e');
       throw e;
+    }
   }
-}
 
   Future<void> addRiparazione(Riparazione riparazione) async {
     final data = addMetadata(riparazione.toMap());

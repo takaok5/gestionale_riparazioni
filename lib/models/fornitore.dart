@@ -1,5 +1,6 @@
 class Fornitore {
   final String id;
+  final String nome;
   final String ragioneSociale;
   final String partitaIva;
   final String codiceFiscale;
@@ -21,7 +22,7 @@ class Fornitore {
     required this.email,
     required this.telefono,
     required this.partitaIva,
-    this.codiceFiscale = '',  // provide default values
+    this.codiceFiscale = '', // provide default values
     required this.ragioneSociale,
     this.indirizzo = '',
     this.pec = '',
@@ -56,6 +57,7 @@ class Fornitore {
   factory Fornitore.fromMap(Map<String, dynamic> map) {
     return Fornitore(
       id: map['id'],
+      nome: map['nome'] as String,
       ragioneSociale: map['ragioneSociale'],
       partitaIva: map['partitaIva'],
       codiceFiscale: map['codiceFiscale'],

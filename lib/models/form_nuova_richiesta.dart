@@ -4,6 +4,9 @@ import '../models/riparazione.dart';
 import '../utils/form_validators.dart';
 import '../models/enums/priorita_riparazione.dart';
 import '../models/enums/stato_riparazione.dart';
+import '../models/enums/tipo_riparazione.dart';
+
+enum TipoRiparazione { hardware, software, misto }
 
 class FormNuovaRichiesta extends StatefulWidget {
   final List<Cliente> clienti;
@@ -49,6 +52,18 @@ class _FormNuovaRichiestaState extends State<FormNuovaRichiesta> {
         costoRicambi: 0,
         tipoRiparazione: TipoRiparazione.standard,
       );
+      void createRiparazione() {
+        final riparazione = Riparazione(
+          id: DateTime.now().millisecondsSinceEpoch.toString(), // temporary ID
+          clienteId: cliente.id,
+          dispositivoId:
+              cliente.dispositivi.first.id, // Add dispositivi field to Cliente
+          stato: StatoRiparazione.inAttesa,
+          tipoIntervento: tipoIntervento,
+          ricambi: [], // Add this parameter
+          // ... other fields ...
+        );
+      }
 
       widget.onSubmit(riparazione);
     }

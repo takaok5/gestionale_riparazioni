@@ -76,19 +76,33 @@ class RouteGenerator {
         case '/garanzia_details':
           if (args == null) throw ArgumentError('Richiesto ID garanzia');
           return MaterialPageRoute(
-            builder: (_) => GaranziaDetailsScreen(
-              garanziaId: args as String,
-              garanzia: locator<GaranziaService>().getGaranzia(args as String),
-              garanziaService: locator<GaranziaService>(),
+            builder: (_) => FutureBuilder<GaranziaInfo?>(
+              future: locator<GaranziaService>().getGaranzia(args as String),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
+                }
+                return GaranziaDetailsScreen(
+                  garanziaId: args as String,
+                  garanzia: snapshot.data,
+                  garanziaService: locator<GaranziaService>(),
             ),
           );
         case '/storico_cliente':
           if (args == null) throw ArgumentError('Richiesto ID cliente');
           return MaterialPageRoute(
             builder: (_) => StoricoClienteScreen(
-              clienteId: args as String,
-              cliente: locator<FirestoreService>().getCliente(args as String),
-              firestoreService: locator<FirestoreService>(),
+            builder: (_) => FutureBuilder<Cliente>(
+             future: locator<FirestoreService>().getCliente(args as String),
+             builder: (context, snapshot) {
+               if (snapshot.connectionState == ConnectionState.waiting) {
+                 return const CircularProgressIndicator();
+               }
+               return StoricoClienteScreen(
+                 clienteId: args as String,
+                 cliente: snapshot.data!,
+                 firestoreService: locator<FirestoreService>(),
+             );,
             ),
           );
         case '/impostazioni':
