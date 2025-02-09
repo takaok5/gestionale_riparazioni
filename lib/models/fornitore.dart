@@ -17,15 +17,16 @@ class Fornitore {
 
   const Fornitore({
     required this.id,
-    required this.ragioneSociale,
-    required this.partitaIva,
-    this.codiceFiscale,
+    required this.nome,
     required this.email,
     required this.telefono,
-    this.indirizzo,
-    this.pec,
-    this.codiceUnivoco,
-    this.note,
+    required this.partitaIva,
+    this.codiceFiscale = '',  // provide default values
+    required this.ragioneSociale,
+    this.indirizzo = '',
+    this.pec = '',
+    this.codiceUnivoco = '',
+    this.note = '',
     this.scontoAcquisto = 0.0,
     this.scontoVendita = 0.0,
     this.margine = 0.0,

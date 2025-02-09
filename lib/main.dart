@@ -51,7 +51,7 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => appContextService),
         ChangeNotifierProvider(
-          create: (_) => ThemeProvider(isDark: false),
+          create: (_) => ThemeProvider(isDarkMode: false),
         ),
         ChangeNotifierProvider(
           create: (_) => AuthProvider(

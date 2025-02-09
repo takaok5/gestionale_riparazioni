@@ -84,17 +84,18 @@ class FirestoreService extends BaseService {
   }
 
   // Metodo getCliente richiesto dagli errori
-  Future<Cliente?> getCliente(String id) async {
+  Future<Cliente> getCliente(String id) async {
     try {
       final doc = await _db.collection('clienti').doc(id).get();
-      if (doc.exists) {
-        return Cliente.fromMap({...doc.data()!, 'id': doc.id});
+      if (!doc.exists) {
+        throw Exception('Cliente non trovato');
       }
-      return null;
+      return Cliente.fromMap({...doc.data()!, 'id': doc.id});
     } catch (e) {
-      throw FirestoreException('Errore durante il recupero del cliente: $e');
-    }
+      print('Error getting cliente: $e');
+      throw e;
   }
+}
 
   Future<void> addRiparazione(Riparazione riparazione) async {
     final data = addMetadata(riparazione.toMap());

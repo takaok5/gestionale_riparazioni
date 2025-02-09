@@ -6,6 +6,16 @@ class GaranziaService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final NotificationService _notificationService;
 
+Future<void> addGaranzia(Garanzia garanzia) async {
+  try {
+    final doc = await _db.collection('garanzie').add(garanzia.toMap());
+    await _scheduleNotificaScadenza(garanzia.copyWith(id: doc.id));
+  } catch (e) {
+    print('Error adding garanzia: $e');
+    throw e;
+  }
+}
+
   GaranziaService(this._notificationService);
 
   Future<GaranziaInfo?> getGaranzia(String id) async {
