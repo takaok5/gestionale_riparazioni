@@ -75,6 +75,9 @@ class Riparazione extends Equatable {
   bool get isInLavorazione => stato == StatoRiparazione.inLavorazione;
   bool get isCompletata => stato == StatoRiparazione.completata;
   bool get isConsegnata => stato == StatoRiparazione.consegnata;
+  TipoDispositivo get tipo => tipoDispositivo;
+  PrioritaRiparazione get urgenza => priorita;
+  double get prezzoTotale => costoTotale ?? (prezzo + costoRicambi);
   Duration? get tempoLavorazione {
     if (dataUscita == null) return null;
     return dataUscita!.difference(dataIngresso);
@@ -119,9 +122,8 @@ class Riparazione extends Equatable {
   Map<String, dynamic> toMap() {
     return {
       'clienteId': clienteId,
-      'tipoDispositivo': tipoDispositivo.name, // Aggiornato
-      'tipoRiparazione': tipoRiparazione.name, // Aggiunto
-      'tipoIntervento': tipoIntervento.toString(),
+      'tipoDispositivo': tipoDispositivo.name,
+      'tipoRiparazione': tipoRiparazione.name,
       'modelloDispositivo': modelloDispositivo,
       'descrizione': descrizione,
       'diagnosi': diagnosi,
@@ -222,7 +224,8 @@ class Riparazione extends Equatable {
   Riparazione copyWith({
     String? id,
     String? clienteId,
-    TipoRiparazione? tipo,
+    TipoDispositivo? tipoDispositivo,
+    TipoRiparazione? tipoRiparazione,
     String? modelloDispositivo,
     String? descrizione,
     String? diagnosi,
@@ -242,11 +245,17 @@ class Riparazione extends Equatable {
     Map<String, dynamic>? metadati,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? dispositivo,
+    DateTime? dataApertura,
+    DateTime? dataChiusura,
+    String? tecnicoId,
+    double? costoTotale,
   }) {
     return Riparazione(
       id: id ?? this.id,
       clienteId: clienteId ?? this.clienteId,
-      tipo: tipo ?? this.tipo,
+      tipoDispositivo: tipoDispositivo ?? this.tipoDispositivo,
+      tipoRiparazione: tipoRiparazione ?? this.tipoRiparazione,
       modelloDispositivo: modelloDispositivo ?? this.modelloDispositivo,
       descrizione: descrizione ?? this.descrizione,
       diagnosi: diagnosi ?? this.diagnosi,
@@ -263,11 +272,14 @@ class Riparazione extends Equatable {
       note: note ?? this.note,
       inGaranzia: inGaranzia ?? this.inGaranzia,
       numeroSeriale: numeroSeriale ?? this.numeroSeriale,
-      metadati: metadati != null
-          ? Map.from(metadati)
-          : this.metadati?.map((k, v) => MapEntry(k, v)),
+      metadati: metadati ?? Map.from(this.metadati ?? {}),
       createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? DateTime.now(),
+      updatedAt: updatedAt ?? this.updatedAt,
+      dispositivo: dispositivo ?? this.dispositivo,
+      dataApertura: dataApertura ?? this.dataApertura,
+      dataChiusura: dataChiusura ?? this.dataChiusura,
+      tecnicoId: tecnicoId ?? this.tecnicoId,
+      costoTotale: costoTotale ?? this.costoTotale,
     );
   }
 

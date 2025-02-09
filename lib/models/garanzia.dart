@@ -8,6 +8,9 @@ enum StatoGaranzia { attiva, scaduta, invalidata }
 class Garanzia {
   final String id;
   final String prodotto;
+  final String riparazioneId; // Campo aggiunto
+  final String clienteId; // Campo aggiunto
+  final String dispositivo; // Campo aggiunto
   final DateTime dataInizio;
   final DateTime dataFine;
   final String? seriale;
@@ -15,10 +18,14 @@ class Garanzia {
   final StatoGaranzia stato;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final List<String> componentiCoperti; // Campo aggiunto
 
   Garanzia({
     required this.id,
     required this.prodotto,
+    required this.riparazioneId,
+    required this.clienteId,
+    required this.dispositivo,
     required this.dataInizio,
     required this.dataFine,
     this.seriale,
@@ -26,6 +33,7 @@ class Garanzia {
     required this.stato,
     required this.createdAt,
     required this.updatedAt,
+    required this.componentiCoperti,
   });
 
   bool get isActive =>
@@ -38,6 +46,9 @@ class Garanzia {
   Map<String, dynamic> toMap() {
     return {
       'prodotto': prodotto,
+      'riparazioneId': riparazioneId,
+      'clienteId': clienteId,
+      'dispositivo': dispositivo,
       'dataInizio': Timestamp.fromDate(dataInizio),
       'dataFine': Timestamp.fromDate(dataFine),
       'seriale': seriale,
@@ -45,6 +56,7 @@ class Garanzia {
       'stato': stato.toString(),
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
+      'componentiCoperti': componentiCoperti,
     };
   }
 
@@ -52,6 +64,9 @@ class Garanzia {
     return Garanzia(
       id: map['id'] ?? '',
       prodotto: map['prodotto'] ?? '',
+      riparazioneId: map['riparazioneId'] ?? '',
+      clienteId: map['clienteId'] ?? '',
+      dispositivo: map['dispositivo'] ?? '',
       dataInizio: (map['dataInizio'] as Timestamp).toDate(),
       dataFine: (map['dataFine'] as Timestamp).toDate(),
       seriale: map['seriale'],
@@ -62,12 +77,16 @@ class Garanzia {
       ),
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       updatedAt: (map['updatedAt'] as Timestamp).toDate(),
+      componentiCoperti: List<String>.from(map['componentiCoperti'] ?? []),
     );
   }
 
   Garanzia copyWith({
     String? id,
     String? prodotto,
+    String? riparazioneId,
+    String? clienteId,
+    String? dispositivo,
     DateTime? dataInizio,
     DateTime? dataFine,
     String? seriale,
@@ -75,10 +94,14 @@ class Garanzia {
     StatoGaranzia? stato,
     DateTime? createdAt,
     DateTime? updatedAt,
+    List<String>? componentiCoperti,
   }) {
     return Garanzia(
       id: id ?? this.id,
       prodotto: prodotto ?? this.prodotto,
+      riparazioneId: riparazioneId ?? this.riparazioneId,
+      clienteId: clienteId ?? this.clienteId,
+      dispositivo: dispositivo ?? this.dispositivo,
       dataInizio: dataInizio ?? this.dataInizio,
       dataFine: dataFine ?? this.dataFine,
       seriale: seriale ?? this.seriale,
@@ -86,6 +109,7 @@ class Garanzia {
       stato: stato ?? this.stato,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      componentiCoperti: componentiCoperti ?? this.componentiCoperti,
     );
   }
 }
