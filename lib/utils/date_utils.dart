@@ -1,4 +1,5 @@
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:intl/intl.dart'; // Aggiungi questa riga
 
 class DateUtils {
   static DateTime startOfDay(DateTime date) {

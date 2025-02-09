@@ -8,14 +8,39 @@ import '../services/app_context_service.dart';
 class FirestoreService extends BaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  FirestoreService(AppContextService appContext) : super(appContext);
-
   // Singleton pattern
   static final FirestoreService _instance = FirestoreService._internal();
 
   factory FirestoreService() {
     return _instance;
   }
+
+  FirestoreService._internal() {
+    // Inizializzazione del singleton se necessaria
+  }
+
+  // Utility methods
+  Map<String, dynamic> addMetadata(Map<String, dynamic> data, {bool isNew = true}) {
+    data['updatedAt'] = FieldValue.serverTimestamp();
+    if (isNew && !data.containsKey('createdAt')) {
+      data['createdAt'] = FieldValue.serverTimestamp();
+    }
+    return data;
+  }
+
+  Future<void> logOperation(String collection, String operation, String docId) async {
+    await _db.collection('logs').add({
+      'collection': collection,
+      'documentId': docId,
+      'operation': operation,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
+  @override
+  Future<void> dispose() async {
+    // Implementa la pulizia delle risorse
+  }
+}
 
   FirestoreService._internal();
 
@@ -282,4 +307,26 @@ class FirestoreService {
       'timestamp': FieldValue.serverTimestamp(),
     });
   }
+}
+enum BatchOperationType { create, update, delete }
+
+class BatchOperation {
+  final String path;
+  final BatchOperationType type;
+  final Map<String, dynamic> data;
+
+  BatchOperation({
+    required this.path,
+    required this.type,
+    this.data = const {},
+  });
+}
+
+class FirestoreException implements Exception {
+  final String message;
+
+  FirestoreException(this.message);
+
+  @override
+  String toString() => message;
 }

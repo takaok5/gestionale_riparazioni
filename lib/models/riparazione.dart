@@ -31,7 +31,7 @@ class Riparazione extends Equatable {
   final Map<String, dynamic>? metadati;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final String? dispositivo;  // Aggiungi questo campo
+  final String? dispositivo; // Aggiungi questo campo
   final DateTime? dataApertura;
   final DateTime? dataChiusura;
   final String? tecnicoId;
@@ -202,11 +202,14 @@ class Riparazione extends Equatable {
         createdAt: DateTime.parse(map['createdAt'] as String),
         updatedAt: DateTime.parse(map['updatedAt'] as String),
         dispositivo: map['dispositivo'],
-        dataApertura: map['dataApertura'] != null ? DateTime.parse(map['dataApertura']) : null,
-        dataChiusura: map['dataChiusura'] != null ? DateTime.parse(map['dataChiusura']) : null,
+        dataApertura: map['dataApertura'] != null
+            ? DateTime.parse(map['dataApertura'])
+            : null,
+        dataChiusura: map['dataChiusura'] != null
+            ? DateTime.parse(map['dataChiusura'])
+            : null,
         tecnicoId: map['tecnicoId'],
         costoTotale: map['costoTotale']?.toDouble(),
-
       );
     } catch (e) {
       throw ValidationException(

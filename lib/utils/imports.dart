@@ -59,5 +59,7 @@ export '../widgets/recent_activities.dart';
 // Utils
 export '../utils/form_validators.dart';
 export '../utils/date_formatter.dart';
+export '../utils/error_handler.dart'; // Aggiunto export per error_handler
+export '../utils/date_utils.dart';
 // Enums
 export '../models/enums.dart';

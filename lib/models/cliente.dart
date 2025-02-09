@@ -8,6 +8,10 @@ class Cliente {
   final String? note;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? codiceFiscale;
+  final String? partitaIva;
+  final String? pec;
+  final String? stato;
 
   Cliente({
     required this.id,
@@ -19,6 +23,10 @@ class Cliente {
     this.note,
     required this.createdAt,
     required this.updatedAt,
+    this.codiceFiscale,
+    this.partitaIva,
+    this.pec,
+    this.stato,
   });
 
   String get nominativo => '$nome $cognome';
@@ -57,6 +65,10 @@ class Cliente {
       'note': note,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      'codiceFiscale': codiceFiscale,
+      'partitaIva': partitaIva,
+      'pec': pec,
+      'stato': stato,
     };
   }
 
@@ -71,6 +83,10 @@ class Cliente {
       note: map['note'],
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       updatedAt: (map['updatedAt'] as Timestamp).toDate(),
+      codiceFiscale: map['codiceFiscale'],
+      partitaIva: map['partitaIva'],
+      pec: map['pec'],
+      stato: map['stato'],
     );
   }
 }

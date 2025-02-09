@@ -5,11 +5,23 @@ import '../models/movimento_magazzino.dart';
 import '../services/app_context_service.dart';
 import 'base_service.dart';
 
-class InventoryService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+class InventoryService extends BaseService {
+  final FirebaseFirestore _firestore;
+  final AppContextService _appContext;
+
   InventoryService(AppContextService appContext)
       : _firestore = FirebaseFirestore.instance,
-        super(appContext);
+        _appContext = appContext,
+        super('ricambi');
+  @override
+  Future<void> initialize() async {
+    // Implementazione dell'inizializzazione
+  }
+
+  @override
+  Future<void> dispose() async {
+    // Implementazione della pulizia
+  }
 
   // Ricambi
   Stream<List<Ricambio>> getRicambi() {
@@ -75,9 +87,18 @@ class InventoryService {
     final ricambi = await _firestore.collection('ricambi').get();
     return ricambi.docs.fold<double>(
       0,
-      (sum, doc) {
-        final ricambio = Ricambio.fromMap({...doc.data(), 'id': doc.id});
-        return sum + (ricambio.prezzo * ricambio.quantita);
+      (double sum, doc) {
+        final ricambio = Ricambio.fromMap(
+          {...doc.data(), 'id': doc.id},
+          categoria: Categoria(
+            id: '',
+            nome: '',
+            descrizione: null,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+        return sum + (ricambio.prezzoAcquisto * ricambio.quantita);
       },
     );
   }
