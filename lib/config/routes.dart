@@ -46,7 +46,7 @@ class RouteGenerator {
         case '/kanban':
           return MaterialPageRoute(
             builder: (_) => KanbanRiparazioniScreen(
-              firestoreService: locator<FirestoreService>(),
+              firestoreService: locator.get<FirestoreService>(),
             ),
           );
 
@@ -74,7 +74,8 @@ class RouteGenerator {
           if (args == null) throw ArgumentError('Richiesto ID garanzia');
           return MaterialPageRoute(
             builder: (_) => FutureBuilder<GaranziaInfo?>(
-              future: locator<GaranziaService>().getGaranzia(args as String),
+              future:
+                  locator.get<GaranziaService>().getGaranzia(args as String),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const CircularProgressIndicator();
@@ -82,7 +83,7 @@ class RouteGenerator {
                 return GaranziaDetailsScreen(
                   garanziaId: args as String,
                   garanzia: snapshot.data,
-                  garanziaService: locator<GaranziaService>(),
+                  garanziaService: locator.get<GaranziaService>(),
                 );
               },
             ),
@@ -92,7 +93,8 @@ class RouteGenerator {
           if (args == null) throw ArgumentError('Richiesto ID cliente');
           return MaterialPageRoute(
             builder: (_) => FutureBuilder<Cliente>(
-              future: locator<FirestoreService>().getCliente(args as String),
+              future:
+                  locator.get<FirestoreService>().getCliente(args as String),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const CircularProgressIndicator();
@@ -100,7 +102,7 @@ class RouteGenerator {
                 return StoricoClienteScreen(
                   clienteId: args as String,
                   cliente: snapshot.data!,
-                  firestoreService: locator<FirestoreService>(),
+                  firestoreService: locator.get<FirestoreService>(),
                 );
               },
             ),

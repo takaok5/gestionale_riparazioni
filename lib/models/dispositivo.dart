@@ -22,6 +22,7 @@ class Dispositivo extends BaseModel {
   final DateTime? ultimaRiparazione;
   final String? note;
   final Garanzia? garanzia;
+  final GaranziaInfo? garanziaInfo;
   final List<String>? fotoProdotto;
 
   const Dispositivo({
@@ -40,6 +41,7 @@ class Dispositivo extends BaseModel {
     this.ultimaRiparazione,
     this.note,
     this.garanzia,
+    this.garanziaInfo,
     this.fotoProdotto,
     required DateTime createdAt,
     required DateTime updatedAt,

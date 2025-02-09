@@ -26,6 +26,18 @@ enum StatoDispositivo {
         return 'Consegnato';
       case StatoDispositivo.annullato:
         return 'Annullato';
+      case StatoDispositivo.nuovo:
+        return 'Nuovo';
+      case StatoDispositivo.usato:
+        return 'Usato';
+      case StatoDispositivo.funzionante:
+        return 'Funzionante';
+      case StatoDispositivo.danneggiato:
+        return 'Danneggiato';
+      case StatoDispositivo.riparato:
+        return 'Riparato';
+      case StatoDispositivo.nonRiparabile:
+        return 'Non Riparabile';
     }
   }
 }

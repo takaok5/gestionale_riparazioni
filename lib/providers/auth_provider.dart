@@ -1,14 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/firestore_service.dart';
 
 class AuthProvider with ChangeNotifier {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirestoreService _firestoreService;
 
   AuthProvider({required FirestoreService firestoreService})
       : _firestoreService = firestoreService;
-      notifyListeners();
-    });
-  }
 
   Future<void> signIn(String email, String password) async {
     try {
@@ -28,4 +27,6 @@ class AuthProvider with ChangeNotifier {
       rethrow;
     }
   }
+
+  bool get isAuthenticated => _auth.currentUser != null;
 }
