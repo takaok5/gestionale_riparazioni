@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../enums/enums.dart';
+import '../utils/date_utils.dart' show AppDateUtils;
 
 extension TipoMovimentoExtension on TipoMovimento {
   IconData get icon {
@@ -48,6 +49,10 @@ class MovimentoMagazzino {
     required this.createdAt,
   });
 
+  // Nuovi getter per la formattazione delle date
+  String get dataCreazione => AppDateUtils.formatDateTime(createdAt);
+  String get dataCreazioneRelativa => AppDateUtils.timeAgo(createdAt);
+
   Map<String, dynamic> toMap() {
     return {
       'ricambioId': ricambioId,
@@ -55,7 +60,7 @@ class MovimentoMagazzino {
       'quantita': quantita,
       'nota': nota,
       'operatoreId': operatoreId,
-      'createdAt': createdAt.toIso8601String(),
+      'createdAt': AppDateUtils.toISOString(createdAt),
     };
   }
 
@@ -69,7 +74,7 @@ class MovimentoMagazzino {
       quantita: map['quantita'],
       nota: map['nota'],
       operatoreId: map['operatoreId'],
-      createdAt: DateTime.parse(map['createdAt']),
+      createdAt: AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
     );
   }
 }

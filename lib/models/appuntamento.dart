@@ -3,7 +3,7 @@ import 'package:meta/meta.dart';
 import './base_model.dart';
 import './contatto.dart';
 import './cliente.dart';
-import '../utils/date_formatter.dart';
+import '../utils/date_utils.dart' show AppDateUtils;
 import '../enums/enums.dart';
 
 @immutable
@@ -60,14 +60,17 @@ class Appuntamento extends BaseModel {
   bool get isInCorso => stato == StatoAppuntamento.inCorso;
   bool get isConfermato => stato == StatoAppuntamento.confermato;
 
+  // Getters per la formattazione delle date
+  String get dataOraFormatted => AppDateUtils.formatDateTime(dataOra);
+  String get dataFormatted => AppDateUtils.formatDate(dataOra);
+  String get oraFormatted => AppDateUtils.formatTime(dataOra);
+
   factory Appuntamento.fromMap(Map<String, dynamic> map) {
     return Appuntamento(
       id: map['id'] as String,
       clienteId: map['clienteId'] as String,
       riparazioneId: map['riparazioneId'] as String?,
-      dataOra: map['dataOra'] is DateTime
-          ? map['dataOra']
-          : DateTime.parse(map['dataOra'] as String),
+      dataOra: AppDateUtils.parseISOString(map['dataOra']) ?? DateTime.now(),
       descrizione: map['descrizione'] as String,
       stato: StatoAppuntamento.values.firstWhere(
         (e) => e.toString().split('.').last == map['stato'],
@@ -85,12 +88,8 @@ class Appuntamento extends BaseModel {
       cliente: map['cliente'] != null
           ? Cliente.fromMap(map['cliente'] as Map<String, dynamic>)
           : null,
-      createdAt: map['createdAt'] is DateTime
-          ? map['createdAt']
-          : DateTime.parse(map['createdAt'] as String),
-      updatedAt: map['updatedAt'] is DateTime
-          ? map['updatedAt']
-          : DateTime.parse(map['updatedAt'] as String),
+      createdAt: AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
+      updatedAt: AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
     );
   }
 
@@ -100,7 +99,7 @@ class Appuntamento extends BaseModel {
       ...super.toMap(),
       'clienteId': clienteId,
       'riparazioneId': riparazioneId,
-      'dataOra': dataOra.toIso8601String(),
+      'dataOra': AppDateUtils.toISOString(dataOra),
       'descrizione': descrizione,
       'stato': stato.toString().split('.').last,
       'tipo': tipo.toString().split('.').last,
@@ -157,7 +156,7 @@ class Appuntamento extends BaseModel {
     if (descrizione.isEmpty) {
       throw Exception('La descrizione non può essere vuota');
     }
-    if (dataOra.isBefore(DateTime.now())) {
+    if (AppDateUtils.isPast(dataOra)) {
       throw Exception('La data dell\'appuntamento non può essere nel passato');
     }
     if (_cliente != null && !_cliente!.attivo) {
@@ -171,12 +170,14 @@ class Appuntamento extends BaseModel {
       stato != StatoAppuntamento.annullato;
 
   bool get isImminente =>
-      dataOra.difference(DateTime.now()).inHours <= 24 &&
+      AppDateUtils.isWithinNextHours(dataOra, 24) &&
       stato == StatoAppuntamento.programmato;
 
   bool get richiedeConferma =>
       stato == StatoAppuntamento.programmato &&
-      dataOra.difference(DateTime.now()).inHours <= 48;
+      AppDateUtils.isWithinNextHours(dataOra, 48);
+
+  bool get isScaduto => AppDateUtils.isPast(dataOra);
 }
 
 // Form widget per la creazione/modifica degli appuntamenti
@@ -241,14 +242,14 @@ class _AppuntamentoFormState extends State<AppuntamentoForm> {
             leading: const Icon(Icons.calendar_today),
             title: Text(_selectedDate == null
                 ? 'Seleziona data'
-                : DateFormatter.formatDate(_selectedDate!)),
+                : AppDateUtils.formatDate(_selectedDate!)),
             onTap: () => _selectDate(context),
           ),
           ListTile(
             leading: const Icon(Icons.access_time),
             title: Text(_selectedTime == null
                 ? 'Seleziona ora'
-                : _selectedTime!.format(context)),
+                : AppDateUtils.formatTimeOfDay(_selectedTime!)),
             onTap: () => _selectTime(context),
           ),
           Padding(

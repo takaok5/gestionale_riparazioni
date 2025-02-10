@@ -1,4 +1,5 @@
 import '../enums/enums.dart';
+import '../utils/date_utils.dart' show AppDateUtils;
 
 class Fornitore {
   final String id;
@@ -24,7 +25,7 @@ class Fornitore {
     required this.email,
     required this.telefono,
     required this.partitaIva,
-    this.codiceFiscale = '', // provide default values
+    this.codiceFiscale = '',
     required this.ragioneSociale,
     this.indirizzo = '',
     this.pec = '',
@@ -36,6 +37,13 @@ class Fornitore {
     required this.createdAt,
     required this.updatedAt,
   });
+
+  // Getters per le date formattate
+  String get dataRegistrazione => AppDateUtils.formatDate(createdAt);
+  String get dataRegistrazioneCompleta => AppDateUtils.formatDateTime(createdAt);
+  String get ultimoAggiornamento => AppDateUtils.formatDateTime(updatedAt);
+  String get tempoTrascorsoDaRegistrazione => AppDateUtils.timeAgo(createdAt);
+  String get tempoTrascorsoDaAggiornamento => AppDateUtils.timeAgo(updatedAt);
 
   Map<String, dynamic> toMap() {
     return {
@@ -51,8 +59,8 @@ class Fornitore {
       'scontoAcquisto': scontoAcquisto,
       'scontoVendita': scontoVendita,
       'margine': margine,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'createdAt': AppDateUtils.toISOString(createdAt),
+      'updatedAt': AppDateUtils.toISOString(updatedAt),
     };
   }
 
@@ -72,8 +80,47 @@ class Fornitore {
       scontoAcquisto: map['scontoAcquisto']?.toDouble() ?? 0.0,
       scontoVendita: map['scontoVendita']?.toDouble() ?? 0.0,
       margine: map['margine']?.toDouble() ?? 0.0,
-      createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: DateTime.parse(map['updatedAt']),
+      createdAt: AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
+      updatedAt: AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
+    );
+  }
+
+  // Metodo di utilità per creare una copia con modifiche
+  Fornitore copyWith({
+    String? id,
+    String? nome,
+    String? ragioneSociale,
+    String? partitaIva,
+    String? codiceFiscale,
+    String? email,
+    String? telefono,
+    String? indirizzo,
+    String? pec,
+    String? codiceUnivoco,
+    String? note,
+    double? scontoAcquisto,
+    double? scontoVendita,
+    double? margine,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Fornitore(
+      id: id ?? this.id,
+      nome: nome ?? this.nome,
+      ragioneSociale: ragioneSociale ?? this.ragioneSociale,
+      partitaIva: partitaIva ?? this.partitaIva,
+      codiceFiscale: codiceFiscale ?? this.codiceFiscale,
+      email: email ?? this.email,
+      telefono: telefono ?? this.telefono,
+      indirizzo: indirizzo ?? this.indirizzo,
+      pec: pec ?? this.pec,
+      codiceUnivoco: codiceUnivoco ?? this.codiceUnivoco,
+      note: note ?? this.note,
+      scontoAcquisto: scontoAcquisto ?? this.scontoAcquisto,
+      scontoVendita: scontoVendita ?? this.scontoVendita,
+      margine: margine ?? this.margine,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
     );
   }
 }

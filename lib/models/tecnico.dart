@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'base_model.dart';
 import '../enums/enums.dart';
+import '../utils/date_utils.dart' show AppDateUtils;
 
 class Tecnico extends BaseModel {
   final String id;
@@ -39,6 +40,13 @@ class Tecnico extends BaseModel {
     required this.updatedAt,
   });
 
+  // Getters per informazioni formattate
+  String get nominativoCompleto => '$nome $cognome';
+  String get createdAtFormatted => AppDateUtils.formatDateTime(createdAt);
+  String get updatedAtFormatted => AppDateUtils.formatDateTime(updatedAt);
+  String get ultimoAggiornamento => AppDateUtils.timeAgo(updatedAt);
+  String get dataRegistrazione => AppDateUtils.formatDate(createdAt);
+
   @override
   Map<String, dynamic> toMap() {
     return {
@@ -58,8 +66,8 @@ class Tecnico extends BaseModel {
       'numeroRiparazioni': numeroRiparazioni,
       'strumentiAssegnati': strumentiAssegnati,
       'note': note,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      'createdAt': AppDateUtils.toISOString(createdAt),
+      'updatedAt': AppDateUtils.toISOString(updatedAt),
     };
   }
 
@@ -84,8 +92,47 @@ class Tecnico extends BaseModel {
       numeroRiparazioni: map['numeroRiparazioni'] ?? 0,
       strumentiAssegnati: List<String>.from(map['strumentiAssegnati'] ?? []),
       note: map['note'],
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
+      createdAt: AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
+      updatedAt: AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
+    );
+  }
+
+  // Metodo di utilità per creare una copia con modifiche
+  Tecnico copyWith({
+    String? id,
+    String? nome,
+    String? cognome,
+    String? email,
+    String? telefono,
+    bool? attivo,
+    Map<String, bool>? disponibilita,
+    List<String>? certificazioni,
+    List<String>? competenze,
+    Map<StatoRiparazione, int>? riparazioniPerStato,
+    double? valutazioneMedia,
+    int? numeroRiparazioni,
+    List<String>? strumentiAssegnati,
+    String? note,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Tecnico(
+      id: id ?? this.id,
+      nome: nome ?? this.nome,
+      cognome: cognome ?? this.cognome,
+      email: email ?? this.email,
+      telefono: telefono ?? this.telefono,
+      attivo: attivo ?? this.attivo,
+      disponibilita: disponibilita ?? this.disponibilita,
+      certificazioni: certificazioni ?? this.certificazioni,
+      competenze: competenze ?? this.competenze,
+      riparazioniPerStato: riparazioniPerStato ?? this.riparazioniPerStato,
+      valutazioneMedia: valutazioneMedia ?? this.valutazioneMedia,
+      numeroRiparazioni: numeroRiparazioni ?? this.numeroRiparazioni,
+      strumentiAssegnati: strumentiAssegnati ?? this.strumentiAssegnati,
+      note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
     );
   }
 }
