@@ -1,4 +1,5 @@
 import 'package:meta/meta.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 @immutable
 abstract class BaseModel {
@@ -12,7 +13,13 @@ abstract class BaseModel {
     required this.updatedAt,
   });
 
-  Map<String, dynamic> toMap();
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
+    };
+  }
 
   @override
   bool operator ==(Object other) =>
