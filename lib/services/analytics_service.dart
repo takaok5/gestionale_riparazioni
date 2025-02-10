@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/riparazione.dart';
 import '../models/feedback_cliente.dart';
 import 'package:gestionale_riparazioni/utils/imports.dart';
+import 'enums/enums.dart';
 
 class AnalyticsService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;

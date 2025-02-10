@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/riparazione.dart';
 import '../utils/validators.dart';
-import '../models/stato_riparazione.dart'; // Aggiunto l'import mancante
+import 'enums/enums.dart';
 
 class StatisticsService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

@@ -1,8 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/ordine.dart';
 import '../models/fornitore.dart';
-import '../models/enums.dart';
-import '../models/ordine_ricambi.dart';
+import 'enums/enums.dart';
 
 class OrdiniService {
   final FirebaseFirestore _db;

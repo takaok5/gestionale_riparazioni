@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import '../utils/imports.dart';
+import '../utils/date_formatter.dart';
 import 'enums/enums.dart';
 import 'dispositivo.dart';
 import 'cliente.dart';
@@ -7,13 +9,26 @@ import 'tecnico.dart';
 import 'ricambio.dart';
 import 'base_model.dart';
 
-class Riparazione extends BaseModel {
+// Base class for common repair properties
+abstract class BaseRiparazione extends BaseModel {
   final String id;
+  final String descrizione;
+  final DateTime dataIngresso;
+  final double? costoFinale;
+
+  const BaseRiparazione({
+    required this.id,
+    required this.descrizione,
+    required this.dataIngresso,
+    this.costoFinale,
+  });
+}
+
+// Main repair model
+class Riparazione extends BaseRiparazione {
   final Cliente cliente;
   final Dispositivo dispositivo;
-  final String descrizioneProblema;
   final String? noteInterne;
-  final DateTime dataRicezione;
   final DateTime? dataCompletamento;
   final DateTime? dataConsegna;
   final StatoRiparazione stato;
@@ -21,7 +36,6 @@ class Riparazione extends BaseModel {
   final PrioritaRiparazione priorita;
   final Tecnico? tecnicoAssegnato;
   final double? preventivo;
-  final double? costoFinale;
   final List<Ricambio>? ricambiUtilizzati;
   final bool inGaranzia;
   final String? numeroGaranzia;
@@ -29,12 +43,12 @@ class Riparazione extends BaseModel {
   final DateTime updatedAt;
 
   const Riparazione({
-    required this.id,
+    required super.id,
     required this.cliente,
     required this.dispositivo,
-    required this.descrizioneProblema,
+    required String descrizioneProblema, // passed to super.descrizione
+    required DateTime dataRicezione, // passed to super.dataIngresso
     this.noteInterne,
-    required this.dataRicezione,
     this.dataCompletamento,
     this.dataConsegna,
     required this.stato,
@@ -42,18 +56,26 @@ class Riparazione extends BaseModel {
     required this.priorita,
     this.tecnicoAssegnato,
     this.preventivo,
-    this.costoFinale,
+    super.costoFinale,
     this.ricambiUtilizzati,
     required this.inGaranzia,
     this.numeroGaranzia,
     required this.createdAt,
     required this.updatedAt,
-  });
+  }) : super(
+          descrizione: descrizioneProblema,
+          dataIngresso: dataRicezione,
+        );
+
+  // Getters for common properties
   String get tipo => tipoRiparazione.toString().split('.').last;
-  String get descrizione => descrizioneProblema;
-  DateTime get dataIngresso => dataRicezione;
   DateTime? get appuntamento => dataCompletamento;
   double get prezzo => preventivo ?? 0.0;
+  double get costoRicambi => ricambiUtilizzati?.fold(
+        0.0,
+        (sum, ricambio) => sum + (ricambio.prezzo ?? 0),
+      ) ?? 0.0;
+  double get costoManodopera => (costoFinale ?? 0.0) - costoRicambi;
 
   @override
   Map<String, dynamic> toMap() {
@@ -61,9 +83,9 @@ class Riparazione extends BaseModel {
       'id': id,
       'clienteId': cliente.id,
       'dispositivo': dispositivo.toMap(),
-      'descrizioneProblema': descrizioneProblema,
+      'descrizioneProblema': descrizione,
       'noteInterne': noteInterne,
-      'dataRicezione': Timestamp.fromDate(dataRicezione),
+      'dataRicezione': Timestamp.fromDate(dataIngresso),
       'dataCompletamento': dataCompletamento != null
           ? Timestamp.fromDate(dataCompletamento!)
           : null,
@@ -126,6 +148,26 @@ class Riparazione extends BaseModel {
     );
   }
 
+  // Convert to archived repair
+  RiparazioneArchiviata toArchiviata() {
+    return RiparazioneArchiviata(
+      id: id,
+      clienteId: cliente.id,
+      dispositivo: dispositivo.toString(),
+      problema: descrizione,
+      dataIngresso: dataIngresso,
+      dataUscita: dataConsegna ?? DateTime.now(),
+      costoRicambi: costoRicambi,
+      costoManodopera: costoManodopera,
+      totalePattuito: costoFinale ?? 0.0,
+      note: noteInterne,
+      dettagliRicambi: {
+        for (var ricambio in (ricambiUtilizzati ?? []))
+          ricambio.id: ricambio.toMap(),
+      },
+    );
+  }
+
   Riparazione copyWith({
     String? id,
     Cliente? cliente,
@@ -151,9 +193,9 @@ class Riparazione extends BaseModel {
       id: id ?? this.id,
       cliente: cliente ?? this.cliente,
       dispositivo: dispositivo ?? this.dispositivo,
-      descrizioneProblema: descrizioneProblema ?? this.descrizioneProblema,
+      descrizioneProblema: descrizioneProblema ?? this.descrizione,
       noteInterne: noteInterne ?? this.noteInterne,
-      dataRicezione: dataRicezione ?? this.dataRicezione,
+      dataRicezione: dataRicezione ?? this.dataIngresso,
       dataCompletamento: dataCompletamento ?? this.dataCompletamento,
       dataConsegna: dataConsegna ?? this.dataConsegna,
       stato: stato ?? this.stato,
@@ -167,6 +209,161 @@ class Riparazione extends BaseModel {
       numeroGaranzia: numeroGaranzia ?? this.numeroGaranzia,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+}
+
+// Archived repair model
+class RiparazioneArchiviata extends BaseRiparazione {
+  final String clienteId;
+  final DateTime dataUscita;
+  final double costoRicambi;
+  final double costoManodopera;
+  final double totalePattuito;
+  final String? note;
+  final Map<String, dynamic>? dettagliRicambi;
+
+  RiparazioneArchiviata({
+    required super.id,
+    required this.clienteId,
+    required String dispositivo,
+    required String problema,
+    required super.dataIngresso,
+    required this.dataUscita,
+    required this.costoRicambi,
+    required this.costoManodopera,
+    required this.totalePattuito,
+    this.note,
+    this.dettagliRicambi,
+  }) : super(
+          descrizione: problema,
+          costoFinale: totalePattuito,
+        );
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'clienteId': clienteId,
+      'dispositivo': descrizione,
+      'problema': descrizione,
+      'dataIngresso': dataIngresso.toIso8601String(),
+      'dataUscita': dataUscita.toIso8601String(),
+      'costoRicambi': costoRicambi,
+      'costoManodopera': costoManodopera,
+      'totalePattuito': totalePattuito,
+      'note': note,
+      'dettagliRicambi': dettagliRicambi,
+    };
+  }
+
+  factory RiparazioneArchiviata.fromMap(Map<String, dynamic> map) {
+    return RiparazioneArchiviata(
+      id: map['id'] ?? '',
+      clienteId: map['clienteId'] ?? '',
+      dispositivo: map['dispositivo'] ?? '',
+      problema: map['problema'] ?? '',
+      dataIngresso: DateTime.parse(map['dataIngresso']),
+      dataUscita: DateTime.parse(map['dataUscita']),
+      costoRicambi: map['costoRicambi']?.toDouble() ?? 0.0,
+      costoManodopera: map['costoManodopera']?.toDouble() ?? 0.0,
+      totalePattuito: map['totalePattuito']?.toDouble() ?? 0.0,
+      note: map['note'],
+      dettagliRicambi: map['dettagliRicambi'],
+    );
+  }
+}
+
+// Widget for displaying repair information
+class RiparazioneCard extends StatelessWidget {
+  final Riparazione riparazione;
+  final VoidCallback onTap;
+
+  const RiparazioneCard({
+    Key? key,
+    required this.riparazione,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    riparazione.tipo,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: riparazione.stato.color.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      riparazione.stato.display,
+                      style: TextStyle(
+                        color: riparazione.stato.color,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                riparazione.descrizione,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              if (riparazione.appuntamento != null) ...[
+                Text(
+                  'Appuntamento: ${DateFormatter.formatDateTime(riparazione.appuntamento!)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Ingresso: ${DateFormatter.formatDate(riparazione.dataIngresso)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  if (riparazione.prezzo > 0)
+                    Text(
+                      '€ ${riparazione.costoFinale?.toStringAsFixed(2) ?? '-'}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
