@@ -10,11 +10,19 @@ import '../models/enums.dart';
 class OrdiniScreen extends GetView<OrdiniController> {
   const OrdiniScreen({Key? key}) : super(key: key);
 
+  // Questo metodo statico garantisce che il controller sia inizializzato
+  // prima che il widget venga costruito
+  static void initDependencies() {
+    Get.lazyPut<OrdiniController>(
+      () => OrdiniController(),
+      fenix: true, // Mantiene il controller in memoria
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Inizializza il controller
-    Get.put(OrdiniController());
-
+    // Non è più necessario inizializzare qui il controller
+    // poiché viene fatto attraverso initDependencies
     return DefaultTabController(
       length: 2,
       child: Scaffold(

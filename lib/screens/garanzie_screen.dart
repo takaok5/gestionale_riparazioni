@@ -7,11 +7,16 @@ import '../widgets/garanzia_form.dart';
 class GaranzieScreen extends GetView<GaranzieController> {
   const GaranzieScreen({Key? key}) : super(key: key);
 
+  // Metodo statico per l'inizializzazione delle dipendenze
+  static void initDependencies() {
+    Get.lazyPut<GaranzieController>(
+      () => GaranzieController(),
+      fenix: true, // Mantiene il controller in memoria
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Inizializza il controller
-    Get.put(GaranzieController());
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gestione Garanzie'),
@@ -316,9 +321,8 @@ class GaranzieScreen extends GetView<GaranzieController> {
   }
 
   void _showGaranziaOptions(BuildContext context, Garanzia garanzia) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
+    Get.bottomSheet(
+      SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -326,7 +330,7 @@ class GaranzieScreen extends GetView<GaranzieController> {
               leading: const Icon(Icons.edit),
               title: const Text('Modifica Note'),
               onTap: () {
-                Navigator.pop(context);
+                Get.back();
                 _showEditNoteDialog(context, garanzia);
               },
             ),
@@ -334,7 +338,7 @@ class GaranzieScreen extends GetView<GaranzieController> {
               leading: const Icon(Icons.cancel),
               title: const Text('Invalida Garanzia'),
               onTap: () {
-                Navigator.pop(context);
+                Get.back();
                 _showInvalidaGaranziaDialog(context, garanzia);
               },
             ),
@@ -342,22 +346,24 @@ class GaranzieScreen extends GetView<GaranzieController> {
               leading: const Icon(Icons.print),
               title: const Text('Stampa Certificato'),
               onTap: () {
-                Navigator.pop(context);
+                Get.back();
                 controller.stampaCertificatoGaranzia(garanzia);
               },
             ),
           ],
         ),
       ),
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
     );
   }
 
   void _showEditNoteDialog(BuildContext context, Garanzia garanzia) {
-    final TextEditingController noteController =
-        TextEditingController(text: garanzia.note);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
+    final noteController = TextEditingController(text: garanzia.note);
+    Get.dialog(
+      AlertDialog(
         title: const Text('Modifica Note'),
         content: TextField(
           controller: noteController,
@@ -369,12 +375,12 @@ class GaranzieScreen extends GetView<GaranzieController> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Get.back(),
             child: const Text('Annulla'),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Get.back();
               controller.updateNote(garanzia.id, noteController.text);
             },
             child: const Text('Salva'),
@@ -385,10 +391,9 @@ class GaranzieScreen extends GetView<GaranzieController> {
   }
 
   void _showInvalidaGaranziaDialog(BuildContext context, Garanzia garanzia) {
-    final TextEditingController motivazioneController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
+    final motivazioneController = TextEditingController();
+    Get.dialog(
+      AlertDialog(
         title: const Text('Invalida Garanzia'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -407,7 +412,7 @@ class GaranzieScreen extends GetView<GaranzieController> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Get.back(),
             child: const Text('Annulla'),
           ),
           TextButton(
@@ -420,7 +425,7 @@ class GaranzieScreen extends GetView<GaranzieController> {
                 );
                 return;
               }
-              Navigator.pop(context);
+              Get.back();
               controller.invalidaGaranzia(
                 garanzia.id,
                 motivazioneController.text,
@@ -434,12 +439,11 @@ class GaranzieScreen extends GetView<GaranzieController> {
   }
 
   void _showNuovaGaranziaDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
+    Get.dialog(
+      Dialog(
         child: GaranziaForm(
           onSubmit: (garanzia) {
-            Navigator.pop(context);
+            Get.back();
             controller.registraGaranzia(garanzia);
           },
         ),
