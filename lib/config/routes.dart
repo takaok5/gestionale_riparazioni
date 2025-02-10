@@ -48,7 +48,10 @@ class RouteGenerator {
       switch (settings.name) {
         case home:
           return MaterialPageRoute(
-            builder: (_) => const HomePage(),
+ builder: (_) => const HomeScreen(
+  authService: locator.get<AuthService>(),
+  contabilitaService: locator.get<ContabilitaService>(),
+),
           );
 
         case kanban:
