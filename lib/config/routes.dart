@@ -36,21 +36,8 @@ class RouteGenerator {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final args = settings.arguments;
     final authProvider = locator<AuthProvider>();
-    final Map<String, WidgetBuilder> routes = {
-  '/': (context) => const HomePage(),
-
-
-    );
-  }    
-}
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
-      body: const Center(child: Text('Benvenuto!')),
 
     if (settings.name != login && !authProvider.isAuthenticated) {
-      // Remove the firestoreService parameter since it's not defined in LoginScreen
       return MaterialPageRoute(
         builder: (_) => const LoginScreen(),
         settings: const RouteSettings(name: login),
@@ -59,29 +46,34 @@ class RouteGenerator {
 
     try {
       switch (settings.name) {
-        case '/kanban':
+        case home:
+          return MaterialPageRoute(
+            builder: (_) => const HomePage(),
+          );
+
+        case kanban:
           return MaterialPageRoute(
             builder: (_) => KanbanRiparazioniScreen(
               firestoreService: locator.get<FirestoreService>(),
             ),
           );
 
-        case '/riparazioni':
+        case riparazioni:
           return MaterialPageRoute(
             builder: (_) => const RiparazioniScreen(),
           );
 
-        case '/magazzino':
+        case gestioneMagazzino:
           return MaterialPageRoute(
             builder: (_) => const GestioneMagazzinoScreen(),
           );
 
-        case '/ordini':
+        case ordini:
           return MaterialPageRoute(
             builder: (_) => const OrdiniScreen(),
           );
 
-        case '/garanzie':
+        case garanzie:
           return MaterialPageRoute(
             builder: (_) => const GaranzieScreen(),
           );
@@ -105,7 +97,7 @@ class RouteGenerator {
             ),
           );
 
-        case '/storico_cliente':
+        case storicoCliente:
           if (args == null) throw ArgumentError('Richiesto ID cliente');
           return MaterialPageRoute(
             builder: (_) => FutureBuilder<Cliente>(
@@ -124,7 +116,7 @@ class RouteGenerator {
             ),
           );
 
-        case '/impostazioni':
+        case impostazioni:
           return MaterialPageRoute(
             builder: (_) => const ImpostazioniScreen(),
           );
