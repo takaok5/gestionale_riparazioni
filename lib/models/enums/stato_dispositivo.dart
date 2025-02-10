@@ -1,19 +1,30 @@
-enum StatoAccessorio {
-  presente,
-  assente,
+enum StatoDispositivo {
+  nuovo,
+  usato,
   danneggiato,
-  sostituito;
+  nonFunzionante,
+  inRiparazione,
+  riparato,
+  daSmaltire
+}
 
+extension StatoDispositivoExtension on StatoDispositivo {
   String get label {
     switch (this) {
-      case StatoAccessorio.presente:
-        return 'Presente';
-      case StatoAccessorio.assente:
-        return 'Assente';
-      case StatoAccessorio.danneggiato:
+      case StatoDispositivo.nuovo:
+        return 'Nuovo';
+      case StatoDispositivo.usato:
+        return 'Usato';
+      case StatoDispositivo.danneggiato:
         return 'Danneggiato';
-      case StatoAccessorio.sostituito:
-        return 'Sostituito';
+      case StatoDispositivo.nonFunzionante:
+        return 'Non Funzionante';
+      case StatoDispositivo.inRiparazione:
+        return 'In Riparazione';
+      case StatoDispositivo.riparato:
+        return 'Riparato';
+      case StatoDispositivo.daSmaltire:
+        return 'Da Smaltire';
     }
   }
 }
