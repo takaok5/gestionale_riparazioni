@@ -461,6 +461,56 @@ enum TipoDispositivo {
   }
 }
 
+// Aggiungi questi enum
+enum StatoAppuntamento {
+  programmato,
+  confermato,
+  inCorso,
+  completato,
+  annullato,
+  nonPresentato;
+
+  String get label {
+    switch (this) {
+      case StatoAppuntamento.programmato:
+        return 'Programmato';
+      case StatoAppuntamento.confermato:
+        return 'Confermato';
+      case StatoAppuntamento.inCorso:
+        return 'In Corso';
+      case StatoAppuntamento.completato:
+        return 'Completato';
+      case StatoAppuntamento.annullato:
+        return 'Annullato';
+      case StatoAppuntamento.nonPresentato:
+        return 'Non Presentato';
+    }
+  }
+}
+
+enum TipoAppuntamento {
+  generico,
+  riparazione,
+  consulenza,
+  sopralluogo,
+  consegna;
+
+  String get label {
+    switch (this) {
+      case TipoAppuntamento.generico:
+        return 'Generico';
+      case TipoAppuntamento.riparazione:
+        return 'Riparazione';
+      case TipoAppuntamento.consulenza:
+        return 'Consulenza';
+      case TipoAppuntamento.sopralluogo:
+        return 'Sopralluogo';
+      case TipoAppuntamento.consegna:
+        return 'Consegna';
+    }
+  }
+}
+
 enum TipoCliente {
   privato,
   azienda,

@@ -48,7 +48,8 @@ class RouteGenerator {
       switch (settings.name) {
         case home:
           return MaterialPageRoute(
-            builder: (_) => HomeScreen(  // Removed const here
+            builder: (_) => HomeScreen(
+              // Removed const here
               authService: locator.get<AuthService>(),
               contabilitaService: locator.get<ContabilitaService>(),
             ),

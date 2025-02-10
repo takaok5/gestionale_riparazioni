@@ -3,17 +3,6 @@ import 'package:equatable/equatable.dart';
 import '../utils/exceptions.dart';
 import '../enums/enums.dart';
 
-List<Dispositivo> getDispositivi() {
-  return _dispositivi ?? [];
-}
-
-Dispositivo? getDispositivo(String id) {
-  return _dispositivi?.firstWhere(
-    (d) => d.id == id,
-    orElse: () => null,
-  );
-}
-
 class Cliente extends Equatable {
   final String id;
   final String nome;

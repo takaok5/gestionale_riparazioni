@@ -151,7 +151,8 @@ class OrdiniController extends GetxController {
         orElse: () => throw OrdineError.notFound(ordineId),
       );
 
-      if (ordine.stato != StatoOrdine.inAttesa) {  // Aggiornato per usare lo stato corretto
+      if (ordine.stato != StatoOrdine.inAttesa) {
+        // Aggiornato per usare lo stato corretto
         throw OrdineError.invalidOperation(
           'Non è possibile aggiungere ricambi a un ordine non in attesa',
         );
@@ -182,7 +183,8 @@ class OrdiniController extends GetxController {
         orElse: () => throw OrdineError.notFound(ordineId),
       );
 
-      if (ordine.stato != StatoOrdine.inAttesa) {  // Aggiornato per usare lo stato corretto
+      if (ordine.stato != StatoOrdine.inAttesa) {
+        // Aggiornato per usare lo stato corretto
         throw OrdineError.invalidOperation(
           'Non è possibile rimuovere ricambi da un ordine non in attesa',
         );
