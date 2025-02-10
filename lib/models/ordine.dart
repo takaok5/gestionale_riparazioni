@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'base_model.dart';
 import 'fornitore.dart';
-import 'enums/enums.dart';
+import '../enums/enums.dart';
 
 /// Rappresenta un singolo ricambio all'interno di un ordine
 class RicambioOrdine {

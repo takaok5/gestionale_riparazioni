@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'enums/enums.dart';
-
+import '../enums/enums.dart';
 extension TipoMovimentoExtension on TipoMovimento {
   IconData get icon {
     switch (this) {

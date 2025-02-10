@@ -3,8 +3,7 @@ import 'package:meta/meta.dart';
 import './base_model.dart';
 import './indirizzo.dart';
 import '../utils/date_formatter.dart';
-import 'enums/enums.dart';
-
+import '../enums/enums.dart';
 @immutable
 class Appuntamento extends BaseModel {
   final String clienteId;

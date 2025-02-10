@@ -1,4 +1,4 @@
-import 'enums/enums.dart';
+import '../enums/enums.dart';
 
 class Fornitore {
   final String id;

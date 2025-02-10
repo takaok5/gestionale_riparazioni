@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../enums/enums.dart';
 
 @immutable
 abstract class BaseModel {

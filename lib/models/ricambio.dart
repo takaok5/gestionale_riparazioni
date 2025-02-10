@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../models/categoria.dart';
 import 'package:flutter/material.dart';
 import './categoria.dart';
-import 'enums/enums.dart';
+import '../enums/enums.dart';
 
 class Ricambio {
   final String id;

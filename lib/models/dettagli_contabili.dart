@@ -1,5 +1,5 @@
 import 'package:meta/meta.dart';
-import 'enums/enums.dart';
+import '../enums/enums.dart';
 
 @immutable
 class DettagliContabili {

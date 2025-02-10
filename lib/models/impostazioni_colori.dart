@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../enums/enums.dart';
 
 class ImpostazioniColori {
   final Color colorePrimario;

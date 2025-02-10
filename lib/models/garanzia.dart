@@ -1,7 +1,7 @@
 import 'package:meta/meta.dart';
 import './base_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'enums\enums.dart';
+import '../enums/enums.dart';
 
 /// Classe base per tutte le garanzie
 @immutable

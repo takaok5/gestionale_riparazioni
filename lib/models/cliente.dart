@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 import '../utils/exceptions.dart';
-import 'enums/enums.dart';
+import '../enums/enums.dart';
 
 List<Dispositivo> getDispositivi() {
   return _dispositivi ?? [];

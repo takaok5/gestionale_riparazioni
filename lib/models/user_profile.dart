@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../utils/exceptions.dart';
-import 'enums/enums.dart';
+import '../enums/enums.dart';
 
 class UserProfile extends Equatable {
   final String id;

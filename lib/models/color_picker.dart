@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import '../enums/enums.dart';
 
 class ColorPickerWidget extends StatelessWidget {
   final Color currentColor;

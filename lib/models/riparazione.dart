@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../utils/imports.dart';
 import '../utils/date_formatter.dart';
-import 'enums/enums.dart';
+import '../enums/enums.dart';
 import 'dispositivo.dart';
 import 'cliente.dart';
 import 'tecnico.dart';
