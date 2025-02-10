@@ -11,6 +11,7 @@ enum StatoRiparazione {
   annullata,
   rifiutata;
 
+extension StatoRiparazioneExtension on StatoRiparazione {
   String get label {
     switch (this) {
       case StatoRiparazione.inAttesa:
@@ -146,4 +147,5 @@ enum StatoRiparazione {
         return [];
     }
   }
+ }
 }

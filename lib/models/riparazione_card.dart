@@ -80,7 +80,7 @@ class RiparazioneCard extends StatelessWidget {
                   ),
                   if (riparazione.prezzo > 0)
                     Text(
-                      '€ ${riparazione.costoFinale.toStringAsFixed(2)}',
+                      '€ ${riparazione.costoFinale?.toStringAsFixed(2) ?? '-'}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                       ),

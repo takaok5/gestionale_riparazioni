@@ -51,7 +51,13 @@ class Riparazione extends BaseModel {
     this.numeroGaranzia,
     required this.createdAt,
     required this.updatedAt,
-  });
+    String get tipo => tipoRiparazione.toString().split('.').last;
+    String get descrizione => descrizioneProblema;
+    DateTime get dataIngresso => dataRicezione;
+    DateTime? get appuntamento => dataCompletamento;
+    double get prezzo => preventivo ?? 0.0;
+}
+  );
 
   @override
   Map<String, dynamic> toMap() {
