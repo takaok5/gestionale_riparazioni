@@ -1,31 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../models/ordine.dart';
 import '../models/fornitore.dart';
-import '../services/ordini_service.dart';
+import '../controllers/ordini_controller.dart';
 import '../widgets/ordine_form.dart';
 import '../utils/validators.dart';
-import '../models/enums.dart'; // Per StatoOrdine
+import '../models/enums.dart';
 
-class OrdiniScreen extends StatefulWidget {
+class OrdiniScreen extends GetView<OrdiniController> {
   const OrdiniScreen({Key? key}) : super(key: key);
 
   @override
-  State<OrdiniScreen> createState() => _OrdiniScreenState();
-}
-
-class _OrdiniScreenState extends State<OrdiniScreen> {
-  final OrdiniService _ordiniService = OrdiniService();
-  final TextEditingController _searchController = TextEditingController();
-  StatoOrdine? _selectedStato;
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // Inizializza il controller
+    Get.put(OrdiniController());
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -61,154 +50,113 @@ class _OrdiniScreenState extends State<OrdiniScreen> {
             children: [
               Expanded(
                 child: TextField(
-                  controller: _searchController,
                   decoration: const InputDecoration(
                     labelText: 'Cerca',
                     prefixIcon: Icon(Icons.search),
                   ),
-                  onChanged: (value) => setState(() {}),
+                  onChanged: controller.setSearchQuery,
                 ),
               ),
               const SizedBox(width: 8),
-              DropdownButton<StatoOrdine>(
-                value: _selectedStato,
-                hint: const Text('Stato'),
-                items: [
-                  const DropdownMenuItem(
-                    value: null,
-                    child: Text('Tutti'),
-                  ),
-                  ...StatoOrdine.values.map(
-                    (stato) => DropdownMenuItem(
-                      value: stato,
-                      child: Text(stato.display),
-                    ),
-                  ),
-                ],
-                onChanged: (value) => setState(() => _selectedStato = value),
-              ),
+              Obx(() => DropdownButton<StatoOrdine>(
+                    value: controller.filtroStato.value,
+                    hint: const Text('Stato'),
+                    items: [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text('Tutti'),
+                      ),
+                      ...StatoOrdine.values.map(
+                        (stato) => DropdownMenuItem(
+                          value: stato,
+                          child: Text(stato.display),
+                        ),
+                      ),
+                    ],
+                    onChanged: controller.setFiltroStato,
+                  )),
             ],
           ),
         ),
         Expanded(
-          child: StreamBuilder<List<Ordine>>(
-            stream: _ordiniService.getOrdini(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
+          child: Obx(() {
+            if (controller.isLoading.value) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-              var ordini = snapshot.data!;
+            if (controller.error.value.isNotEmpty) {
+              return Center(child: Text(controller.error.value));
+            }
 
-              // Applica i filtri
-              if (_searchController.text.isNotEmpty) {
-                ordini = ordini
-                    .where((o) =>
-                        o.numeroOrdine
-                            .toLowerCase()
-                            .contains(_searchController.text.toLowerCase()) ||
-                        o.fornitore.ragioneSociale
-                            .toLowerCase()
-                            .contains(_searchController.text.toLowerCase()))
-                    .toList();
-              }
-
-              if (_selectedStato != null) {
-                ordini =
-                    ordini.where((o) => o.stato == _selectedStato).toList();
-              }
-
-              return ListView.builder(
-                itemCount: ordini.length,
-                itemBuilder: (context, index) {
-                  final ordine = ordini[index];
-                  return Card(
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: ListTile(
-                      title: Text('Ordine ${ordine.numeroOrdine}'),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Fornitore: ${ordine.fornitore.ragioneSociale}'),
-                          Text('Stato: ${ordine.stato.display}'),
-                          Text(
-                            'Data: ${Validators.formatDate(ordine.dataOrdine)}',
-                          ),
-                          Text(
-                            'Totale: €${ordine.totale.toStringAsFixed(2)}',
-                          ),
-                        ],
-                      ),
-                      trailing: PopupMenuButton<String>(
-                        onSelected: (value) =>
-                            _handleMenuSelection(value, ordine),
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'dettagli',
-                            child: Text('Dettagli'),
-                          ),
-                          const PopupMenuItem(
-                            value: 'modifica',
-                            child: Text('Modifica Stato'),
-                          ),
-                          if (ordine.stato == StatoOrdine.inAttesa)
-                            const PopupMenuItem(
-                              value: 'annulla',
-                              child: Text('Annulla'),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
+            return ListView.builder(
+              itemCount: controller.ordiniFiltered.length,
+              itemBuilder: (context, index) {
+                final ordine = controller.ordiniFiltered[index];
+                return _buildOrdineCard(context, ordine);
+              },
+            );
+          }),
         ),
       ],
     );
   }
 
-  Widget _buildStatisticheTab() {
-    return StreamBuilder<Map<String, dynamic>>(
-      stream: _ordiniService.getStatisticheOrdini(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final stats = snapshot.data!;
-        return ListView(
-          padding: const EdgeInsets.all(16),
+  Widget _buildOrdineCard(BuildContext context, Ordine ordine) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: ListTile(
+        title: Text('Ordine ${ordine.numeroOrdine}'),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildStatCard(
-              'Ordini Totali',
-              stats['totaleOrdini'].toString(),
-              Colors.blue,
-            ),
-            const SizedBox(height: 16),
-            _buildStatCard(
-              'Ordini in Attesa',
-              stats['ordiniInAttesa'].toString(),
-              Colors.orange,
-            ),
-            const SizedBox(height: 16),
-            _buildStatCard(
-              'Spesa Totale',
-              '€${stats['spesaTotale'].toStringAsFixed(2)}',
-              Colors.green,
-            ),
-            const SizedBox(height: 16),
-            _buildStatCard(
-              'Tempo Medio Consegna',
-              '${stats['tempoMedioConsegna']} giorni',
-              Colors.purple,
-            ),
+            Text('Fornitore: ${ordine.fornitore.ragioneSociale}'),
+            Text('Stato: ${ordine.stato.display}'),
+            Text('Data: ${Validators.formatDate(ordine.dataOrdine)}'),
+            Text('Totale: €${ordine.totale.toStringAsFixed(2)}'),
           ],
-        );
-      },
+        ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) => _handleMenuSelection(context, value, ordine),
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'dettagli',
+              child: Text('Dettagli'),
+            ),
+            const PopupMenuItem(
+              value: 'modifica',
+              child: Text('Modifica Stato'),
+            ),
+            if (ordine.stato == StatoOrdine.inAttesa)
+              const PopupMenuItem(
+                value: 'annulla',
+                child: Text('Annulla'),
+              ),
+          ],
+        ),
+      ),
     );
+  }
+
+  Widget _buildStatisticheTab() {
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return const Center(child: CircularProgressIndicator());
+      }
+
+      final stats = controller.statisticheOrdini;
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildStatCard('Ordini Totali', stats.totaleOrdini.toString(), Colors.blue),
+          const SizedBox(height: 16),
+          _buildStatCard('Ordini in Attesa', stats.ordiniInAttesa.toString(), Colors.orange),
+          const SizedBox(height: 16),
+          _buildStatCard('Spesa Totale', '€${stats.spesaTotale.toStringAsFixed(2)}', Colors.green),
+          const SizedBox(height: 16),
+          _buildStatCard('Tempo Medio Consegna', '${stats.tempoMedioConsegna} giorni', Colors.purple),
+        ],
+      );
+    });
   }
 
   Widget _buildStatCard(String title, String value, Color color) {
@@ -241,36 +189,101 @@ class _OrdiniScreenState extends State<OrdiniScreen> {
     );
   }
 
-  void _showNuovoOrdineDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Nuovo Ordine'),
-        content: OrdineForm(
-          onSubmit: (ordine) async {
-            Navigator.pop(context);
-            await _ordiniService.addOrdine(ordine);
-          },
-        ),
-      ),
-    );
-  }
-
-  void _handleMenuSelection(String value, Ordine ordine) {
+  void _handleMenuSelection(BuildContext context, String value, Ordine ordine) {
     switch (value) {
       case 'dettagli':
-        _showDettagliOrdine(ordine);
+        _showDettagliOrdine(context, ordine);
         break;
       case 'modifica':
-        _showModificaStatoDialog(ordine);
+        _showModificaStatoDialog(context, ordine);
         break;
       case 'annulla':
-        _annullaOrdine(ordine);
+        _showAnnullaDialog(context, ordine);
         break;
     }
   }
 
-  void _showModificaStatoDialog(Ordine ordine) {
+  void _showDettagliOrdine(BuildContext context, Ordine ordine) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Dettagli Ordine ${ordine.numeroOrdine}'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDetailSection(
+                'Informazioni Ordine',
+                [
+                  _buildDetailRow('Fornitore:', ordine.fornitore.ragioneSociale),
+                  _buildDetailRow('Stato:', ordine.stato.display),
+                  _buildDetailRow('Data:', Validators.formatDate(ordine.dataOrdine)),
+                  _buildDetailRow('Totale:', '€${ordine.totale.toStringAsFixed(2)}'),
+                  if (ordine.note.isNotEmpty) _buildDetailRow('Note:', ordine.note),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildDetailSection(
+                'Ricambi Ordinati',
+                ordine.ricambi.map((r) => ListTile(
+                  title: Text(r.nome),
+                  subtitle: Text('Quantità: ${r.quantita}'),
+                  trailing: Text('€${r.totale.toStringAsFixed(2)}'),
+                )).toList(),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Chiudi'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailSection(String title, List<Widget> children) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...children,
+      ],
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showModificaStatoDialog(BuildContext context, Ordine ordine) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -283,13 +296,10 @@ class _OrdiniScreenState extends State<OrdiniScreen> {
                     child: Text(stato.display),
                   ))
               .toList(),
-          onChanged: (newStato) async {
+          onChanged: (newStato) {
             if (newStato != null) {
               Navigator.pop(context);
-              await _ordiniService.updateStatoOrdine(
-                ordine.id,
-                newStato,
-              );
+              controller.updateStatoOrdine(ordine.id, newStato);
             }
           },
         ),
@@ -297,83 +307,41 @@ class _OrdiniScreenState extends State<OrdiniScreen> {
     );
   }
 
-  Future<void> _annullaOrdine(Ordine ordine) async {
-    final conferma = await showDialog<bool>(
+  void _showAnnullaDialog(BuildContext context, Ordine ordine) {
+    showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Conferma Annullamento'),
         content: const Text('Sei sicuro di voler annullare questo ordine?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(context),
             child: const Text('No'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () {
+              Navigator.pop(context);
+              controller.updateStatoOrdine(ordine.id, StatoOrdine.annullato);
+            },
             child: const Text('Sì'),
           ),
         ],
       ),
     );
-
-    if (conferma == true) {
-      await _ordiniService.updateStatoOrdine(
-        ordine.id,
-        StatoOrdine.annullato,
-      );
-    }
   }
-}
 
-void _showDettagliOrdine(Ordine ordine) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text('Dettagli Ordine ${ordine.numeroOrdine}'),
-      content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Fornitore: ${ordine.fornitore.ragioneSociale}'),
-            Text('Stato: ${ordine.stato.toString().split('.').last}'),
-            Text('Data: ${Validators.formatDate(ordine.dataOrdine)}'),
-            Text('Totale: €${ordine.totale.toStringAsFixed(2)}'),
-            const SizedBox(height: 16),
-            const Text('Ricambi ordinati:',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            ...ordine.ricambi
-                .map((r) => Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: Text('- ${r.nome} (${r.quantita} pz)'),
-                    ))
-                .toList(),
-          ],
+  void _showNuovoOrdineDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Nuovo Ordine'),
+        content: OrdineForm(
+          onSubmit: (ordine) {
+            Navigator.pop(context);
+            controller.createOrdine(ordine);
+          },
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Chiudi'),
-        ),
-      ],
-    ),
-  );
-}
-
-// Modifica il metodo _showNuovoOrdineDialog per includere ricambi
-void _showNuovoOrdineDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Nuovo Ordine'),
-      content: OrdineForm(
-        ricambi: [], // Fornisci una lista vuota iniziale
-        onSubmit: (ordine) async {
-          Navigator.pop(context);
-          await _ordiniService.addOrdine(ordine);
-        },
-      ),
-    ),
-  );
+    );
+  }
 }
