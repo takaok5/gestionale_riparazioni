@@ -48,7 +48,6 @@ class RouteGenerator {
         case home:
           return MaterialPageRoute(
             builder: (_) => HomeScreen(
-              // Removed const here
               authService: locator.get<AuthService>(),
               contabilitaService: locator.get<ContabilitaService>(),
             ),
@@ -77,27 +76,10 @@ class RouteGenerator {
           );
 
         case garanzie:
+          GaranzieScreen
+              .initDependencies(); // Inizializza le dipendenze prima di mostrare la schermata
           return MaterialPageRoute(
             builder: (_) => const GaranzieScreen(),
-          );
-
-        case '/garanzia_details':
-          if (args == null) throw ArgumentError('Richiesto ID garanzia');
-          return MaterialPageRoute(
-            builder: (_) => FutureBuilder<Garanzia?>(
-              future:
-                  locator.get<GaranziaService>().getGaranzia(args as String),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const CircularProgressIndicator();
-                }
-                return GaranziaDetailsScreen(
-                  garanziaId: args as String,
-                  garanzia: snapshot.data,
-                  garanziaService: locator.get<GaranziaService>(),
-                );
-              },
-            ),
           );
 
         case storicoCliente:

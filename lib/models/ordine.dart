@@ -76,6 +76,8 @@ class Ordine extends BaseModel {
   final List<RicambioOrdine> ricambi;
   final String? note;
   final String userId;
+  final bool isUrgente;
+  final String descrizione; // Add this new field
 
   Ordine({
     required String id,
@@ -90,11 +92,16 @@ class Ordine extends BaseModel {
     required this.userId,
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.isUrgente = false,
+    required this.descrizione, // Add this to constructor
   }) : super(
           id: id,
           createdAt: createdAt,
           updatedAt: updatedAt,
         );
+
+  /// Getter for number (alias for numeroOrdine)
+  String get numero => numeroOrdine;
 
   /// Calcola il totale dell'ordine
   double get totale => ricambi.fold(0, (sum, item) => sum + item.totale);
@@ -116,6 +123,8 @@ class Ordine extends BaseModel {
       'ricambi': ricambi.map((r) => r.toMap()).toList(),
       'note': note,
       'userId': userId,
+      'isUrgente': isUrgente,
+      'descrizione': descrizione, // Add this field to the map
     };
   }
 
@@ -137,6 +146,8 @@ class Ordine extends BaseModel {
       userId: map['userId'] as String,
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
+      isUrgente: map['isUrgente'] as bool? ?? false,
+      descrizione: map['descrizione'] as String, // Add this field
     );
   }
 
@@ -150,6 +161,8 @@ class Ordine extends BaseModel {
     List<RicambioOrdine>? ricambi,
     String? note,
     String? userId,
+    bool? isUrgente,
+    String? descrizione, // Add this to the copyWith parameters
   }) {
     return Ordine(
       id: id,
@@ -164,6 +177,8 @@ class Ordine extends BaseModel {
       userId: userId ?? this.userId,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
+      isUrgente: isUrgente ?? this.isUrgente,
+      descrizione: descrizione ?? this.descrizione, // Add this field
     );
   }
 }

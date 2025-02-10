@@ -21,18 +21,45 @@ import 'services/firestore_service.dart';
 import 'services/app_context_service.dart';
 import 'utils/platform_utils.dart';
 
-final settingsProvider =
-    Provider<SettingsProvider>(create: (_) => SettingsProvider());
+// Create theme instances
+final ThemeData lightTheme = ThemeData(
+  brightness: Brightness.light,
+  // Add your light theme configurations here
+);
+
+final ThemeData darkTheme = ThemeData(
+  brightness: Brightness.dark,
+  // Add your dark theme configurations here
+);
+
+class SettingsService {
+  final SharedPreferences _prefs;
+
+  SettingsService(this._prefs);
+
+  static Future<SettingsService> init(SharedPreferences prefs) async {
+    return SettingsService(prefs);
+  }
+
+  ThemeMode get themeMode =>
+      ThemeMode.system; // You can implement the actual logic here
+}
+
+final settingsProvider = ChangeNotifierProvider<SettingsProvider>(
+  create: (_) => SettingsProvider(),
+);
 
 // Add MyApp class definition
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  final SettingsService settingsService;
+
+  const MyApp({Key? key, required this.settingsService}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: lightTheme, // Define your light theme
-      darkTheme: darkTheme, // Define your dark theme
+      theme: lightTheme,
+      darkTheme: darkTheme,
       themeMode: settingsService.themeMode,
       title: 'Gestionale Riparazioni',
       onGenerateRoute: RouteGenerator.generateRoute,
@@ -47,10 +74,7 @@ void main() async {
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
   final themeProvider = ThemeProvider(prefs);
-  final settingsService =
-      await SettingsService.init(prefs); // Create proper service instance
-  final appContextService =
-      AppContextService(settingsService); // Pass service instance
+  final settingsService = await SettingsService.init(prefs);
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -69,9 +93,13 @@ void main() async {
   }
 
   final appContextService = AppContextService();
+  // Get the current user from your auth provider or service
+  final currentUser =
+      await getCurrentUser(); // Implement this function based on your auth system
+
   appContextService.updateContext(
-    date: DateTime.now(), // Add missing date parameter
-    user: currentUser, // Add missing user parameter
+    currentDate: DateTime.now(),
+    currentUser: currentUser,
   );
 
   runApp(
@@ -84,9 +112,18 @@ void main() async {
             firestoreService: locator<FirestoreService>(),
           ),
         ),
-        ChangeNotifierProvider.value(value: settingsProvider),
+        ChangeNotifierProvider<SettingsProvider>(
+          create: (_) => SettingsProvider(),
+        ),
       ],
-      child: const MyApp(),
+      child: MyApp(settingsService: settingsService),
     ),
   );
+}
+
+// Add this function to get the current user
+Future<User?> getCurrentUser() async {
+  // Implement your logic to get the current user
+  // This might involve Firebase Auth or your custom auth system
+  return null; // Replace with actual implementation
 }
