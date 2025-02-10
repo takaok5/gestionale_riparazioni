@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 enum StatoRiparazione {
   inAttesa,
   diagnostica,
@@ -9,7 +11,8 @@ enum StatoRiparazione {
   pronta,
   consegnata,
   annullata,
-  rifiutata;
+  rifiutata
+}
 
 extension StatoRiparazioneExtension on StatoRiparazione {
   String get label {
@@ -39,57 +42,57 @@ extension StatoRiparazioneExtension on StatoRiparazione {
     }
   }
 
-  String get icon {
+  IconData get icon {
     switch (this) {
       case StatoRiparazione.inAttesa:
-        return 'hourglass_empty';
+        return Icons.hourglass_empty;
       case StatoRiparazione.diagnostica:
-        return 'search';
+        return Icons.search;
       case StatoRiparazione.attesaPezzi:
-        return 'inventory';
+        return Icons.inventory;
       case StatoRiparazione.inLavorazione:
-        return 'build';
+        return Icons.build;
       case StatoRiparazione.inPausa:
-        return 'pause_circle';
+        return Icons.pause_circle;
       case StatoRiparazione.completata:
-        return 'check_circle';
+        return Icons.check_circle;
       case StatoRiparazione.daTestare:
-        return 'rule';
+        return Icons.rule;
       case StatoRiparazione.pronta:
-        return 'done_all';
+        return Icons.done_all;
       case StatoRiparazione.consegnata:
-        return 'local_shipping';
+        return Icons.local_shipping;
       case StatoRiparazione.annullata:
-        return 'cancel';
+        return Icons.cancel;
       case StatoRiparazione.rifiutata:
-        return 'block';
+        return Icons.block;
     }
   }
 
-  String get color {
+  Color get color {
     switch (this) {
       case StatoRiparazione.inAttesa:
-        return '#FFA726'; // Orange
+        return Colors.orange;
       case StatoRiparazione.diagnostica:
-        return '#42A5F5'; // Blue
+        return Colors.blue;
       case StatoRiparazione.attesaPezzi:
-        return '#EF5350'; // Red
+        return Colors.red;
       case StatoRiparazione.inLavorazione:
-        return '#AB47BC'; // Purple
+        return Colors.purple;
       case StatoRiparazione.inPausa:
-        return '#78909C'; // Blue Grey
+        return Colors.blueGrey;
       case StatoRiparazione.completata:
-        return '#66BB6A'; // Green
+        return Colors.green;
       case StatoRiparazione.daTestare:
-        return '#FDD835'; // Yellow
+        return Colors.yellow;
       case StatoRiparazione.pronta:
-        return '#26A69A'; // Teal
+        return Colors.teal;
       case StatoRiparazione.consegnata:
-        return '#9CCC65'; // Light Green
+        return Colors.lightGreen;
       case StatoRiparazione.annullata:
-        return '#E53935'; // Red
+        return Colors.red;
       case StatoRiparazione.rifiutata:
-        return '#D32F2F'; // Dark Red
+        return Colors.red[700]!;
     }
   }
 
@@ -147,5 +150,4 @@ extension StatoRiparazioneExtension on StatoRiparazione {
         return [];
     }
   }
- }
 }
