@@ -71,10 +71,12 @@ class Riparazione extends BaseRiparazione {
   String get tipo => tipoRiparazione.toString().split('.').last;
   DateTime? get appuntamento => dataCompletamento;
   double get prezzo => preventivo ?? 0.0;
-  double get costoRicambi => ricambiUtilizzati?.fold(
+  double get costoRicambi =>
+      ricambiUtilizzati?.fold(
         0.0,
         (sum, ricambio) => sum + (ricambio.prezzo ?? 0),
-      ) ?? 0.0;
+      ) ??
+      0.0;
   double get costoManodopera => (costoFinale ?? 0.0) - costoRicambi;
 
   @override

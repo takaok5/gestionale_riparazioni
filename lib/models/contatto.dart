@@ -171,7 +171,8 @@ class Contatto {
       case TipoContatto.telefono:
         return PhoneValidator.isValid(valore);
       case TipoContatto.pec:
-        return EmailValidator.isValid(valore) && valore.toLowerCase().endsWith('.pec.it');
+        return EmailValidator.isValid(valore) &&
+            valore.toLowerCase().endsWith('.pec.it');
       default:
         return valore.isNotEmpty;
     }
@@ -256,20 +257,15 @@ class PhoneFormatter {
   static String format(String phone) {
     // Remove all non-digit characters
     final digits = phone.replaceAll(RegExp(r'[^\d]'), '');
-    
+
     // Format based on length
     if (digits.length <= 10) {
       // National number
       return digits.replaceAllMapped(
-        RegExp(r'(\d{3})(\d{3})(\d+)'),
-        (m) => '${m[1]} ${m[2]} ${m[3]}'
-      );
+          RegExp(r'(\d{3})(\d{3})(\d+)'), (m) => '${m[1]} ${m[2]} ${m[3]}');
     } else {
       // International number
-      return '+${digits.substring(0, 2)} ${digits.substring(2).replaceAllMapped(
-        RegExp(r'(\d{3})(\d{3})(\d+)'),
-        (m) => '${m[1]} ${m[2]} ${m[3]}'
-      )}';
+      return '+${digits.substring(0, 2)} ${digits.substring(2).replaceAllMapped(RegExp(r'(\d{3})(\d{3})(\d+)'), (m) => '${m[1]} ${m[2]} ${m[3]}')}';
     }
   }
 }

@@ -5,13 +5,15 @@ import 'enums/enums.dart';
 /// e operazioni nel sistema, combinando le funzionalità di Activity e LogOperazione
 class ActivityLog {
   final String id;
-  final String type;           // Tipo di attività/oggetto (cliente, riparazione, preventivo, etc.)
-  final String action;         // Tipo di operazione (creazione, modifica, eliminazione, etc.)
-  final String title;          // Titolo breve dell'attività
-  final String description;    // Descrizione dettagliata
-  final String referenceId;    // ID dell'oggetto di riferimento
-  final DateTime timestamp;    // Data e ora dell'attività
-  final String userId;         // ID dell'utente che ha eseguito l'operazione
+  final String
+      type; // Tipo di attività/oggetto (cliente, riparazione, preventivo, etc.)
+  final String
+      action; // Tipo di operazione (creazione, modifica, eliminazione, etc.)
+  final String title; // Titolo breve dell'attività
+  final String description; // Descrizione dettagliata
+  final String referenceId; // ID dell'oggetto di riferimento
+  final DateTime timestamp; // Data e ora dell'attività
+  final String userId; // ID dell'utente che ha eseguito l'operazione
   final Map<String, dynamic> details; // Metadati e dettagli aggiuntivi
 
   ActivityLog({

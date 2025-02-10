@@ -3,7 +3,6 @@ import './base_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'enums\enums.dart';
 
-
 /// Classe base per tutte le garanzie
 @immutable
 class Garanzia extends BaseModel {
@@ -158,7 +157,7 @@ class GaranziaInterna extends Garanzia {
 /// Garanzia del fornitore
 class GaranziaFornitore extends Garanzia {
   final String fornitore;
-  
+
   const GaranziaFornitore({
     required String id,
     required String numero,

@@ -8,14 +8,14 @@ import 'enums/enums.dart';
 @immutable
 class Appuntamento extends BaseModel {
   final String clienteId;
-  final String? riparazioneId;  // New field to link with repairs
+  final String? riparazioneId; // New field to link with repairs
   final DateTime dataOra;
   final String descrizione;
   final StatoAppuntamento stato;
   final Indirizzo? luogoAppuntamento;
   final String? note;
   final String? tecnicoAssegnato;
-  final TipoAppuntamento tipo;  // New field to categorize appointments
+  final TipoAppuntamento tipo; // New field to categorize appointments
 
   const Appuntamento({
     required String id,
@@ -135,19 +135,20 @@ class _AppuntamentoFormState extends State<AppuntamentoForm> {
   final _descrizioneController = TextEditingController();
   final _noteController = TextEditingController();
   late TipoAppuntamento _tipo;
-  
+
   @override
   void initState() {
     super.initState();
     if (widget.initialAppuntamento != null) {
       _selectedDate = widget.initialAppuntamento!.dataOra;
-      _selectedTime = TimeOfDay.fromDateTime(widget.initialAppuntamento!.dataOra);
+      _selectedTime =
+          TimeOfDay.fromDateTime(widget.initialAppuntamento!.dataOra);
       _descrizioneController.text = widget.initialAppuntamento!.descrizione;
       _noteController.text = widget.initialAppuntamento!.note ?? '';
       _tipo = widget.initialAppuntamento!.tipo;
     } else {
-      _tipo = widget.riparazioneId != null 
-          ? TipoAppuntamento.riparazione 
+      _tipo = widget.riparazioneId != null
+          ? TipoAppuntamento.riparazione
           : TipoAppuntamento.generico;
     }
   }
@@ -286,7 +287,9 @@ class _AppuntamentoFormState extends State<AppuntamentoForm> {
   }
 
   void _submit() {
-    if (_formKey.currentState!.validate() && _selectedDate != null && _selectedTime != null) {
+    if (_formKey.currentState!.validate() &&
+        _selectedDate != null &&
+        _selectedTime != null) {
       final dateTime = DateTime(
         _selectedDate!.year,
         _selectedDate!.month,
@@ -296,7 +299,8 @@ class _AppuntamentoFormState extends State<AppuntamentoForm> {
       );
 
       final appuntamento = Appuntamento(
-        id: widget.initialAppuntamento?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        id: widget.initialAppuntamento?.id ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
         clienteId: widget.clienteId,
         riparazioneId: widget.riparazioneId,
         dataOra: dateTime,

@@ -18,7 +18,7 @@ import '../services/ordini_service.dart';
 import '../services/inventory_service.dart';
 import 'package:get_it/get_it.dart';
 import '../models/cliente.dart';
-import '../models/garanzia_info.dart';
+import '../models/garanzia.dart';
 
 class RouteGenerator {
   static final GetIt locator = GetIt.instance;
