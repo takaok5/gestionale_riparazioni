@@ -70,7 +70,9 @@ class Dispositivo extends BaseModel {
       'specificheTecniche': specificheTecniche,
       'accessoriInclusi': accessoriInclusi.map((a) => a.toMap()).toList(),
       'stato': stato.toString().split('.').last,
-      'ultimaRiparazione': ultimaRiparazione?.toIso8601String(),
+      'ultimaRiparazione': ultimaRiparazione != null 
+          ? AppDateUtils.toISOString(ultimaRiparazione!)
+          : null,
       'note': note,
       'garanzia': garanzia?.toMap(),
       'fotoProdotto': fotoProdotto,
@@ -103,7 +105,7 @@ class Dispositivo extends BaseModel {
         orElse: () => StatoDispositivo.funzionante,
       ),
       ultimaRiparazione: map['ultimaRiparazione'] != null
-          ? DateTime.parse(map['ultimaRiparazione'] as String)
+          ? AppDateUtils.parseISOString(map['ultimaRiparazione'])
           : null,
       note: map['note'] as String?,
       garanzia: map['garanzia'] != null
@@ -113,8 +115,12 @@ class Dispositivo extends BaseModel {
                   map['garanzia'] as Map<String, dynamic>)
           : null,
       fotoProdotto: List<String>.from(map['fotoProdotto'] ?? []),
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
+      createdAt: map['createdAt'] is Timestamp 
+          ? (map['createdAt'] as Timestamp).toDate()
+          : AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
+      updatedAt: map['updatedAt'] is Timestamp
+          ? (map['updatedAt'] as Timestamp).toDate()
+          : AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
     );
   }
 
@@ -168,6 +174,21 @@ class Dispositivo extends BaseModel {
   bool get hasFoto => fotoProdotto?.isNotEmpty ?? false;
   bool get isSmartphone => tipo == TipoDispositivo.smartphone;
   bool get isTablet => tipo == TipoDispositivo.tablet;
+  bool get hasUltimaRiparazioneRecente => 
+      ultimaRiparazione != null && 
+      DateTime.now().difference(ultimaRiparazione!).inDays <= 30;
+
+  String formatUltimaRiparazione() {
+    return ultimaRiparazione != null 
+        ? AppDateUtils.formatDateTime(ultimaRiparazione!)
+        : 'Nessuna riparazione';
+  }
+
+  bool isRiparatoInData(DateTime data) {
+    return ultimaRiparazione != null && 
+           AppDateUtils.isSameDay(ultimaRiparazione!, data);
+  }
+}
   bool get isComputer => tipo == TipoDispositivo.computer;
 }
 

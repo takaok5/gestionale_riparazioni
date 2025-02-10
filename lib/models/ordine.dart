@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'base_model.dart';
 import 'fornitore.dart';
 import '../enums/enums.dart';
+import '../utils/date_utils.dart' show AppDateUtils;
 
 /// Rappresenta un singolo ricambio all'interno di un ordine
 class RicambioOrdine {
@@ -77,7 +78,7 @@ class Ordine extends BaseModel {
   final String? note;
   final String userId;
   final bool isUrgente;
-  final String descrizione; // Add this new field
+  final String descrizione;
 
   Ordine({
     required String id,
@@ -93,7 +94,7 @@ class Ordine extends BaseModel {
     required DateTime createdAt,
     required DateTime updatedAt,
     this.isUrgente = false,
-    required this.descrizione, // Add this to constructor
+    required this.descrizione,
   }) : super(
           id: id,
           createdAt: createdAt,
@@ -109,6 +110,30 @@ class Ordine extends BaseModel {
   /// Restituisce l'etichetta dello stato dell'ordine
   String get statoLabel => stato.label;
 
+  /// Verifica se l'ordine è in ritardo
+  bool get isInRitardo {
+    if (dataConsegna == null) return false;
+    return AppDateUtils.isPast(dataConsegna!);
+  }
+
+  /// Verifica se l'ordine è stato consegnato oggi
+  bool get isConsegnatoOggi {
+    if (dataConsegna == null) return false;
+    return AppDateUtils.isToday(dataConsegna!);
+  }
+
+  /// Formatta la data dell'ordine
+  String get dataOrdineFormatted => AppDateUtils.formatDateTime(dataOrdine);
+
+  /// Formatta la data di consegna
+  String get dataConsegnaFormatted => 
+      dataConsegna != null ? AppDateUtils.formatDateTime(dataConsegna!) : 'Non specificata';
+
+  /// Verifica se l'ordine è stato creato negli ultimi n giorni
+  bool isCreatedInLastDays(int days) {
+    return AppDateUtils.isWithinLastDays(createdAt, days);
+  }
+
   @override
   Map<String, dynamic> toMap() {
     final baseMap = super.toMap();
@@ -117,14 +142,14 @@ class Ordine extends BaseModel {
       'numeroOrdine': numeroOrdine,
       'fornitoreId': fornitoreId,
       'fornitoreNome': fornitoreNome,
-      'dataOrdine': dataOrdine.toIso8601String(),
-      'dataConsegna': dataConsegna?.toIso8601String(),
+      'dataOrdine': AppDateUtils.toISOString(dataOrdine),
+      'dataConsegna': dataConsegna != null ? AppDateUtils.toISOString(dataConsegna!) : null,
       'stato': stato.index,
       'ricambi': ricambi.map((r) => r.toMap()).toList(),
       'note': note,
       'userId': userId,
       'isUrgente': isUrgente,
-      'descrizione': descrizione, // Add this field to the map
+      'descrizione': descrizione,
     };
   }
 
@@ -134,9 +159,9 @@ class Ordine extends BaseModel {
       numeroOrdine: map['numeroOrdine'] as String,
       fornitoreId: map['fornitoreId'] as String,
       fornitoreNome: map['fornitoreNome'] as String,
-      dataOrdine: DateTime.parse(map['dataOrdine'] as String),
+      dataOrdine: AppDateUtils.parseISOString(map['dataOrdine']) ?? DateTime.now(),
       dataConsegna: map['dataConsegna'] != null
-          ? DateTime.parse(map['dataConsegna'] as String)
+          ? AppDateUtils.parseISOString(map['dataConsegna'])
           : null,
       stato: StatoOrdine.values[map['stato'] as int],
       ricambi: (map['ricambi'] as List)
@@ -144,10 +169,10 @@ class Ordine extends BaseModel {
           .toList(),
       note: map['note'] as String?,
       userId: map['userId'] as String,
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      updatedAt: DateTime.parse(map['updatedAt'] as String),
+      createdAt: AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
+      updatedAt: AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
       isUrgente: map['isUrgente'] as bool? ?? false,
-      descrizione: map['descrizione'] as String, // Add this field
+      descrizione: map['descrizione'] as String,
     );
   }
 
@@ -162,7 +187,7 @@ class Ordine extends BaseModel {
     String? note,
     String? userId,
     bool? isUrgente,
-    String? descrizione, // Add this to the copyWith parameters
+    String? descrizione,
   }) {
     return Ordine(
       id: id,
@@ -178,7 +203,17 @@ class Ordine extends BaseModel {
       createdAt: createdAt,
       updatedAt: DateTime.now(),
       isUrgente: isUrgente ?? this.isUrgente,
-      descrizione: descrizione ?? this.descrizione, // Add this field
+      descrizione: descrizione ?? this.descrizione,
     );
+  }
+
+  /// Verifica se l'ordine può essere modificato
+  bool canBeModified() {
+    return !AppDateUtils.isPast(dataConsegna ?? DateTime.now());
+  }
+
+  /// Verifica se due date di ordine sono nello stesso giorno
+  bool isSameOrderDay(DateTime otherDate) {
+    return AppDateUtils.isSameDay(dataOrdine, otherDate);
   }
 }
