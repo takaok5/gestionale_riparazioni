@@ -1,5 +1,6 @@
 // Material Design
 export 'package:flutter/material.dart' hide TextDirection;
+
 // Firebase
 export 'package:cloud_firestore/cloud_firestore.dart';
 export 'package:firebase_auth/firebase_auth.dart';
@@ -12,26 +13,39 @@ export 'package:timeago/timeago.dart';
 export 'package:fl_chart/fl_chart.dart';
 export 'package:intl/intl.dart';
 
-// Models
+// Models - Base
+export '../models/base_model.dart';
+
+// Models - Core
 export '../models/activity.dart';
 export '../models/categoria.dart';
 export '../models/cliente.dart';
-export '../models/fornitore.dart';
-export '../models/movimento_magazzino.dart';
-export '../models/ordine.dart';
-export '../models/ricambio.dart';
-export '../models/user_profile.dart';
-export '../models/stato_riparazione.dart';
-export '../models/riparazione.dart';
-export '../models/garanzia.dart';
-export '../models/impostazioni_colori.dart';
-export '../models/ordine_ricambi.dart';
-export '../models/base_model.dart';
 export '../models/contatto.dart';
-export '../models/preventivo.dart';
-export '../models/ricambio_ordinato.dart';
 export '../models/dettagli_contabili.dart';
-export '../models/tipo_riparazione.dart';
+export '../models/preventivo.dart';
+
+// Models - Riparazioni
+export '../models/riparazione.dart' hide StatoRiparazione, TipoRiparazione;
+export '../models/garanzia.dart';
+export '../models/tipo_riparazione.dart' hide TipoRiparazione;
+
+// Models - Magazzino
+export '../models/movimento_magazzino.dart';
+export '../models/ricambio.dart';
+export '../models/ricambio_ordinato.dart';
+
+// Models - Ordini
+export '../models/ordine.dart' hide StatoOrdine;
+export '../models/ordine_ricambi.dart' hide RicambioOrdine;
+
+// Models - Altri
+export '../models/fornitore.dart';
+export '../models/user_profile.dart';
+export '../models/impostazioni_colori.dart';
+
+// Enums
+export '../models/enums/index.dart';
+
 // Services
 export '../services/auth_service.dart';
 export '../services/contabilita_service.dart';
@@ -43,7 +57,7 @@ export '../services/garanzia_service.dart';
 export '../services/ordini_service.dart';
 
 // Providers
-export 'package:gestionale_riparazioni/providers/app_state.dart';
+export '../providers/app_state.dart';
 export '../providers/settings_provider.dart';
 
 // Widgets
@@ -52,14 +66,12 @@ export '../widgets/form_nuova_richiesta.dart';
 export '../widgets/form_appuntamento.dart';
 export '../widgets/garanzia_form.dart';
 export '../widgets/fornitore_form.dart';
-export '../widgets/ordine_form.dart';
+export '../widgets/ordine_form.dart' hide RicambioOrdine;
 export '../widgets/ricambio_form.dart';
 export '../widgets/recent_activities.dart';
 
 // Utils
 export '../utils/form_validators.dart';
 export '../utils/date_formatter.dart';
-export '../utils/error_handler.dart'; // Aggiunto export per error_handler
-export '../utils/date_utils.dart';
-// Enums
-export '../models/enums.dart';
+export '../utils/error_handler.dart';
+export '../utils/date_utils.dart' show AppDateUtils;

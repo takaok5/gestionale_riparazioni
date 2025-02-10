@@ -2,10 +2,11 @@ enum TipoDispositivo {
   smartphone,
   tablet,
   computer,
-  console,
-  altro;
+  altro
+}
 
-  String get label {
+extension TipoDispositivoExtension on TipoDispositivo {
+  String get display {
     switch (this) {
       case TipoDispositivo.smartphone:
         return 'Smartphone';
@@ -13,8 +14,6 @@ enum TipoDispositivo {
         return 'Tablet';
       case TipoDispositivo.computer:
         return 'Computer';
-      case TipoDispositivo.console:
-        return 'Console';
       case TipoDispositivo.altro:
         return 'Altro';
     }

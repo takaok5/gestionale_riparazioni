@@ -5,6 +5,8 @@ import '../utils/form_validators.dart';
 import '../models/enums/priorita_riparazione.dart';
 import '../models/enums/stato_riparazione.dart';
 import '../models/enums/tipo_riparazione.dart';
+import 'package:gestionale_riparazioni/models/enums/index.dart';
+import 'package:gestionale_riparazioni/utils/imports.dart' hide PrioritaRiparazione;
 
 // Rimuovere questa definizione perché è già importata da tipo_riparazione.dart
 // enum TipoRiparazione { hardware, software, misto }
@@ -12,6 +14,7 @@ import '../models/enums/tipo_riparazione.dart';
 class FormNuovaRichiesta extends StatefulWidget {
   final List<Cliente> clienti;
   final Function(Riparazione) onSubmit;
+  final PrioritaRiparazione priorita;
 
   const FormNuovaRichiesta({
     Key? key,
