@@ -138,7 +138,8 @@ class OrdiniController extends GetxController {
   }
 
   /// Aggiunge un ricambio a un ordine esistente
-  Future<void> addRicambioToOrdine(String ordineId, RicambioOrdine ricambio) async {
+  Future<void> addRicambioToOrdine(
+      String ordineId, RicambioOrdine ricambio) async {
     try {
       isLoading.value = true;
       error.value = '';
@@ -168,7 +169,8 @@ class OrdiniController extends GetxController {
   }
 
   /// Rimuove un ricambio da un ordine esistente
-  Future<void> removeRicambioFromOrdine(String ordineId, String ricambioId) async {
+  Future<void> removeRicambioFromOrdine(
+      String ordineId, String ricambioId) async {
     try {
       isLoading.value = true;
       error.value = '';
@@ -184,9 +186,8 @@ class OrdiniController extends GetxController {
         );
       }
 
-      final updatedRicambi = ordine.ricambi
-          .where((r) => r.id != ricambioId)
-          .toList();
+      final updatedRicambi =
+          ordine.ricambi.where((r) => r.id != ricambioId).toList();
 
       if (updatedRicambi.length == ordine.ricambi.length) {
         throw OrdineError.ricambioNotFound(ricambioId);
@@ -211,21 +212,20 @@ class OrdiniController extends GetxController {
 /// Classe per la gestione degli errori specifici degli ordini
 class OrdineError {
   static String notFound(String id) => 'Ordine con ID $id non trovato';
-  
-  static String invalidState(StatoOrdine from, StatoOrdine to) => 
+
+  static String invalidState(StatoOrdine from, StatoOrdine to) =>
       'Transizione di stato non valida da ${from.label} a ${to.label}';
-  
-  static String invalidDates() => 
+
+  static String invalidDates() =>
       'La data di consegna deve essere successiva alla data dell\'ordine';
-  
-  static String emptyRicambi() => 
-      'L\'ordine deve contenere almeno un ricambio';
-  
-  static String ricambioNotFound(String id) => 
+
+  static String emptyRicambi() => 'L\'ordine deve contenere almeno un ricambio';
+
+  static String ricambioNotFound(String id) =>
       'Ricambio con ID $id non trovato nell\'ordine';
-  
-  static String loadError(String message) => 
+
+  static String loadError(String message) =>
       'Errore nel caricamento degli ordini: $message';
-  
+
   static String invalidOperation(String message) => message;
 }

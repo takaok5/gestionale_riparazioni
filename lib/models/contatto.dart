@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../utils/validators.dart';
 import '../enums/enums.dart';
+
 // Base class for location-related data
 @immutable
 class Coordinate {

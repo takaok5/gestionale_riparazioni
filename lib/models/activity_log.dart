@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../enums/enums.dart';
+
 /// ActivityLog è una classe unificata che gestisce il tracciamento di tutte le attività
 /// e operazioni nel sistema, combinando le funzionalità di Activity e LogOperazione
 class ActivityLog {
