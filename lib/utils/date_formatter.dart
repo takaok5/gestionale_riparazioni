@@ -4,6 +4,13 @@ class DateFormatter {
   static final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
   static final DateFormat _dateTimeFormat = DateFormat('dd/MM/yyyy HH:mm');
 
+  static String formatRelative(DateTime date) {
+    final Duration diff = DateTime.now().difference(date);
+    if (diff.inDays > 0) return '${diff.inDays} giorni fa';
+    if (diff.inHours > 0) return '${diff.inHours} ore fa';
+    return '${diff.inMinutes} minuti fa';
+  }
+
   static String formatDate(DateTime date) {
     return _dateFormat.format(date);
   }

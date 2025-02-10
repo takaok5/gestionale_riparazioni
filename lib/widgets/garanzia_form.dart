@@ -5,9 +5,17 @@ import '../utils/validators.dart';
 class GaranziaForm extends StatefulWidget {
   final Garanzia? garanzia;
   final Function(Garanzia) onSubmit;
+  final String clienteId;
+  final List<String> componentiCoperti;
+  final String dispositivo;
+  final String riparazioneId;
 
   const GaranziaForm({
     Key? key,
+    required this.clienteId,
+    required this.componentiCoperti,
+    required this.dispositivo,
+    required this.riparazioneId,
     this.garanzia,
     required this.onSubmit,
   }) : super(key: key);
@@ -83,6 +91,20 @@ class _GaranziaFormState extends State<GaranziaForm> {
 
       widget.onSubmit(garanzia);
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Cliente ID: $clienteId'),
+        Text('Dispositivo: $dispositivo'),
+        Text('Riparazione ID: $riparazioneId'),
+        const Text('Componenti Coperti:'),
+        for (var comp in componentiCoperti) Text('- $comp'),
+      ],
+    );
   }
 
   @override

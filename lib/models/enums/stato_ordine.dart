@@ -1,7 +1,1 @@
-enum StatoOrdine {
-  inAttesa,
-  inLavorazione,
-  completato,
-  annullato,
-  inSospeso
-}
+enum StatoOrdine { inAttesa, inLavorazione, completato, annullato, inSospeso }

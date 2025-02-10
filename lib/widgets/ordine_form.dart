@@ -13,6 +13,9 @@ class OrdineForm extends StatefulWidget {
   final List<Fornitore> fornitori;
   final List<Ricambio> ricambi;
   final Function(Ordine) onSubmit;
+  final String fornitore;
+  final String numeroOrdine;
+  final StatoOrdine stato;
 
   const OrdineForm({
     Key? key,
@@ -20,6 +23,9 @@ class OrdineForm extends StatefulWidget {
     required this.fornitori,
     required this.ricambi,
     required this.onSubmit,
+    required this.fornitore,
+    required this.numeroOrdine,
+    required this.stato,
   }) : super(key: key);
 
   @override

@@ -44,7 +44,8 @@ class _FormNuovaRichiestaState extends State<FormNuovaRichiesta> {
   void _submitForm() {
     if (_formKey.currentState!.validate() && _selectedCliente != null) {
       // Get the selected dispositivo from the cliente's dispositivi list
-      final dispositivo = _selectedCliente!.getDispositivo(_selectedDispositivoId!);
+      final dispositivo =
+          _selectedCliente!.getDispositivo(_selectedDispositivoId!);
 
       final riparazione = Riparazione(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -118,7 +119,8 @@ class _FormNuovaRichiestaState extends State<FormNuovaRichiesta> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _descrizioneController,
-            decoration: const InputDecoration(labelText: 'Descrizione problema'),
+            decoration:
+                const InputDecoration(labelText: 'Descrizione problema'),
             maxLines: 3,
             validator: FormValidators.required,
           ),

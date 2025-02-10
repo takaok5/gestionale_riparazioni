@@ -7,6 +7,16 @@ enum StatoOrdine {
   consegnato,
   annullato;
 
+class Ordine {
+  final String fornitoreId;
+  // altri campi...
+
+  Ordine({
+    required this.fornitoreId,
+    // inizializza anche altri campi se necessario
+  });
+}
+
   String get display {
     switch (this) {
       case StatoOrdine.inAttesa:

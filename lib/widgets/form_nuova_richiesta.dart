@@ -5,11 +5,15 @@ import '../utils/validators.dart';
 import '../models/stato_riparazione.dart';
 
 class FormNuovaRichiesta extends StatefulWidget {
-  final Function(Riparazione) onSubmit;
+  final String clienteId;
+  final String tipoDispositivo;
+  final String tipoRiparazione;
 
   const FormNuovaRichiesta({
     Key? key,
-    required this.onSubmit,
+    required this.clienteId,
+    required this.tipoDispositivo,
+    required this.tipoRiparazione,
   }) : super(key: key);
 
   @override
@@ -17,6 +21,8 @@ class FormNuovaRichiesta extends StatefulWidget {
 }
 
 class _FormNuovaRichiestaState extends State<FormNuovaRichiesta> {
+  final TextEditingController modelloController = TextEditingController();
+  final TextEditingController descrizioneController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final _descrizioneController = TextEditingController();
   final _modelloDispositivoController = TextEditingController();

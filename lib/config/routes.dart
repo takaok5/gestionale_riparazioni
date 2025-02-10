@@ -36,6 +36,18 @@ class RouteGenerator {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final args = settings.arguments;
     final authProvider = locator<AuthProvider>();
+    final Map<String, WidgetBuilder> routes = {
+  '/': (context) => const HomePage(),
+
+
+    );
+  }    
+}
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Home')),
+      body: const Center(child: Text('Benvenuto!')),
 
     if (settings.name != login && !authProvider.isAuthenticated) {
       // Remove the firestoreService parameter since it's not defined in LoginScreen
@@ -78,7 +90,8 @@ class RouteGenerator {
           if (args == null) throw ArgumentError('Richiesto ID garanzia');
           return MaterialPageRoute(
             builder: (_) => FutureBuilder<GaranziaInfo?>(
-              future: locator.get<GaranziaService>().getGaranzia(args as String),
+              future:
+                  locator.get<GaranziaService>().getGaranzia(args as String),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const CircularProgressIndicator();
@@ -96,7 +109,8 @@ class RouteGenerator {
           if (args == null) throw ArgumentError('Richiesto ID cliente');
           return MaterialPageRoute(
             builder: (_) => FutureBuilder<Cliente>(
-              future: locator.get<FirestoreService>().getCliente(args as String),
+              future:
+                  locator.get<FirestoreService>().getCliente(args as String),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const CircularProgressIndicator();

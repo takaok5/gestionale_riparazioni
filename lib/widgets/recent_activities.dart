@@ -7,6 +7,7 @@ import '../utils/date_formatter.dart';
 class RecentActivities extends StatelessWidget {
   final List<Activity> activities;
   final Function(String)? onActivityTap;
+  final DateTime activityDate;
 
   const RecentActivities({
     Key? key,
@@ -15,6 +16,11 @@ class RecentActivities extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  Widget build(BuildContext context) {
+    String relativeDate = DateFormatter.formatRelative(activityDate);
+    return Text('Attività recente: $relativeDate');
+  }
+
   Widget build(BuildContext context) {
     return Card(
       child: Column(
