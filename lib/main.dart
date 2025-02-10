@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:window_size/window_size.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Aggiunto
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:timezone/data/latest_all.dart' as tz;
 
@@ -21,13 +21,29 @@ import 'services/firestore_service.dart';
 import 'services/app_context_service.dart';
 import 'utils/platform_utils.dart';
 
+// Add MyApp class definition
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Gestionale Riparazioni',
+      theme: Provider.of<ThemeProvider>(context).currentTheme,
+      onGenerateRoute: RouteGenerator.generateRoute,
+      initialRoute: RouteGenerator.login,
+    );
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Correzione inizializzazione SharedPreferences
+  // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
   final themeProvider = ThemeProvider(prefs);
-  final settingsProvider = SettingsProvider(prefs);
+  // Fix: Remove the prefs parameter from SettingsProvider constructor
+  final settingsProvider = SettingsProvider();
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,

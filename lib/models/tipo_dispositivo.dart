@@ -1,9 +1,4 @@
-enum TipoDispositivo {
-  smartphone,
-  tablet,
-  computer,
-  altro
-}
+enum TipoDispositivo { smartphone, tablet, computer, altro }
 
 extension TipoDispositivoExtension on TipoDispositivo {
   String get display {

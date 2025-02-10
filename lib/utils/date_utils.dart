@@ -9,7 +9,7 @@ class AppDateUtils {
   static final DateFormat _dateTimeFormatter = DateFormat('dd/MM/yyyy HH:mm');
   static final DateFormat _timeFormatter = DateFormat('HH:mm');
   static final DateFormat _isoFormatter = DateFormat('yyyy-MM-dd\'T\'HH:mm:ss');
-  
+
   /// Restituisce l'inizio del giorno (00:00:00)
   static DateTime startOfDay(DateTime date) {
     return DateTime(date.year, date.month, date.day);
@@ -40,7 +40,7 @@ class AppDateUtils {
     final days = <DateTime>[];
     var current = startOfDay(start);
     final endDate = startOfDay(end);
-    
+
     while (current.isBefore(endDate) || isSameDay(current, endDate)) {
       days.add(current);
       current = current.add(const Duration(days: 1));
@@ -88,7 +88,8 @@ class AppDateUtils {
   /// Nuove funzioni utili per il gestionale riparazioni
 
   /// Calcola la data di scadenza della garanzia
-  static DateTime calcolaScadenzaGaranzia(DateTime dataInizio, int mesiGaranzia) {
+  static DateTime calcolaScadenzaGaranzia(
+      DateTime dataInizio, int mesiGaranzia) {
     return DateTime(
       dataInizio.year,
       dataInizio.month + mesiGaranzia,

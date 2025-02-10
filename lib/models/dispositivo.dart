@@ -26,7 +26,7 @@ class Dispositivo extends BaseModel {
   final GaranziaInfo? garanziaInfo;
   final List<String>? fotoProdotto;
 
-  const Dispositivo({
+  Dispositivo({
     required String id,
     required this.tipo,
     required this.marca,
@@ -34,10 +34,10 @@ class Dispositivo extends BaseModel {
     this.serialNumber,
     this.imei,
     required this.clienteId,
-    this.problemiRicorrenti = const [],
-    this.riparazioniIds = const [],
-    this.specificheTecniche = const {},
-    this.accessoriInclusi = const [],
+    List<String>? problemiRicorrenti,
+    List<String>? riparazioniIds,
+    Map<String, String>? specificheTecniche,
+    List<Accessorio>? accessoriInclusi,
     this.stato = StatoDispositivo.funzionante,
     this.ultimaRiparazione,
     this.note,
@@ -46,7 +46,11 @@ class Dispositivo extends BaseModel {
     this.fotoProdotto,
     required DateTime createdAt,
     required DateTime updatedAt,
-  })  : assert(
+  })  : problemiRicorrenti = problemiRicorrenti ?? const [],
+        riparazioniIds = riparazioniIds ?? const [],
+        specificheTecniche = specificheTecniche ?? const {},
+        accessoriInclusi = accessoriInclusi ?? const [],
+        assert(
           imei == null || RegExp(r'^\d{15}$').hasMatch(imei),
           'IMEI deve essere di 15 cifre',
         ),
@@ -58,7 +62,7 @@ class Dispositivo extends BaseModel {
 
   @override
   Map<String, dynamic> toMap() {
-    return {
+    final map = <String, dynamic>{
       ...super.toMap(),
       'tipo': tipo.toString().split('.').last,
       'marca': marca,
@@ -77,6 +81,7 @@ class Dispositivo extends BaseModel {
       'garanziaInfo': garanziaInfo?.toMap(),
       'fotoProdotto': fotoProdotto,
     };
+    return map;
   }
 
   factory Dispositivo.fromMap(Map<String, dynamic> map) {

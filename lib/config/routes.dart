@@ -35,14 +35,12 @@ class RouteGenerator {
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final args = settings.arguments;
-    final authProvider =
-        locator<AuthProvider>(); // Get AuthProvider from locator
+    final authProvider = locator<AuthProvider>();
 
     if (settings.name != login && !authProvider.isAuthenticated) {
+      // Remove the firestoreService parameter since it's not defined in LoginScreen
       return MaterialPageRoute(
-        builder: (_) => LoginScreen(
-          firestoreService: locator<FirestoreService>(),
-        ),
+        builder: (_) => const LoginScreen(),
         settings: const RouteSettings(name: login),
       );
     }
@@ -80,8 +78,7 @@ class RouteGenerator {
           if (args == null) throw ArgumentError('Richiesto ID garanzia');
           return MaterialPageRoute(
             builder: (_) => FutureBuilder<GaranziaInfo?>(
-              future:
-                  locator.get<GaranziaService>().getGaranzia(args as String),
+              future: locator.get<GaranziaService>().getGaranzia(args as String),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const CircularProgressIndicator();
@@ -99,8 +96,7 @@ class RouteGenerator {
           if (args == null) throw ArgumentError('Richiesto ID cliente');
           return MaterialPageRoute(
             builder: (_) => FutureBuilder<Cliente>(
-              future:
-                  locator.get<FirestoreService>().getCliente(args as String),
+              future: locator.get<FirestoreService>().getCliente(args as String),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const CircularProgressIndicator();
