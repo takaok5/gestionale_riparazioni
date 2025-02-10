@@ -2,6 +2,7 @@ import 'package:meta/meta.dart';
 import './base_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../enums/enums.dart';
+import '../utils/date_utils.dart' show AppDateUtils;
 
 /// Classe base per tutte le garanzie
 @immutable
@@ -29,24 +30,32 @@ class Garanzia extends BaseModel {
           updatedAt: updatedAt,
         );
 
+  // Getters per le date formattate
+  String get dataInizioFormattata => AppDateUtils.formatDate(dataInizio);
+  String get dataFineFormattata => AppDateUtils.formatDate(dataFine);
+  String get dataInizioCompleta => AppDateUtils.formatDateTime(dataInizio);
+  String get dataFineCompleta => AppDateUtils.formatDateTime(dataFine);
+  String get durataFormattata => AppDateUtils.formatDuration(durata);
+  String get rimanenteFormattato => AppDateUtils.formatDuration(rimanente);
+
   // Getters comuni
   bool get attiva => stato == StatoGaranzia.attiva;
   DateTime get dataScadenza => dataFine;
 
   bool get isValid {
-    final now = DateTime.now().toUtc();
+    final now = AppDateUtils.getCurrentDateTime();
     return stato == StatoGaranzia.attiva && dataFine.isAfter(now);
   }
 
   Duration get durata => dataFine.difference(dataInizio);
 
   Duration get rimanente {
-    final now = DateTime.now().toUtc();
+    final now = AppDateUtils.getCurrentDateTime();
     return dataFine.difference(now);
   }
 
   bool get isScaduta {
-    final now = DateTime.now().toUtc();
+    final now = AppDateUtils.getCurrentDateTime();
     return dataFine.isBefore(now);
   }
 
@@ -66,6 +75,13 @@ class Garanzia extends BaseModel {
       'stato': stato.toString().split('.').last,
       'tipo': tipo.toString().split('.').last,
     };
+  }
+
+  String getStatusMessage() {
+    if (isScaduta) return 'Garanzia scaduta il ${dataFineFormattata}';
+    if (inScadenza) return 'Garanzia in scadenza tra ${rimanenteFormattato}';
+    if (isValid) return 'Garanzia valida per altri ${rimanenteFormattato}';
+    return 'Garanzia non valida';
   }
 }
 
@@ -110,7 +126,8 @@ class GaranziaInterna extends Garanzia {
         );
 
   String? get motivazioneInvalidazione => _motivazioneInvalidazione;
-  DateTime? get dataInvalidazione => _dataInvalidazione;
+  String? get dataInvalidazioneFormattata => 
+      _dataInvalidazione != null ? AppDateUtils.formatDateTime(_dataInvalidazione!) : null;
 
   @override
   Map<String, dynamic> toMap() {
@@ -135,8 +152,8 @@ class GaranziaInterna extends Garanzia {
       riparazioneId: map['riparazioneId'] as String,
       clienteId: map['clienteId'] as String,
       dispositivo: map['dispositivo'] as String,
-      dataInizio: (map['dataInizio'] as Timestamp).toDate(),
-      dataFine: (map['dataFine'] as Timestamp).toDate(),
+      dataInizio: AppDateUtils.fromTimestamp(map['dataInizio'] as Timestamp),
+      dataFine: AppDateUtils.fromTimestamp(map['dataFine'] as Timestamp),
       seriale: map['seriale'] as String?,
       note: map['note'] as String?,
       stato: StatoGaranzia.values.firstWhere(
@@ -146,14 +163,13 @@ class GaranziaInterna extends Garanzia {
       componentiCoperti: List<String>.from(map['componentiCoperti'] ?? []),
       motivazioneInvalidazione: map['motivazioneInvalidazione'] as String?,
       dataInvalidazione: map['dataInvalidazione'] != null
-          ? (map['dataInvalidazione'] as Timestamp).toDate()
+          ? AppDateUtils.fromTimestamp(map['dataInvalidazione'] as Timestamp)
           : null,
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
+      createdAt: AppDateUtils.fromTimestamp(map['createdAt'] as Timestamp),
+      updatedAt: AppDateUtils.fromTimestamp(map['updatedAt'] as Timestamp),
     );
   }
 }
-
 /// Garanzia del fornitore
 class GaranziaFornitore extends Garanzia {
   final String fornitore;
@@ -187,16 +203,16 @@ class GaranziaFornitore extends Garanzia {
     };
   }
 
-  factory GaranziaFornitore.fromMap(Map<String, dynamic> map) {
+ factory GaranziaFornitore.fromMap(Map<String, dynamic> map) {
     return GaranziaFornitore(
       id: map['id'] as String,
       numero: map['numero'] as String,
-      dataInizio: (map['dataInizio'] as Timestamp).toDate(),
-      dataFine: (map['dataFine'] as Timestamp).toDate(),
+      dataInizio: AppDateUtils.fromTimestamp(map['dataInizio'] as Timestamp),
+      dataFine: AppDateUtils.fromTimestamp(map['dataFine'] as Timestamp),
       fornitore: map['fornitore'] as String,
       note: map['note'] as String?,
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
+      createdAt: AppDateUtils.fromTimestamp(map['createdAt'] as Timestamp),
+      updatedAt: AppDateUtils.fromTimestamp(map['updatedAt'] as Timestamp),
     );
   }
 }
