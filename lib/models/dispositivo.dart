@@ -71,7 +71,7 @@ class Dispositivo extends BaseModel {
       'specificheTecniche': specificheTecniche,
       'accessoriInclusi': accessoriInclusi.map((a) => a.toMap()).toList(),
       'stato': stato.toString().split('.').last,
-      'ultimaRiparazione': ultimaRiparazione != null 
+      'ultimaRiparazione': ultimaRiparazione != null
           ? Timestamp.fromDate(AppDateUtils.toUtc(ultimaRiparazione!))
           : null,
       'note': note,
@@ -148,15 +148,18 @@ class Dispositivo extends BaseModel {
       serialNumber: serialNumber ?? this.serialNumber,
       imei: imei ?? this.imei,
       clienteId: clienteId ?? this.clienteId,
-      problemiRicorrenti: problemiRicorrenti ?? List.from(this.problemiRicorrenti),
+      problemiRicorrenti:
+          problemiRicorrenti ?? List.from(this.problemiRicorrenti),
       riparazioniIds: riparazioniIds ?? List.from(this.riparazioniIds),
-      specificheTecniche: specificheTecniche ?? Map.from(this.specificheTecniche),
+      specificheTecniche:
+          specificheTecniche ?? Map.from(this.specificheTecniche),
       accessoriInclusi: accessoriInclusi ?? List.from(this.accessoriInclusi),
       stato: stato ?? this.stato,
       ultimaRiparazione: ultimaRiparazione ?? this.ultimaRiparazione,
       note: note ?? this.note,
       garanzia: garanzia ?? this.garanzia,
-      fotoProdotto: fotoProdotto ?? (this.fotoProdotto != null ? List.from(this.fotoProdotto!) : null),
+      fotoProdotto: fotoProdotto ??
+          (this.fotoProdotto != null ? List.from(this.fotoProdotto!) : null),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -171,19 +174,19 @@ class Dispositivo extends BaseModel {
   bool get isSmartphone => tipo == TipoDispositivo.smartphone;
   bool get isTablet => tipo == TipoDispositivo.tablet;
   bool get isComputer => tipo == TipoDispositivo.computer;
-  bool get hasUltimaRiparazioneRecente => 
-      ultimaRiparazione != null && 
+  bool get hasUltimaRiparazioneRecente =>
+      ultimaRiparazione != null &&
       DateTime.now().difference(ultimaRiparazione!).inDays <= 30;
 
   String formatUltimaRiparazione() {
-    return ultimaRiparazione != null 
+    return ultimaRiparazione != null
         ? AppDateUtils.formatDateTime(ultimaRiparazione!)
         : 'Nessuna riparazione';
   }
 
   bool isRiparatoInData(DateTime data) {
-    return ultimaRiparazione != null && 
-           AppDateUtils.isSameDay(ultimaRiparazione!, data);
+    return ultimaRiparazione != null &&
+        AppDateUtils.isSameDay(ultimaRiparazione!, data);
   }
 }
 
