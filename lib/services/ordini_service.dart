@@ -9,7 +9,7 @@ class OrdiniService {
 
   OrdiniService(this._db);
 
-  Stream<List<OrdineRicambi>> getOrdiniStream({
+  Stream<List<Ordine>> getOrdiniStream({
     required String userId,
     StatoOrdine? stato,
     String? fornitoreId,
@@ -35,11 +35,11 @@ class OrdiniService {
     });
   }
 
-  Future<void> createOrdine(OrdineRicambi ordine) async {
+  Future<void> createOrdine(Ordine ordine) async {
     await _db.collection(collectionName).doc(ordine.id).set(ordine.toMap());
   }
 
-  Future<void> updateOrdine(OrdineRicambi ordine) async {
+  Future<void> updateOrdine(Ordine ordine) async {
     await _db.collection(collectionName).doc(ordine.id).update(ordine.toMap());
   }
 
@@ -53,7 +53,7 @@ class OrdiniService {
     Map<String, dynamic> statistiche = {};
 
     for (var doc in snapshot.docs) {
-      final ordine = OrdineRicambi.fromMap({
+      final ordine = Ordine.fromMap({
         'id': doc.id,
         ...doc.data() as Map<String, dynamic>,
       });

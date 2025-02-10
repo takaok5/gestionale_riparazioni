@@ -28,8 +28,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: lightTheme, // Define your light theme
+      darkTheme: darkTheme, // Define your dark theme
+      themeMode: settingsService.themeMode,
       title: 'Gestionale Riparazioni',
-      theme: Provider.of<ThemeProvider>(context).currentTheme,
       onGenerateRoute: RouteGenerator.generateRoute,
       initialRoute: RouteGenerator.login,
     );
@@ -42,8 +44,10 @@ void main() async {
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
   final themeProvider = ThemeProvider(prefs);
-  final appContextService = AppContextService();
-  final settingsProvider = SettingsProvider();
+  final settingsService =
+      await SettingsService.init(prefs); // Create proper service instance
+  final appContextService =
+      AppContextService(settingsService); // Pass service instance
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -63,8 +67,8 @@ void main() async {
 
   final appContextService = AppContextService();
   appContextService.updateContext(
-    date: DateTime.now().toUtc(),
-    user: 'takaok5',
+    date: DateTime.now(), // Add missing date parameter
+    user: currentUser, // Add missing user parameter
   );
 
   runApp(

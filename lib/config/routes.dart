@@ -84,7 +84,8 @@ class RouteGenerator {
         case '/garanzia_details':
           if (args == null) throw ArgumentError('Richiesto ID garanzia');
           return MaterialPageRoute(
-            builder: (_) => FutureBuilder<GaranziaInfo?>(
+            builder: (_) => FutureBuilder<Garanzia?>(
+              // Changed from GaranziaInfo to Garanzia
               future:
                   locator.get<GaranziaService>().getGaranzia(args as String),
               builder: (context, snapshot) {

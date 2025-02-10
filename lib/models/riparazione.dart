@@ -25,7 +25,7 @@ abstract class BaseRiparazione extends BaseModel {
 }
 
 // Main repair model
-class Riparazione extends BaseRiparazione {
+class Riparazione extends BaseModel {
   final Cliente cliente;
   final Dispositivo dispositivo;
   final String? noteInterne;
@@ -43,11 +43,13 @@ class Riparazione extends BaseRiparazione {
   final DateTime updatedAt;
 
   const Riparazione({
+    required String id,
+    required DateTime createdAt,
+    required DateTime updatedAt,
     required super.id,
     required this.cliente,
     required this.dispositivo,
     required String descrizioneProblema, // passed to super.descrizione
-    required DateTime dataRicezione, // passed to super.dataIngresso
     this.noteInterne,
     this.dataCompletamento,
     this.dataConsegna,
@@ -62,10 +64,7 @@ class Riparazione extends BaseRiparazione {
     this.numeroGaranzia,
     required this.createdAt,
     required this.updatedAt,
-  }) : super(
-          descrizione: descrizioneProblema,
-          dataIngresso: dataRicezione,
-        );
+  }) : super(id: id, createdAt: createdAt, updatedAt: updatedAt);
 
   // Getters for common properties
   String get tipo => tipoRiparazione.toString().split('.').last;

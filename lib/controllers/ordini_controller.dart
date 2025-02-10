@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 import '../models/ordine.dart';
 import '../services/ordini_service.dart';
-import 'enums/enums.dart';
+import '..enums/enums.dart';
 import 'dart:async';
 
 /// Controller per la gestione degli ordini
