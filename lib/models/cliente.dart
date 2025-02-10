@@ -2,6 +2,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 import '../utils/exceptions.dart';
 
+  List<Dispositivo> getDispositivi() {
+    return _dispositivi ?? [];
+  }
+
+  Dispositivo? getDispositivo(String id) {
+    return _dispositivi?.firstWhere(
+      (d) => d.id == id,
+      orElse: () => null,
+    );
+  }
+
 enum TipoCliente {
   privato,
   azienda,

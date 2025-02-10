@@ -1,15 +1,26 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import '../models/user_profile.dart';
 
-class AppContextService {
-  // Variabile privata (ipotetica) per l'utente corrente.
-  final String _currentUser = 'user@example.com';
+class AppContextService extends ChangeNotifier {
+  BuildContext? _context;
+  UserProfile? _currentUser;
 
-  // Getter per currentUser.
-  String get currentUser => _currentUser;
+  BuildContext? get context => _context;
+  UserProfile? get currentUser => _currentUser;
 
-  // Getter per una data formattata.
-  String get formattedDate {
-    final now = DateTime.now();
-    return "${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}";
+  void updateContext(BuildContext context) {
+    _context = context;
+    notifyListeners();
+  }
+
+  void updateCurrentUser(UserProfile? user) {
+    _currentUser = user;
+    notifyListeners();
+  }
+
+  void clear() {
+    _context = null;
+    _currentUser = null;
+    notifyListeners();
   }
 }

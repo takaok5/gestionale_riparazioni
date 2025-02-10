@@ -3,98 +3,33 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_profile.dart';
 import '../utils/exceptions.dart';
 
+
 class AuthService {
-  // Singleton pattern
-  static final AuthService _instance = AuthService._internal();
-
-  factory AuthService() {
-    return _instance;
-  }
-
-  AuthService._internal();
-
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirestoreService _firestoreService;
 
-  // Auth state stream
+  AuthService(this._firestoreService);
+
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Current user
-  User? get currentUser => _auth.currentUser;
+  Future<UserProfile?> getCurrentUser() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
 
-  // Is user signed in
-  bool get isSignedIn => currentUser != null;
-
-  // Get current user profile
-  Future<UserProfile?> getCurrentUserProfile() async {
-    try {
-      final user = currentUser;
-      if (user == null) return null;
-
-      final doc = await _firestore.collection('users').doc(user.uid).get();
-      if (!doc.exists) {
-        throw AuthException(
-          'Profilo utente non trovato',
-          code: 'profile-not-found',
-          details: {'uid': user.uid},
-        );
-      }
-
-      return UserProfile.fromMap({
-        ...doc.data()!,
-        'id': doc.id,
-      });
-    } on FirebaseException catch (e) {
-      throw AuthException(
-        'Errore nel recupero del profilo utente',
-        code: e.code,
-        details: e.message,
-      );
-    }
+    final userProfile = await _firestoreService.getUserProfile(user.uid);
+    return userProfile;
   }
 
-  // Sign in with email and password
-  Future<UserProfile> signIn(String email, String password) async {
-    try {
-      final userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      final user = userCredential.user;
-      if (user == null) {
-        throw AuthException('Login fallito: nessun utente trovato');
-      }
-
-      final profile = await getCurrentUserProfile();
-      if (profile == null) {
-        throw AuthException('Profilo utente non trovato dopo il login');
-      }
-
-      return profile;
-    } on FirebaseAuthException catch (e) {
-      throw AuthException(
-        _getAuthErrorMessage(e.code),
-        code: e.code,
-        details: e.message,
-      );
-    }
+  Future<UserCredential> signInWithEmailAndPassword(
+    String email, 
+    String password,
+  ) async {
+    return await _auth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
   }
-
-  // Sign up with email and password
-  Future<UserProfile> signUp(
-      String email, String password, UserProfile profile) async {
-    try {
-      final userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      final user = userCredential.user;
-      if (user == null) {
-        throw AuthException('Registrazione fallita: nessun utente creato');
-      }
-
+}
       // Create user profile
       await _firestore.collection('users').doc(user.uid).set({
         ...profile.toMap(),

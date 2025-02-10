@@ -42,7 +42,7 @@ void main() async {
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
   final themeProvider = ThemeProvider(prefs);
-  // Fix: Remove the prefs parameter from SettingsProvider constructor
+  final appContextService = AppContextService();
   final settingsProvider = SettingsProvider();
 
   await Firebase.initializeApp(
@@ -70,8 +70,8 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => themeProvider),
         ChangeNotifierProvider(create: (_) => appContextService),
-        ChangeNotifierProvider.value(value: themeProvider),
         ChangeNotifierProvider(
           create: (_) => AuthProvider(
             firestoreService: locator<FirestoreService>(),
