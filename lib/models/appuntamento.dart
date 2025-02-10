@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:meta/meta.dart';
 import './base_model.dart';
-import './indirizzo.dart';
+import './contatto.dart';
 import './cliente.dart';
 import '../utils/date_formatter.dart';
 import '../enums/enums.dart';
@@ -48,9 +48,9 @@ class Appuntamento extends BaseModel {
   String get emailCliente => _cliente?.email ?? '';
   bool get clienteAttivo => _cliente?.attivo ?? false;
   TipoCliente get tipoCliente => _cliente?.tipo ?? TipoCliente.privato;
-  
+
   // Getter per l'indirizzo
-  String get indirizzoAppuntamento => 
+  String get indirizzoAppuntamento =>
       luogoAppuntamento?.toString() ?? _cliente?.indirizzoCompleto ?? '';
 
   // Getters per lo stato dell'appuntamento
@@ -82,7 +82,7 @@ class Appuntamento extends BaseModel {
           : null,
       note: map['note'] as String?,
       tecnicoAssegnato: map['tecnicoAssegnato'] as String?,
-      cliente: map['cliente'] != null 
+      cliente: map['cliente'] != null
           ? Cliente.fromMap(map['cliente'] as Map<String, dynamic>)
           : null,
       createdAt: map['createdAt'] is DateTime
@@ -143,7 +143,8 @@ class Appuntamento extends BaseModel {
   // Metodo per aggiornare il riferimento al cliente
   Appuntamento withCliente(Cliente cliente) {
     if (cliente.id != clienteId) {
-      throw ArgumentError('L\'ID del cliente non corrisponde al clienteId dell\'appuntamento');
+      throw ArgumentError(
+          'L\'ID del cliente non corrisponde al clienteId dell\'appuntamento');
     }
     return copyWith(cliente: cliente);
   }
@@ -165,11 +166,11 @@ class Appuntamento extends BaseModel {
   }
 
   // Utility methods
-  bool get isModificabile => 
-      stato != StatoAppuntamento.completato && 
+  bool get isModificabile =>
+      stato != StatoAppuntamento.completato &&
       stato != StatoAppuntamento.annullato;
 
-  bool get isImminente => 
+  bool get isImminente =>
       dataOra.difference(DateTime.now()).inHours <= 24 &&
       stato == StatoAppuntamento.programmato;
 
@@ -210,7 +211,8 @@ class _AppuntamentoFormState extends State<AppuntamentoForm> {
     super.initState();
     if (widget.initialAppuntamento != null) {
       _selectedDate = widget.initialAppuntamento!.dataOra;
-      _selectedTime = TimeOfDay.fromDateTime(widget.initialAppuntamento!.dataOra);
+      _selectedTime =
+          TimeOfDay.fromDateTime(widget.initialAppuntamento!.dataOra);
       _descrizioneController.text = widget.initialAppuntamento!.descrizione;
       _noteController.text = widget.initialAppuntamento!.note ?? '';
       _tipo = widget.initialAppuntamento!.tipo;

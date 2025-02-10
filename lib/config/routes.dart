@@ -5,7 +5,6 @@ import '../screens/kanban_riparazioni_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/riparazioni_screen.dart';
 import '../screens/garanzie_screen.dart';
-import '../screens/garanzia_details_screen.dart';
 import '../screens/gestione_magazzino_screen.dart';
 import '../screens/storico_cliente_screen.dart';
 import '../screens/ordini_screen.dart';

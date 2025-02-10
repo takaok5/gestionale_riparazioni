@@ -19,7 +19,7 @@ class Dispositivo extends BaseModel {
   final StatoDispositivo stato;
   final DateTime? ultimaRiparazione;
   final String? note;
-  final Garanzia? garanzia;  // Manteniamo solo questo campo per la garanzia
+  final Garanzia? garanzia; // Manteniamo solo questo campo per la garanzia
   final List<String>? fotoProdotto;
 
   Dispositivo({
@@ -109,7 +109,8 @@ class Dispositivo extends BaseModel {
       garanzia: map['garanzia'] != null
           ? map['garanzia']['tipo'] == 'interna'
               ? GaranziaInterna.fromMap(map['garanzia'] as Map<String, dynamic>)
-              : GaranziaFornitore.fromMap(map['garanzia'] as Map<String, dynamic>)
+              : GaranziaFornitore.fromMap(
+                  map['garanzia'] as Map<String, dynamic>)
           : null,
       fotoProdotto: List<String>.from(map['fotoProdotto'] ?? []),
       createdAt: (map['createdAt'] as Timestamp).toDate(),

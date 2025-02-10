@@ -21,6 +21,9 @@ import 'services/firestore_service.dart';
 import 'services/app_context_service.dart';
 import 'utils/platform_utils.dart';
 
+final settingsProvider =
+    Provider<SettingsProvider>(create: (_) => SettingsProvider());
+
 // Add MyApp class definition
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);

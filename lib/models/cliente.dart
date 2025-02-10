@@ -48,8 +48,8 @@ class Cliente extends Equatable {
     this.codiceDestinatario,
     this.tipo = TipoCliente.privato,
     this.attivo = true,
-    this.numeroRiparazioni = 0,
-    this.totaleSpeso = 0.0,
+    this.totaleSpeso = const 0,  // Make it a constant
+    this.numeroRiparazioni = const 0,  // Make it a constant    
     this.ultimaRiparazione,
     this.metadati,
   })  : createdAt = createdAt ?? DateTime.now(),

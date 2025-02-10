@@ -514,6 +514,7 @@ enum TipoAppuntamento {
 enum TipoCliente {
   privato,
   azienda,
+  professionista,
   pubblicaAmministrazione,
   altro,
 }

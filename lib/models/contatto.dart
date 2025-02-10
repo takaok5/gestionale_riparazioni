@@ -162,7 +162,7 @@ class Contatto {
     required this.valore,
     this.isPrimario = false,
     this.note,
-  }) : assert(valore.isNotEmpty);
+  }) : assert(valore.isNotEmpty, 'Il valore non può essere vuoto');
 
   bool get isValid {
     switch (tipo) {
