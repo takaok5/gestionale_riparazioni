@@ -1,8 +1,7 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../utils/imports.dart';
-import '../utils/date_formatter.dart';
+import '../utils/date_utils.dart' show AppDateUtils;
 import '../enums/enums.dart';
 import 'dispositivo.dart';
 import 'cliente.dart';
@@ -50,7 +49,7 @@ class Riparazione extends BaseModel {
     required super.id,
     required this.cliente,
     required this.dispositivo,
-    required String descrizioneProblema, // passed to super.descrizione
+    required String descrizioneProblema,
     this.noteInterne,
     this.dataCompletamento,
     this.dataConsegna,
@@ -79,6 +78,13 @@ class Riparazione extends BaseModel {
       0.0;
   double get costoManodopera => (costoFinale ?? 0.0) - costoRicambi;
 
+  bool get isCompletato => dataCompletamento != null;
+  bool get isConsegnato => dataConsegna != null;
+  bool get isInRitardo {
+    if (dataCompletamento == null) return false;
+    return AppDateUtils.isPast(dataCompletamento!);
+  }
+
   @override
   Map<String, dynamic> toMap() {
     return {
@@ -87,12 +93,12 @@ class Riparazione extends BaseModel {
       'dispositivo': dispositivo.toMap(),
       'descrizioneProblema': descrizione,
       'noteInterne': noteInterne,
-      'dataRicezione': Timestamp.fromDate(dataIngresso),
+      'dataRicezione': AppDateUtils.toISOString(dataIngresso),
       'dataCompletamento': dataCompletamento != null
-          ? Timestamp.fromDate(dataCompletamento!)
+          ? AppDateUtils.toISOString(dataCompletamento!)
           : null,
       'dataConsegna':
-          dataConsegna != null ? Timestamp.fromDate(dataConsegna!) : null,
+          dataConsegna != null ? AppDateUtils.toISOString(dataConsegna!) : null,
       'stato': stato.name,
       'tipoRiparazione': tipoRiparazione.name,
       'priorita': priorita.name,
@@ -102,8 +108,8 @@ class Riparazione extends BaseModel {
       'ricambiUtilizzati': ricambiUtilizzati?.map((r) => r.toMap()).toList(),
       'inGaranzia': inGaranzia,
       'numeroGaranzia': numeroGaranzia,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      'createdAt': AppDateUtils.toISOString(createdAt),
+      'updatedAt': AppDateUtils.toISOString(updatedAt),
     };
   }
 
@@ -120,13 +126,9 @@ class Riparazione extends BaseModel {
           Dispositivo.fromMap(map['dispositivo'] as Map<String, dynamic>),
       descrizioneProblema: map['descrizioneProblema'] ?? '',
       noteInterne: map['noteInterne'],
-      dataRicezione: (map['dataRicezione'] as Timestamp).toDate(),
-      dataCompletamento: map['dataCompletamento'] != null
-          ? (map['dataCompletamento'] as Timestamp).toDate()
-          : null,
-      dataConsegna: map['dataConsegna'] != null
-          ? (map['dataConsegna'] as Timestamp).toDate()
-          : null,
+      dataRicezione: AppDateUtils.parseISOString(map['dataRicezione']) ?? DateTime.now(),
+      dataCompletamento: AppDateUtils.parseISOString(map['dataCompletamento']),
+      dataConsegna: AppDateUtils.parseISOString(map['dataConsegna']),
       stato: StatoRiparazione.values.firstWhere(
         (e) => e.name == map['stato'],
         orElse: () => StatoRiparazione.inAttesa,
@@ -145,8 +147,8 @@ class Riparazione extends BaseModel {
       ricambiUtilizzati: ricambi,
       inGaranzia: map['inGaranzia'] ?? false,
       numeroGaranzia: map['numeroGaranzia'],
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
+      createdAt: AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
+      updatedAt: AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
     );
   }
 
@@ -249,8 +251,8 @@ class RiparazioneArchiviata extends BaseRiparazione {
       'clienteId': clienteId,
       'dispositivo': descrizione,
       'problema': descrizione,
-      'dataIngresso': dataIngresso.toIso8601String(),
-      'dataUscita': dataUscita.toIso8601String(),
+      'dataIngresso': AppDateUtils.toISOString(dataIngresso),
+      'dataUscita': AppDateUtils.toISOString(dataUscita),
       'costoRicambi': costoRicambi,
       'costoManodopera': costoManodopera,
       'totalePattuito': totalePattuito,
@@ -265,8 +267,8 @@ class RiparazioneArchiviata extends BaseRiparazione {
       clienteId: map['clienteId'] ?? '',
       dispositivo: map['dispositivo'] ?? '',
       problema: map['problema'] ?? '',
-      dataIngresso: DateTime.parse(map['dataIngresso']),
-      dataUscita: DateTime.parse(map['dataUscita']),
+      dataIngresso: AppDateUtils.parseISOString(map['dataIngresso']) ?? DateTime.now(),
+      dataUscita: AppDateUtils.parseISOString(map['dataUscita']) ?? DateTime.now(),
       costoRicambi: map['costoRicambi']?.toDouble() ?? 0.0,
       costoManodopera: map['costoManodopera']?.toDouble() ?? 0.0,
       totalePattuito: map['totalePattuito']?.toDouble() ?? 0.0,
@@ -336,7 +338,7 @@ class RiparazioneCard extends StatelessWidget {
               const SizedBox(height: 8),
               if (riparazione.appuntamento != null) ...[
                 Text(
-                  'Appuntamento: ${DateFormatter.formatDateTime(riparazione.appuntamento!)}',
+                  'Appuntamento: ${AppDateUtils.formatDateTime(riparazione.appuntamento!)}',
                   style: const TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
@@ -347,7 +349,7 @@ class RiparazioneCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Ingresso: ${DateFormatter.formatDate(riparazione.dataIngresso)}',
+                    'Ingresso: ${AppDateUtils.formatDate(riparazione.dataIngresso)}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Colors.grey,
@@ -360,12 +362,3 @@ class RiparazioneCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
