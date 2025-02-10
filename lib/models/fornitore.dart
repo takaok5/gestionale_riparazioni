@@ -1,3 +1,5 @@
+import 'enums/enums.dart';
+
 class Fornitore {
   final String id;
   final String nome;

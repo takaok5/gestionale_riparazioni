@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/cliente.dart';
 import '../models/riparazione.dart';
 import '../utils/form_validators.dart';
-import '../models/enums/priorita_riparazione.dart' as pr;
-import '../models/enums/stato_riparazione.dart';
-import '../models/enums/tipo_riparazione.dart';
+import '../models/enums/enums.dart';
 import '../models/dispositivo.dart';
 
 Riparazione createRiparazione() {

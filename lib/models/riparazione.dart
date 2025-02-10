@@ -1,9 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/imports.dart';
-import 'enums/stato_riparazione.dart';
-import 'enums/tipo_dispositivo.dart';
-import 'enums/tipo_riparazione.dart';
-import 'enums/priorita_riparazione.dart';
+import 'enums/enums.dart';
 import 'dispositivo.dart';
 import 'cliente.dart';
 import 'tecnico.dart';

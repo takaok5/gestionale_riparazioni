@@ -1,6 +1,6 @@
 import 'package:meta/meta.dart';
 import 'dart:math' as math;
-
+import 'enums/enums.dart';
 @immutable
 class Coordinate {
   final double latitudine;

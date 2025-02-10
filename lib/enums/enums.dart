@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-
+enum TipoMovimento { carico, scarico, reso, scarto }
+enum UserRole { admin, manager, tecnico, receptionist, user }
 enum StatoDispositivo {
   inAttesa,
   inLavorazione,
@@ -463,3 +464,8 @@ enum TipoCliente {
   pubblicaAmministrazione,
   altro,
 }
+/// Stato possibile di una garanzia
+enum StatoGaranzia { attiva, scaduta, invalidata }
+
+/// Tipo di garanzia
+enum TipoGaranzia { interna, fornitore }

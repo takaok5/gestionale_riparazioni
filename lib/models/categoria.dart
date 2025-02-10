@@ -1,3 +1,5 @@
+import 'enums/enums.dart';
+
 class Categoria {
   final String id;
   final String nome;

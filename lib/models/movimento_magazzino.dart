@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-enum TipoMovimento { carico, scarico, reso, scarto }
+import 'enums/enums.dart';
 
 extension TipoMovimentoExtension on TipoMovimento {
   IconData get icon {

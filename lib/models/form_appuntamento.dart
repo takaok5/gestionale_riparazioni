@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/date_formatter.dart';
+import 'enums/enums.dart';
 
 class FormAppuntamento extends StatefulWidget {
   final String riparazioneId;

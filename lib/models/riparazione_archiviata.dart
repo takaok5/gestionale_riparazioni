@@ -1,3 +1,6 @@
+import 'enums/enums.dart';
+
+
 class RiparazioneArchiviata {
   final String id;
   final String clienteId;

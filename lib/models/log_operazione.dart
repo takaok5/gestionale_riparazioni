@@ -1,3 +1,4 @@
+import 'enums/enums.dart';
 class LogOperazione {
   final String id;
   final String tipo; // 'cliente', 'riparazione', 'preventivo', etc.

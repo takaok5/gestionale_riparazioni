@@ -1,11 +1,8 @@
 import 'package:meta/meta.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'base_model.dart';
-import 'garanzia_info.dart';
 import 'garanzia.dart';
-import 'enums/stato_dispositivo.dart';
-import 'enums/tipo_dispositivo.dart';
-import 'enums/stato_accessorio.dart';
+import 'enums/enums.dart';
 
 @immutable
 class Dispositivo extends BaseModel {

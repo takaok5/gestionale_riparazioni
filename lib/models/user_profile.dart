@@ -1,7 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../utils/exceptions.dart';
-
-enum UserRole { admin, manager, tecnico, receptionist, user }
+import 'enums/enums.dart';
 
 class UserProfile extends Equatable {
   final String id;

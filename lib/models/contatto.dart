@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 import '../utils/validators.dart';
+import 'enums\enums.dart?;
 
 @immutable
 class Contatto {

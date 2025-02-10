@@ -1,3 +1,5 @@
+import 'enums/enums.dart';
+
 class Messaggio {
   final String id;
   final String mittente;

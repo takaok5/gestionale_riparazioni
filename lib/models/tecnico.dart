@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'base_model.dart';
-import 'enums/stato_riparazione.dart';
+import 'enums/enums.dart';
 
 class Tecnico extends BaseModel {
   final String id;

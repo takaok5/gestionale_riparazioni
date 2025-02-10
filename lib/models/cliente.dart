@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 import '../utils/exceptions.dart';
-
+import 'enums/enums.dart';
 List<Dispositivo> getDispositivi() {
   return _dispositivi ?? [];
 }
@@ -13,22 +13,7 @@ Dispositivo? getDispositivo(String id) {
   );
 }
 
-enum TipoCliente {
-  privato,
-  azienda,
-  professionista;
 
-  String get label {
-    switch (this) {
-      case TipoCliente.privato:
-        return 'Privato';
-      case TipoCliente.azienda:
-        return 'Azienda';
-      case TipoCliente.professionista:
-        return 'Professionista';
-    }
-  }
-}
 
 class Cliente extends Equatable {
   final String id;

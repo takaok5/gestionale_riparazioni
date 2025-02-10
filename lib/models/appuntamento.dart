@@ -1,13 +1,7 @@
 import 'package:meta/meta.dart';
 import './base_model.dart';
 import './indirizzo.dart';
-
-enum StatoAppuntamento {
-  programmato,
-  inCorso,
-  completato,
-  annullato,
-}
+import 'enums/enums.dart';
 
 @immutable
 class Appuntamento extends BaseModel {

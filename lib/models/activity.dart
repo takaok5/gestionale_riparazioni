@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart'; // Fixed package name
+import 'enums/enums.dart';
 
 class Activity {
   final String id;
