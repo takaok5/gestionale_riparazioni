@@ -19,8 +19,7 @@ class Dispositivo extends BaseModel {
   final StatoDispositivo stato;
   final DateTime? ultimaRiparazione;
   final String? note;
-  final Garanzia? garanzia;
-  final GaranziaInfo? garanziaInfo;
+  final Garanzia? garanzia;  // Manteniamo solo questo campo per la garanzia
   final List<String>? fotoProdotto;
 
   Dispositivo({
@@ -39,7 +38,6 @@ class Dispositivo extends BaseModel {
     this.ultimaRiparazione,
     this.note,
     this.garanzia,
-    this.garanziaInfo,
     this.fotoProdotto,
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -75,7 +73,6 @@ class Dispositivo extends BaseModel {
       'ultimaRiparazione': ultimaRiparazione?.toIso8601String(),
       'note': note,
       'garanzia': garanzia?.toMap(),
-      'garanziaInfo': garanziaInfo?.toMap(),
       'fotoProdotto': fotoProdotto,
     };
     return map;
@@ -110,10 +107,9 @@ class Dispositivo extends BaseModel {
           : null,
       note: map['note'] as String?,
       garanzia: map['garanzia'] != null
-          ? Garanzia.fromMap(map['garanzia'] as Map<String, dynamic>)
-          : null,
-      garanziaInfo: map['garanziaInfo'] != null
-          ? GaranziaInfo.fromMap(map['garanziaInfo'] as Map<String, dynamic>)
+          ? map['garanzia']['tipo'] == 'interna'
+              ? GaranziaInterna.fromMap(map['garanzia'] as Map<String, dynamic>)
+              : GaranziaFornitore.fromMap(map['garanzia'] as Map<String, dynamic>)
           : null,
       fotoProdotto: List<String>.from(map['fotoProdotto'] ?? []),
       createdAt: (map['createdAt'] as Timestamp).toDate(),
@@ -137,7 +133,6 @@ class Dispositivo extends BaseModel {
     DateTime? ultimaRiparazione,
     String? note,
     Garanzia? garanzia,
-    GaranziaInfo? garanziaInfo,
     List<String>? fotoProdotto,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -158,7 +153,6 @@ class Dispositivo extends BaseModel {
       ultimaRiparazione: ultimaRiparazione ?? this.ultimaRiparazione,
       note: note ?? this.note,
       garanzia: garanzia ?? this.garanzia,
-      garanziaInfo: garanziaInfo ?? this.garanziaInfo,
       fotoProdotto: fotoProdotto ?? this.fotoProdotto,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

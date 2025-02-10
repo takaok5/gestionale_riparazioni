@@ -155,13 +155,17 @@ class OrdiniScreen extends GetView<OrdiniController> {
       return ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildStatCard('Ordini Totali', stats.totaleOrdini.toString(), Colors.blue),
+          _buildStatCard(
+              'Ordini Totali', stats.totaleOrdini.toString(), Colors.blue),
           const SizedBox(height: 16),
-          _buildStatCard('Ordini in Attesa', stats.ordiniInAttesa.toString(), Colors.orange),
+          _buildStatCard('Ordini in Attesa', stats.ordiniInAttesa.toString(),
+              Colors.orange),
           const SizedBox(height: 16),
-          _buildStatCard('Spesa Totale', '€${stats.spesaTotale.toStringAsFixed(2)}', Colors.green),
+          _buildStatCard('Spesa Totale',
+              '€${stats.spesaTotale.toStringAsFixed(2)}', Colors.green),
           const SizedBox(height: 16),
-          _buildStatCard('Tempo Medio Consegna', '${stats.tempoMedioConsegna} giorni', Colors.purple),
+          _buildStatCard('Tempo Medio Consegna',
+              '${stats.tempoMedioConsegna} giorni', Colors.purple),
         ],
       );
     });
@@ -224,21 +228,27 @@ class OrdiniScreen extends GetView<OrdiniController> {
               _buildDetailSection(
                 'Informazioni Ordine',
                 [
-                  _buildDetailRow('Fornitore:', ordine.fornitore.ragioneSociale),
+                  _buildDetailRow(
+                      'Fornitore:', ordine.fornitore.ragioneSociale),
                   _buildDetailRow('Stato:', ordine.stato.display),
-                  _buildDetailRow('Data:', Validators.formatDate(ordine.dataOrdine)),
-                  _buildDetailRow('Totale:', '€${ordine.totale.toStringAsFixed(2)}'),
-                  if (ordine.note.isNotEmpty) _buildDetailRow('Note:', ordine.note),
+                  _buildDetailRow(
+                      'Data:', Validators.formatDate(ordine.dataOrdine)),
+                  _buildDetailRow(
+                      'Totale:', '€${ordine.totale.toStringAsFixed(2)}'),
+                  if (ordine.note.isNotEmpty)
+                    _buildDetailRow('Note:', ordine.note),
                 ],
               ),
               const SizedBox(height: 16),
               _buildDetailSection(
                 'Ricambi Ordinati',
-                ordine.ricambi.map((r) => ListTile(
-                  title: Text(r.nome),
-                  subtitle: Text('Quantità: ${r.quantita}'),
-                  trailing: Text('€${r.totale.toStringAsFixed(2)}'),
-                )).toList(),
+                ordine.ricambi
+                    .map((r) => ListTile(
+                          title: Text(r.nome),
+                          subtitle: Text('Quantità: ${r.quantita}'),
+                          trailing: Text('€${r.totale.toStringAsFixed(2)}'),
+                        ))
+                    .toList(),
               ),
             ],
           ),

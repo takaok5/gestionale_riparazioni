@@ -80,8 +80,10 @@ class GaranzieScreen extends GetView<GaranzieController> {
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStatCard('Garanzie Attive', stats.attive.toString(), Colors.green),
-              _buildStatCard('In Scadenza', stats.inScadenza.toString(), Colors.orange),
+              _buildStatCard(
+                  'Garanzie Attive', stats.attive.toString(), Colors.green),
+              _buildStatCard(
+                  'In Scadenza', stats.inScadenza.toString(), Colors.orange),
               _buildStatCard('Scadute', stats.scadute.toString(), Colors.red),
             ],
           );
@@ -173,8 +175,10 @@ class GaranzieScreen extends GetView<GaranzieController> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildInfoSection('Informazioni Generali', [
-            _buildInfoRow('Data Inizio:', controller.formatDate(garanzia.dataInizio)),
-            _buildInfoRow('Data Scadenza:', controller.formatDate(garanzia.dataScadenza)),
+            _buildInfoRow(
+                'Data Inizio:', controller.formatDate(garanzia.dataInizio)),
+            _buildInfoRow(
+                'Data Scadenza:', controller.formatDate(garanzia.dataScadenza)),
             _buildInfoRow(
               'Durata:',
               '${garanzia.dataScadenza.difference(garanzia.dataInizio).inDays} giorni',

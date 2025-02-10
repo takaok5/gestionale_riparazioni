@@ -18,7 +18,8 @@ class OrdiniController extends GetxController {
     OrdiniService? ordiniService,
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
-  })  : _ordiniService = ordiniService ?? OrdiniService(FirebaseFirestore.instance),
+  })  : _ordiniService =
+            ordiniService ?? OrdiniService(FirebaseFirestore.instance),
         _auth = auth ?? FirebaseAuth.instance,
         _firestore = firestore ?? FirebaseFirestore.instance {
     _initController();
@@ -77,10 +78,8 @@ class OrdiniController extends GetxController {
         .listen(
       (snapshot) {
         fornitori.value = snapshot.docs
-            .map((doc) => Fornitore.fromMap({
-                  'id': doc.id,
-                  ...doc.data() as Map<String, dynamic>
-                }))
+            .map((doc) => Fornitore.fromMap(
+                {'id': doc.id, ...doc.data() as Map<String, dynamic>}))
             .toList();
       },
       onError: (error) {
@@ -102,21 +101,21 @@ class OrdiniController extends GetxController {
     try {
       _ordiniSubscription = _ordiniService
           .getOrdiniStream(
-            userId: currentUserId,
-            stato: filtroStato.value,
-            fornitoreId: filtroFornitoreId.value,
-          )
+        userId: currentUserId,
+        stato: filtroStato.value,
+        fornitoreId: filtroFornitoreId.value,
+      )
           .listen(
-            (ordiniList) {
-              ordini.value = ordiniList;
-              _applicaFiltri();
-              isLoading.value = false;
-            },
-            onError: (e) {
-              error.value = OrdineError.loadError(e.toString());
-              isLoading.value = false;
-            },
-          );
+        (ordiniList) {
+          ordini.value = ordiniList;
+          _applicaFiltri();
+          isLoading.value = false;
+        },
+        onError: (e) {
+          error.value = OrdineError.loadError(e.toString());
+          isLoading.value = false;
+        },
+      );
     } catch (e) {
       error.value = OrdineError.loadError(e.toString());
       isLoading.value = false;
@@ -134,7 +133,8 @@ class OrdiniController extends GetxController {
           .toList();
     }
 
-    if (filtroFornitoreId.value != null && filtroFornitoreId.value!.isNotEmpty) {
+    if (filtroFornitoreId.value != null &&
+        filtroFornitoreId.value!.isNotEmpty) {
       risultatiFiltrati = risultatiFiltrati
           .where((ordine) => ordine.fornitoreId == filtroFornitoreId.value)
           .toList();
@@ -153,9 +153,8 @@ class OrdiniController extends GetxController {
     }
 
     if (mostraSoloUrgenti.value) {
-      risultatiFiltrati = risultatiFiltrati
-          .where((ordine) => ordine.isUrgente)
-          .toList();
+      risultatiFiltrati =
+          risultatiFiltrati.where((ordine) => ordine.isUrgente).toList();
     }
 
     if (searchQuery.value.isNotEmpty) {
@@ -172,11 +171,13 @@ class OrdiniController extends GetxController {
 
   // Metodi per gestire i filtri
   void setFiltroStato(StatoOrdine? stato) => filtroStato.value = stato;
-  void setFiltroFornitore(String? fornitoreId) => filtroFornitoreId.value = fornitoreId;
+  void setFiltroFornitore(String? fornitoreId) =>
+      filtroFornitoreId.value = fornitoreId;
   void setFiltroDate(DateTime? dataDa, DateTime? dataA) {
     filtroDataDa.value = dataDa;
     filtroDataA.value = dataA;
   }
+
   void setMostraSoloUrgenti(bool value) => mostraSoloUrgenti.value = value;
   void setSearchQuery(String query) => searchQuery.value = query;
   void resetFiltri() {

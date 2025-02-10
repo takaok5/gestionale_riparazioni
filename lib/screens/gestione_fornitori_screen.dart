@@ -54,7 +54,7 @@ class GestioneFornitori extends GetView<OrdiniController> {
       }
 
       final fornitori = controller.fornitori;
-      
+
       if (fornitori.isEmpty) {
         return const Center(child: Text('Nessun fornitore trovato'));
       }
@@ -96,7 +96,7 @@ class GestioneFornitori extends GetView<OrdiniController> {
       }
 
       final ordini = controller.ordiniFiltered;
-      
+
       if (ordini.isEmpty) {
         return const Center(child: Text('Nessun ordine trovato'));
       }
@@ -229,7 +229,8 @@ class FornitoreDetailsScreen extends GetView<OrdiniController> {
             _buildInfoRow('Nome:', fornitore.nome),
             _buildInfoRow('Email:', fornitore.email ?? 'Non specificata'),
             _buildInfoRow('Telefono:', fornitore.telefono ?? 'Non specificato'),
-            _buildInfoRow('Indirizzo:', fornitore.indirizzo ?? 'Non specificato'),
+            _buildInfoRow(
+                'Indirizzo:', fornitore.indirizzo ?? 'Non specificato'),
             if (fornitore.note?.isNotEmpty ?? false)
               _buildInfoRow('Note:', fornitore.note!),
           ],
@@ -300,7 +301,8 @@ class FornitoreDetailsScreen extends GetView<OrdiniController> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    onTap: () => Get.to(() => OrdineDetailsScreen(ordine: ordine)),
+                    onTap: () =>
+                        Get.to(() => OrdineDetailsScreen(ordine: ordine)),
                   );
                 },
               );

@@ -2,20 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:meta/meta.dart';
 import './base_model.dart';
 import './indirizzo.dart';
+import './cliente.dart';
 import '../utils/date_formatter.dart';
 import '../enums/enums.dart';
 
 @immutable
 class Appuntamento extends BaseModel {
   final String clienteId;
-  final String? riparazioneId; // New field to link with repairs
+  final String? riparazioneId;
   final DateTime dataOra;
   final String descrizione;
   final StatoAppuntamento stato;
   final Indirizzo? luogoAppuntamento;
   final String? note;
   final String? tecnicoAssegnato;
-  final TipoAppuntamento tipo; // New field to categorize appointments
+  final TipoAppuntamento tipo;
+  final Cliente? _cliente;
 
   const Appuntamento({
     required String id,
@@ -28,29 +30,51 @@ class Appuntamento extends BaseModel {
     this.note,
     this.tecnicoAssegnato,
     this.tipo = TipoAppuntamento.generico,
+    Cliente? cliente,
     required DateTime createdAt,
     required DateTime updatedAt,
   })  : assert(clienteId != ''),
         assert(descrizione != ''),
+        _cliente = cliente,
         super(
           id: id,
           createdAt: createdAt,
           updatedAt: updatedAt,
         );
 
+  // Getters per le informazioni del cliente
+  String get nomeCliente => _cliente?.nominativoCompleto ?? '';
+  String get telefonoCliente => _cliente?.telefono ?? '';
+  String get emailCliente => _cliente?.email ?? '';
+  bool get clienteAttivo => _cliente?.attivo ?? false;
+  TipoCliente get tipoCliente => _cliente?.tipo ?? TipoCliente.privato;
+  
+  // Getter per l'indirizzo
+  String get indirizzoAppuntamento => 
+      luogoAppuntamento?.toString() ?? _cliente?.indirizzoCompleto ?? '';
+
+  // Getters per lo stato dell'appuntamento
+  bool get isCompletato => stato == StatoAppuntamento.completato;
+  bool get isAnnullato => stato == StatoAppuntamento.annullato;
+  bool get isProgrammato => stato == StatoAppuntamento.programmato;
+  bool get isInCorso => stato == StatoAppuntamento.inCorso;
+  bool get isConfermato => stato == StatoAppuntamento.confermato;
+
   factory Appuntamento.fromMap(Map<String, dynamic> map) {
     return Appuntamento(
       id: map['id'] as String,
       clienteId: map['clienteId'] as String,
       riparazioneId: map['riparazioneId'] as String?,
-      dataOra: DateTime.parse(map['dataOra'] as String),
+      dataOra: map['dataOra'] is DateTime
+          ? map['dataOra']
+          : DateTime.parse(map['dataOra'] as String),
       descrizione: map['descrizione'] as String,
       stato: StatoAppuntamento.values.firstWhere(
-        (e) => e.toString() == 'StatoAppuntamento.${map['stato']}',
+        (e) => e.toString().split('.').last == map['stato'],
         orElse: () => StatoAppuntamento.programmato,
       ),
       tipo: TipoAppuntamento.values.firstWhere(
-        (e) => e.toString() == 'TipoAppuntamento.${map['tipo']}',
+        (e) => e.toString().split('.').last == map['tipo'],
         orElse: () => TipoAppuntamento.generico,
       ),
       luogoAppuntamento: map['luogoAppuntamento'] != null
@@ -58,15 +82,22 @@ class Appuntamento extends BaseModel {
           : null,
       note: map['note'] as String?,
       tecnicoAssegnato: map['tecnicoAssegnato'] as String?,
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      updatedAt: DateTime.parse(map['updatedAt'] as String),
+      cliente: map['cliente'] != null 
+          ? Cliente.fromMap(map['cliente'] as Map<String, dynamic>)
+          : null,
+      createdAt: map['createdAt'] is DateTime
+          ? map['createdAt']
+          : DateTime.parse(map['createdAt'] as String),
+      updatedAt: map['updatedAt'] is DateTime
+          ? map['updatedAt']
+          : DateTime.parse(map['updatedAt'] as String),
     );
   }
 
   @override
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      ...super.toMap(),
       'clienteId': clienteId,
       'riparazioneId': riparazioneId,
       'dataOra': dataOra.toIso8601String(),
@@ -76,8 +107,7 @@ class Appuntamento extends BaseModel {
       'luogoAppuntamento': luogoAppuntamento?.toMap(),
       'note': note,
       'tecnicoAssegnato': tecnicoAssegnato,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'cliente': _cliente?.toMap(),
     };
   }
 
@@ -91,6 +121,7 @@ class Appuntamento extends BaseModel {
     Indirizzo? luogoAppuntamento,
     String? note,
     String? tecnicoAssegnato,
+    Cliente? cliente,
   }) {
     return Appuntamento(
       id: id,
@@ -103,13 +134,51 @@ class Appuntamento extends BaseModel {
       luogoAppuntamento: luogoAppuntamento ?? this.luogoAppuntamento,
       note: note ?? this.note,
       tecnicoAssegnato: tecnicoAssegnato ?? this.tecnicoAssegnato,
+      cliente: cliente ?? _cliente,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
     );
   }
+
+  // Metodo per aggiornare il riferimento al cliente
+  Appuntamento withCliente(Cliente cliente) {
+    if (cliente.id != clienteId) {
+      throw ArgumentError('L\'ID del cliente non corrisponde al clienteId dell\'appuntamento');
+    }
+    return copyWith(cliente: cliente);
+  }
+
+  // Validazione appuntamento
+  void validate() {
+    if (clienteId.isEmpty) {
+      throw Exception('ID cliente non può essere vuoto');
+    }
+    if (descrizione.isEmpty) {
+      throw Exception('La descrizione non può essere vuota');
+    }
+    if (dataOra.isBefore(DateTime.now())) {
+      throw Exception('La data dell\'appuntamento non può essere nel passato');
+    }
+    if (_cliente != null && !_cliente!.attivo) {
+      throw Exception('Il cliente non è attivo');
+    }
+  }
+
+  // Utility methods
+  bool get isModificabile => 
+      stato != StatoAppuntamento.completato && 
+      stato != StatoAppuntamento.annullato;
+
+  bool get isImminente => 
+      dataOra.difference(DateTime.now()).inHours <= 24 &&
+      stato == StatoAppuntamento.programmato;
+
+  bool get richiedeConferma =>
+      stato == StatoAppuntamento.programmato &&
+      dataOra.difference(DateTime.now()).inHours <= 48;
 }
 
-// Form widget for creating/editing appointments
+// Form widget per la creazione/modifica degli appuntamenti
 class AppuntamentoForm extends StatefulWidget {
   final String clienteId;
   final String? riparazioneId;
@@ -141,8 +210,7 @@ class _AppuntamentoFormState extends State<AppuntamentoForm> {
     super.initState();
     if (widget.initialAppuntamento != null) {
       _selectedDate = widget.initialAppuntamento!.dataOra;
-      _selectedTime =
-          TimeOfDay.fromDateTime(widget.initialAppuntamento!.dataOra);
+      _selectedTime = TimeOfDay.fromDateTime(widget.initialAppuntamento!.dataOra);
       _descrizioneController.text = widget.initialAppuntamento!.descrizione;
       _noteController.text = widget.initialAppuntamento!.note ?? '';
       _tipo = widget.initialAppuntamento!.tipo;
@@ -167,7 +235,6 @@ class _AppuntamentoFormState extends State<AppuntamentoForm> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Data selection
           ListTile(
             leading: const Icon(Icons.calendar_today),
             title: Text(_selectedDate == null
@@ -175,7 +242,6 @@ class _AppuntamentoFormState extends State<AppuntamentoForm> {
                 : DateFormatter.formatDate(_selectedDate!)),
             onTap: () => _selectDate(context),
           ),
-          // Time selection
           ListTile(
             leading: const Icon(Icons.access_time),
             title: Text(_selectedTime == null
@@ -183,7 +249,6 @@ class _AppuntamentoFormState extends State<AppuntamentoForm> {
                 : _selectedTime!.format(context)),
             onTap: () => _selectTime(context),
           ),
-          // Description field
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextFormField(
@@ -201,7 +266,6 @@ class _AppuntamentoFormState extends State<AppuntamentoForm> {
               },
             ),
           ),
-          // Notes field
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextFormField(
@@ -213,7 +277,6 @@ class _AppuntamentoFormState extends State<AppuntamentoForm> {
               maxLines: 2,
             ),
           ),
-          // Appointment type selection
           if (widget.riparazioneId == null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -237,7 +300,6 @@ class _AppuntamentoFormState extends State<AppuntamentoForm> {
               ),
             ),
           const SizedBox(height: 24),
-          // Action buttons
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -314,13 +376,4 @@ class _AppuntamentoFormState extends State<AppuntamentoForm> {
       widget.onSubmit(appuntamento);
     }
   }
-}
-
-// Enum for appointment types
-enum TipoAppuntamento {
-  generico,
-  riparazione,
-  consulenza,
-  sopralluogo,
-  consegna,
 }
