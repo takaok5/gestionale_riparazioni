@@ -72,7 +72,10 @@ class Riparazione extends BaseRiparazione {
   String get tipo => tipoRiparazione.toString().split('.').last;
   DateTime? get appuntamento => dataCompletamento;
   double get prezzo => preventivo ?? 0.0;
-  double get costoRicambi => ricambiUtilizzati?.fold(0.0, (sum, ricambio) => sum + (ricambio.prezzo ?? 0)) ?? 0.0;
+  double get costoRicambi =>
+      ricambiUtilizzati?.fold(
+          0.0, (sum, ricambio) => sum + (ricambio.prezzo ?? 0)) ??
+      0.0;
   double get costoManodopera => (costoFinale ?? 0.0) - costoRicambi;
 
   bool get isCompletato => dataCompletamento != null;
@@ -90,8 +93,12 @@ class Riparazione extends BaseRiparazione {
       'dispositivo': dispositivo.toMap(),
       'descrizioneProblema': descrizione,
       'noteInterne': noteInterne,
-      'dataCompletamento': dataCompletamento != null ? Timestamp.fromDate(AppDateUtils.toUtc(dataCompletamento!)) : null,
-      'dataConsegna': dataConsegna != null ? Timestamp.fromDate(AppDateUtils.toUtc(dataConsegna!)) : null,
+      'dataCompletamento': dataCompletamento != null
+          ? Timestamp.fromDate(AppDateUtils.toUtc(dataCompletamento!))
+          : null,
+      'dataConsegna': dataConsegna != null
+          ? Timestamp.fromDate(AppDateUtils.toUtc(dataConsegna!))
+          : null,
       'stato': stato.toString().split('.').last,
       'tipoRiparazione': tipoRiparazione.toString().split('.').last,
       'priorita': priorita.toString().split('.').last,
@@ -104,7 +111,8 @@ class Riparazione extends BaseRiparazione {
     };
   }
 
-  static Riparazione fromMap(Map<String, dynamic> map, {
+  static Riparazione fromMap(
+    Map<String, dynamic> map, {
     required Cliente cliente,
     Tecnico? tecnico,
     List<Ricambio>? ricambi,
@@ -112,13 +120,14 @@ class Riparazione extends BaseRiparazione {
     return Riparazione(
       id: map['id'] as String,
       cliente: cliente,
-      dispositivo: Dispositivo.fromMap(map['dispositivo'] as Map<String, dynamic>),
+      dispositivo:
+          Dispositivo.fromMap(map['dispositivo'] as Map<String, dynamic>),
       descrizioneProblema: map['descrizioneProblema'] as String,
       noteInterne: map['noteInterne'] as String?,
-      dataCompletamento: map['dataCompletamento'] != null 
+      dataCompletamento: map['dataCompletamento'] != null
           ? (map['dataCompletamento'] as Timestamp).toDate()
           : null,
-      dataConsegna: map['dataConsegna'] != null 
+      dataConsegna: map['dataConsegna'] != null
           ? (map['dataConsegna'] as Timestamp).toDate()
           : null,
       stato: StatoRiparazione.values.firstWhere(
@@ -202,7 +211,8 @@ class Riparazione extends BaseRiparazione {
       tecnicoAssegnato: tecnicoAssegnato ?? this.tecnicoAssegnato,
       preventivo: preventivo ?? this.preventivo,
       costoFinale: costoFinale ?? this.costoFinale,
-      ricambiUtilizzati: ricambiUtilizzati ?? this.ricambiUtilizzati,
+      ricambiUtilizzati:
+          ricambiUtilizzati ?? List.from(this.ricambiUtilizzati ?? []),
       inGaranzia: inGaranzia ?? this.inGaranzia,
       numeroGaranzia: numeroGaranzia ?? this.numeroGaranzia,
       createdAt: createdAt ?? this.createdAt,
@@ -295,6 +305,7 @@ class RiparazioneCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -365,9 +376,10 @@ class RiparazioneCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       'Tecnico: ${riparazione.tecnicoAssegnato!.nome}',
-                      style: const TextStyle(fontSize: 12, color: Colors.
-'Tecnico: ${riparazione.tecnicoAssegnato!.nome}',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
                     ),
                   ],
                 ),
