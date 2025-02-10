@@ -34,10 +34,10 @@ class Tecnico extends BaseModel {
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : super(
-    id: id,
-    createdAt: createdAt,
-    updatedAt: updatedAt,
-  );
+          id: id,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+        );
 
   @override
   Map<String, dynamic> toMap() {

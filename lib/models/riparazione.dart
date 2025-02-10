@@ -62,8 +62,11 @@ class Riparazione extends BaseModel {
       'descrizioneProblema': descrizioneProblema,
       'noteInterne': noteInterne,
       'dataRicezione': Timestamp.fromDate(dataRicezione),
-      'dataCompletamento': dataCompletamento != null ? Timestamp.fromDate(dataCompletamento!) : null,
-      'dataConsegna': dataConsegna != null ? Timestamp.fromDate(dataConsegna!) : null,
+      'dataCompletamento': dataCompletamento != null
+          ? Timestamp.fromDate(dataCompletamento!)
+          : null,
+      'dataConsegna':
+          dataConsegna != null ? Timestamp.fromDate(dataConsegna!) : null,
       'stato': stato.name,
       'tipoRiparazione': tipoRiparazione.name,
       'priorita': priorita.name,
@@ -78,7 +81,8 @@ class Riparazione extends BaseModel {
     };
   }
 
-  static Riparazione fromMap(Map<String, dynamic> map, {
+  static Riparazione fromMap(
+    Map<String, dynamic> map, {
     required Cliente cliente,
     Tecnico? tecnico,
     List<Ricambio>? ricambi,
@@ -86,14 +90,15 @@ class Riparazione extends BaseModel {
     return Riparazione(
       id: map['id'] ?? '',
       cliente: cliente,
-      dispositivo: Dispositivo.fromMap(map['dispositivo'] as Map<String, dynamic>),
+      dispositivo:
+          Dispositivo.fromMap(map['dispositivo'] as Map<String, dynamic>),
       descrizioneProblema: map['descrizioneProblema'] ?? '',
       noteInterne: map['noteInterne'],
       dataRicezione: (map['dataRicezione'] as Timestamp).toDate(),
-      dataCompletamento: map['dataCompletamento'] != null 
+      dataCompletamento: map['dataCompletamento'] != null
           ? (map['dataCompletamento'] as Timestamp).toDate()
           : null,
-      dataConsegna: map['dataConsegna'] != null 
+      dataConsegna: map['dataConsegna'] != null
           ? (map['dataConsegna'] as Timestamp).toDate()
           : null,
       stato: StatoRiparazione.values.firstWhere(

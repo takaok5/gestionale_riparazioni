@@ -51,8 +51,6 @@ class OrdineRicambi extends BaseModel {
     };
   }
 
-
-
   factory OrdineRicambi.fromMap(Map<String, dynamic> map) {
     return OrdineRicambi(
       id: map['id'] as String,

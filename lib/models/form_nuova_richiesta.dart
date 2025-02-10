@@ -7,28 +7,29 @@ import '../models/enums/stato_riparazione.dart';
 import '../models/enums/tipo_riparazione.dart';
 import '../models/dispositivo.dart';
 
-  Riparazione createRiparazione() {
-    return Riparazione(
-      id: '', // Sarà generato da Firestore
-      cliente: cliente,
-      dispositivo: Dispositivo(
-        id: '', // Sarà generato
-        tipoDispositivo: tipoDispositivo,
-        marca: marcaDispositivo,
-        modello: modelloDispositivo,
-        numeroSerie: numeroSerieDispositivo,
-        statoDispositivo: StatoDispositivo.daVerificare,
-      ),
-      descrizioneProblema: descrizioneProblema,
-      dataRicezione: DateTime.now(),
-      stato: StatoRiparazione.inAttesa,
-      tipoRiparazione: tipoRiparazione,
-      priorita: priorita,
-      inGaranzia: false,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
-  }
+Riparazione createRiparazione() {
+  return Riparazione(
+    id: '', // Sarà generato da Firestore
+    cliente: cliente,
+    dispositivo: Dispositivo(
+      id: '', // Sarà generato
+      tipoDispositivo: tipoDispositivo,
+      marca: marcaDispositivo,
+      modello: modelloDispositivo,
+      numeroSerie: numeroSerieDispositivo,
+      statoDispositivo: StatoDispositivo.daVerificare,
+    ),
+    descrizioneProblema: descrizioneProblema,
+    dataRicezione: DateTime.now(),
+    stato: StatoRiparazione.inAttesa,
+    tipoRiparazione: tipoRiparazione,
+    priorita: priorita,
+    inGaranzia: false,
+    createdAt: DateTime.now(),
+    updatedAt: DateTime.now(),
+  );
+}
+
 class FormNuovaRichiesta extends StatefulWidget {
   final List<Cliente> clienti;
   final Function(Riparazione) onSubmit;

@@ -15,8 +15,8 @@ class OrdiniService {
     StatoOrdine? stato,
     String? fornitoreId,
   }) {
-    Query query = _db.collection(collectionName)
-        .where('userId', isEqualTo: userId);
+    Query query =
+        _db.collection(collectionName).where('userId', isEqualTo: userId);
 
     if (stato != null) {
       query = query.where('stato', isEqualTo: stato.index);
@@ -50,15 +50,15 @@ class OrdiniService {
 
   Future<Map<String, dynamic>> getStatisticheFornitori() async {
     final QuerySnapshot snapshot = await _db.collection(collectionName).get();
-    
+
     Map<String, dynamic> statistiche = {};
-    
+
     for (var doc in snapshot.docs) {
       final ordine = OrdineRicambi.fromMap({
         'id': doc.id,
         ...doc.data() as Map<String, dynamic>,
       });
-      
+
       if (!statistiche.containsKey(ordine.fornitoreId)) {
         statistiche[ordine.fornitoreId] = {
           'nome': ordine.fornitoreNome,
@@ -66,11 +66,11 @@ class OrdiniService {
           'totaleSpesa': 0.0,
         };
       }
-      
+
       statistiche[ordine.fornitoreId]['totaleOrdini']++;
       statistiche[ordine.fornitoreId]['totaleSpesa'] += ordine.totale;
     }
-    
+
     return statistiche;
   }
 }

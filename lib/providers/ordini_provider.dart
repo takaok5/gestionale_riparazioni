@@ -2,40 +2,38 @@ import 'package:flutter/foundation.dart';
 import '../models/ordine_ricambi.dart';
 import '../services/ordini_service.dart';
 
+AppState(this._authService) {
+  _init();
+}
 
-  AppState(this._authService) {
-    _init();
-  }
+bool get isInitialized => _initialized;
+UserProfile? get currentUser => _currentUser;
+bool get isAuthenticated => _currentUser != null;
 
-  bool get isInitialized => _initialized;
-  UserProfile? get currentUser => _currentUser;
-  bool get isAuthenticated => _currentUser != null;
+Future<void> _init() async {
+  _authService.authStateChanges.listen((user) async {
+    if (user != null) {
+      _currentUser = await _authService.getCurrentUserProfile();
+    } else {
+      _currentUser = null;
+    }
+    _initialized = true;
+    notifyListeners();
+  });
+}
 
-  Future<void> _init() async {
-    _authService.authStateChanges.listen((user) async {
-      if (user != null) {
-        _currentUser = await _authService.getCurrentUserProfile();
-      } else {
-        _currentUser = null;
-      }
-      _initialized = true;
-      notifyListeners();
-    });
-  }
+Future<void> signIn(String email, String password) async {
+  await _authService.signInWithEmailAndPassword(email, password);
+}
 
-  Future<void> signIn(String email, String password) async {
-    await _authService.signInWithEmailAndPassword(email, password);
-  }
-
-  Future<void> signOut() async {
-    await _authService.signOut();
-  }
+Future<void> signOut() async {
+  await _authService.signOut();
 }
 
 class OrdiniProvider with ChangeNotifier {
   final OrdiniService _ordiniService = OrdiniService();
   final AuthService _authService;
-  UserProfile? _currentUser; 
+  UserProfile? _currentUser;
   List<OrdineRicambi> _ordini = [];
   bool _isLoading = false;
   String? _error;
@@ -59,13 +57,14 @@ class OrdiniProvider with ChangeNotifier {
     String? fornitoreId,
   }) {
     if (_currentUser == null) return Stream.value([]);
-    
+
     return _ordiniService.getOrdiniStream(
       userId: _currentUser!.id,
       stato: stato,
       fornitoreId: fornitoreId,
     );
   }
+
   // Filtri
   void setFiltroStato(StatoOrdine? stato) {
     _filtroStato = stato;

@@ -1,11 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_profile.dart';
-import '../utils/exceptions.dart';
-
+import '../services/firestore_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirestoreService _firestoreService;
 
   AuthService(this._firestoreService);
@@ -21,7 +21,7 @@ class AuthService {
   }
 
   Future<UserCredential> signInWithEmailAndPassword(
-    String email, 
+    String email,
     String password,
   ) async {
     return await _auth.signInWithEmailAndPassword(
@@ -29,150 +29,63 @@ class AuthService {
       password: password,
     );
   }
-}
-      // Create user profile
-      await _firestore.collection('users').doc(user.uid).set({
-        ...profile.toMap(),
-        'email': email,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
 
-      return profile.copyWith(id: user.uid);
-    } on FirebaseAuthException catch (e) {
-      throw AuthException(
-        _getAuthErrorMessage(e.code),
-        code: e.code,
-        details: e.message,
-      );
-    }
-  }
-
-  // Sign out
-  Future<void> signOut() async {
+  Future<UserCredential> createUserWithEmailAndPassword({
+    required String email,
+    required String password,
+    required UserProfile profile,
+  }) async {
     try {
-      await _auth.signOut();
-    } on FirebaseAuthException catch (e) {
-      throw AuthException(
-        'Errore durante il logout',
-        code: e.code,
-        details: e.message,
-      );
-    }
-  }
-
-  // Update user profile
-  Future<void> updateProfile(UserProfile profile) async {
-    try {
-      final user = currentUser;
-      if (user == null) {
-        throw AuthException('Nessun utente autenticato');
-      }
-
-      await _firestore
-          .collection('users')
-          .doc(profile.id)
-          .update(profile.toMap());
-    } on FirebaseException catch (e) {
-      throw AuthException(
-        'Errore durante l\'aggiornamento del profilo',
-        code: e.code,
-        details: e.message,
-      );
-    }
-  }
-
-  // Change password
-  Future<void> changePassword(
-      String currentPassword, String newPassword) async {
-    try {
-      final user = currentUser;
-      if (user == null || user.email == null) {
-        throw AuthException('Nessun utente autenticato');
-      }
-
-      // Re-authenticate user
-      final credential = EmailAuthProvider.credential(
-        email: user.email!,
-        password: currentPassword,
-      );
-      await user.reauthenticateWithCredential(credential);
-
-      // Change password
-      await user.updatePassword(newPassword);
-    } on FirebaseAuthException catch (e) {
-      throw AuthException(
-        _getAuthErrorMessage(e.code),
-        code: e.code,
-        details: e.message,
-      );
-    }
-  }
-
-  // Reset password
-  Future<void> resetPassword(String email) async {
-    try {
-      await _auth.sendPasswordResetEmail(email: email);
-    } on FirebaseAuthException catch (e) {
-      throw AuthException(
-        _getAuthErrorMessage(e.code),
-        code: e.code,
-        details: e.message,
-      );
-    }
-  }
-
-  // Delete account
-  Future<void> deleteAccount(String password) async {
-    try {
-      final user = currentUser;
-      if (user == null || user.email == null) {
-        throw AuthException('Nessun utente autenticato');
-      }
-
-      // Re-authenticate user
-      final credential = EmailAuthProvider.credential(
-        email: user.email!,
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
         password: password,
       );
-      await user.reauthenticateWithCredential(credential);
 
-      // Delete user data
-      await _firestore.collection('users').doc(user.uid).delete();
+      if (userCredential.user != null) {
+        await _firestore.collection('users').doc(userCredential.user!.uid).set({
+          ...profile.toMap(),
+          'email': email,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
 
-      // Delete auth account
-      await user.delete();
-    } on FirebaseAuthException catch (e) {
-      throw AuthException(
-        _getAuthErrorMessage(e.code),
-        code: e.code,
-        details: e.message,
-      );
+      return userCredential;
+    } catch (e) {
+      rethrow;
     }
   }
 
-  // Helper method to get user-friendly error messages
-  String _getAuthErrorMessage(String code) {
-    switch (code) {
-      case 'user-not-found':
-        return 'Nessun utente trovato con questa email';
-      case 'wrong-password':
-        return 'Password non corretta';
-      case 'email-already-in-use':
-        return 'Email già in uso';
-      case 'weak-password':
-        return 'La password deve essere di almeno 6 caratteri';
-      case 'invalid-email':
-        return 'Email non valida';
-      case 'user-disabled':
-        return 'Account disabilitato';
-      case 'too-many-requests':
-        return 'Troppi tentativi. Riprova più tardi';
-      case 'operation-not-allowed':
-        return 'Operazione non consentita';
-      case 'requires-recent-login':
-        return 'Per favore, effettua nuovamente il login';
-      default:
-        return 'Si è verificato un errore durante l\'autenticazione';
-    }
+  Future<void> updateUserProfile(UserProfile profile) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No user logged in');
+
+    await _firestore.collection('users').doc(user.uid).update({
+      ...profile.toMap(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> signOut() async {
+    await _auth.signOut();
+  }
+
+  Future<void> resetPassword(String email) async {
+    await _auth.sendPasswordResetEmail(email: email);
+  }
+
+  Future<void> updatePassword(String newPassword) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No user logged in');
+
+    await user.updatePassword(newPassword);
+  }
+
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No user logged in');
+
+    await _firestore.collection('users').doc(user.uid).delete();
+    await user.delete();
   }
 }
