@@ -64,13 +64,22 @@ class Garanzia extends BaseModel {
     return attiva && giorni <= 30 && giorni > 0;
   }
 
+  void validate() {
+    if (numero.isEmpty) {
+      throw Exception('Il numero della garanzia è obbligatorio');
+    }
+    if (dataInizio.isAfter(dataFine)) {
+      throw Exception('La data di inizio non può essere successiva alla data di fine');
+    }
+  }
+
   @override
   Map<String, dynamic> toMap() {
     return {
       ...super.toMap(),
       'numero': numero,
-      'dataInizio': Timestamp.fromDate(dataInizio),
-      'dataFine': Timestamp.fromDate(dataFine),
+      'dataInizio': Timestamp.fromDate(AppDateUtils.toUtc(dataInizio)),
+      'dataFine': Timestamp.fromDate(AppDateUtils.toUtc(dataFine)), 
       'note': note,
       'stato': stato.toString().split('.').last,
       'tipo': tipo.toString().split('.').last,
@@ -83,6 +92,17 @@ class Garanzia extends BaseModel {
     if (isValid) return 'Garanzia valida per altri ${rimanenteFormattato}';
     return 'Garanzia non valida';
   }
+
+  Garanzia copyWith({
+    String? id,
+    String? numero,
+    DateTime? dataInizio,
+    DateTime? dataFine,
+    String? note,
+    StatoGaranzia? stato,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  });
 }
 
 /// Garanzia interna per riparazioni
@@ -130,6 +150,17 @@ class GaranziaInterna extends Garanzia {
       _dataInvalidazione != null ? AppDateUtils.formatDateTime(_dataInvalidazione!) : null;
 
   @override
+  void validate() {
+    super.validate();
+    if (dispositivo.isEmpty) {
+      throw Exception('Il dispositivo è obbligatorio');
+    }
+    if (componentiCoperti.isEmpty) {
+      throw Exception('È necessario specificare almeno un componente coperto');
+    }
+  }
+
+  @override
   Map<String, dynamic> toMap() {
     return {
       ...super.toMap(),
@@ -140,9 +171,46 @@ class GaranziaInterna extends Garanzia {
       'componentiCoperti': componentiCoperti,
       'motivazioneInvalidazione': _motivazioneInvalidazione,
       'dataInvalidazione': _dataInvalidazione != null
-          ? Timestamp.fromDate(_dataInvalidazione!)
+          ? Timestamp.fromDate(AppDateUtils.toUtc(_dataInvalidazione!))
           : null,
     };
+  }
+
+  @override
+  GaranziaInterna copyWith({
+    String? id,
+    String? numero,
+    String? riparazioneId,
+    String? clienteId,
+    String? dispositivo,
+    DateTime? dataInizio,
+    DateTime? dataFine,
+    String? seriale,
+    String? note,
+    StatoGaranzia? stato,
+    List<String>? componentiCoperti,
+    String? motivazioneInvalidazione,
+    DateTime? dataInvalidazione,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return GaranziaInterna(
+      id: id ?? this.id,
+      numero: numero ?? this.numero,
+      riparazioneId: riparazioneId ?? this.riparazioneId,
+      clienteId: clienteId ?? this.clienteId,
+      dispositivo: dispositivo ?? this.dispositivo,
+      dataInizio: dataInizio ?? this.dataInizio,
+      dataFine: dataFine ?? this.dataFine,
+      seriale: seriale ?? this.seriale,
+      note: note ?? this.note,
+      stato: stato ?? this.stato,
+      componentiCoperti: componentiCoperti ?? List.from(this.componentiCoperti),
+      motivazioneInvalidazione: motivazioneInvalidazione ?? this._motivazioneInvalidazione,
+      dataInvalidazione: dataInvalidazione ?? this._dataInvalidazione,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
   }
 
   factory GaranziaInterna.fromMap(Map<String, dynamic> map) {
@@ -170,6 +238,7 @@ class GaranziaInterna extends Garanzia {
     );
   }
 }
+
 /// Garanzia del fornitore
 class GaranziaFornitore extends Garanzia {
   final String fornitore;
@@ -196,6 +265,14 @@ class GaranziaFornitore extends Garanzia {
         );
 
   @override
+  void validate() {
+    super.validate();
+    if (fornitore.isEmpty) {
+      throw Exception('Il fornitore è obbligatorio');
+    }
+  }
+
+  @override
   Map<String, dynamic> toMap() {
     return {
       ...super.toMap(),
@@ -203,7 +280,30 @@ class GaranziaFornitore extends Garanzia {
     };
   }
 
- factory GaranziaFornitore.fromMap(Map<String, dynamic> map) {
+  @override
+  GaranziaFornitore copyWith({
+    String? id,
+    String? numero,
+    DateTime? dataInizio,
+    DateTime? dataFine,
+    String? fornitore,
+    String? note,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return GaranziaFornitore(
+      id: id ?? this.id,
+      numero: numero ?? this.numero,
+      dataInizio: dataInizio ?? this.dataInizio,
+      dataFine: dataFine ?? this.dataFine,
+      fornitore: fornitore ?? this.fornitore,
+      note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  factory GaranziaFornitore.fromMap(Map<String, dynamic> map) {
     return GaranziaFornitore(
       id: map['id'] as String,
       numero: map['numero'] as String,

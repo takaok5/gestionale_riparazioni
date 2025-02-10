@@ -60,6 +60,36 @@ class GaranziaService {
   Stream<List<Garanzia>> getAllGaranzie() => getGaranzie();
 
   // Registra una nuova garanzia interna
+  Future<void> addGaranziaInterna(GaranziaInterna garanzia) async {
+    try {
+      garanzia.validate();
+      final doc = await _db.collection('garanzie').add(garanzia.toMap());
+      await _scheduleNotificaScadenza(garanzia, doc.id);
+    } catch (e) {
+      print('Error adding garanzia: $e');
+      throw e;
+    }
+  }
+
+  Future<void> addGaranziaFornitore(GaranziaFornitore garanzia) async {
+    try {
+      garanzia.validate();
+      final doc = await _db.collection('garanzie').add(garanzia.toMap());
+      await _scheduleNotificaScadenza(garanzia, doc.id);
+    } catch (e) {
+      print('Error adding garanzia fornitore: $e');
+      throw e;
+    }
+  }
+
+  String _generateNumeroGaranzia() {
+    final now = AppDateUtils.getCurrentDateTime();
+    final anno = now.year.toString();
+    final timestamp = now.millisecondsSinceEpoch.toString();
+    final progressivo = timestamp.substring(timestamp.length - 6);
+    return 'GAR$anno$progressivo';
+  }
+
   Future<void> registraGaranziaInterna({
     required String riparazioneId,
     required String clienteId,
@@ -72,8 +102,14 @@ class GaranziaService {
     final now = AppDateUtils.getCurrentDateTime();
     final dataFine = AppDateUtils.addDays(now, durataGiorniGaranzia);
     
+    // Verifica esistenza riparazione
+    final riparazioneDoc = await _db.collection('riparazioni').doc(riparazioneId).get();
+    if (!riparazioneDoc.exists) {
+      throw Exception('Riparazione non trovata');
+    }
+    
     final garanzia = GaranziaInterna(
-      id: '',  // sarà generato da Firestore
+      id: '',
       numero: _generateNumeroGaranzia(),
       riparazioneId: riparazioneId,
       clienteId: clienteId,
@@ -90,7 +126,6 @@ class GaranziaService {
 
     await addGaranziaInterna(garanzia);
   }
-
   String _generateNumeroGaranzia() {
     final now = AppDateUtils.getCurrentDateTime();
     final anno = now.year.toString();
