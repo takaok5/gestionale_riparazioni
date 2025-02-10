@@ -19,17 +19,20 @@ import 'services/analytics_service.dart';
 import 'services/locator.dart';
 import 'services/firestore_service.dart';
 import 'services/app_context_service.dart';
+import 'models/user_profile.dart';
 import 'utils/platform_utils.dart';
 
 // Create theme instances
 final ThemeData lightTheme = ThemeData(
   brightness: Brightness.light,
-  // Add your light theme configurations here
+  primarySwatch: Colors.blue,
+  visualDensity: VisualDensity.adaptivePlatformDensity,
 );
 
 final ThemeData darkTheme = ThemeData(
   brightness: Brightness.dark,
-  // Add your dark theme configurations here
+  primarySwatch: Colors.blue,
+  visualDensity: VisualDensity.adaptivePlatformDensity,
 );
 
 class SettingsService {
@@ -41,29 +44,53 @@ class SettingsService {
     return SettingsService(prefs);
   }
 
-  ThemeMode get themeMode =>
-      ThemeMode.system; // You can implement the actual logic here
+  ThemeMode get themeMode {
+    final String? themeModeString = _prefs.getString('themeMode');
+    switch (themeModeString) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
+    }
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    String themeModeString;
+    switch (mode) {
+      case ThemeMode.light:
+        themeModeString = 'light';
+        break;
+      case ThemeMode.dark:
+        themeModeString = 'dark';
+        break;
+      case ThemeMode.system:
+        themeModeString = 'system';
+        break;
+    }
+    await _prefs.setString('themeMode', themeModeString);
+  }
 }
 
-final settingsProvider = ChangeNotifierProvider<SettingsProvider>(
-  create: (_) => SettingsProvider(),
-);
-
-// Add MyApp class definition
 class MyApp extends StatelessWidget {
   final SettingsService settingsService;
 
-  const MyApp({Key? key, required this.settingsService}) : super(key: key);
+  const MyApp({
+    Key? key,
+    required this.settingsService,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Gestionale Riparazioni',
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: settingsService.themeMode,
-      title: 'Gestionale Riparazioni',
       onGenerateRoute: RouteGenerator.generateRoute,
       initialRoute: RouteGenerator.login,
+      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -71,36 +98,47 @@ class MyApp extends StatelessWidget {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize SharedPreferences
-  final prefs = await SharedPreferences.getInstance();
-  final themeProvider = ThemeProvider(prefs);
-  final settingsService = await SettingsService.init(prefs);
-
+  // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Initialize SharedPreferences and SettingsService
+  final prefs = await SharedPreferences.getInstance();
+  final settingsService = await SettingsService.init(prefs);
+
+  // Initialize ThemeProvider with SettingsService
+  final themeProvider = ThemeProvider(settingsService);
+
+  // Initialize timezone data
   tz.initializeTimeZones();
 
+  // Setup service locator
   setupServiceLocator();
 
+  // Initialize notification service
   final notificationService = NotificationService();
   await notificationService.initialize();
 
+  // Set window size for desktop platforms
   if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
     setWindowMinSize(const Size(800, 600));
     setWindowMaxSize(Size.infinite);
   }
 
+  // Initialize FirestoreService
+  final firestoreService = FirestoreService();
+  
+  // Initialize AppContextService
   final appContextService = AppContextService();
-  // Get the current user from your auth provider or service
-  final currentUser =
-      await getCurrentUser(); // Implement this function based on your auth system
 
-  appContextService.updateContext(
-    currentDate: DateTime.now(),
-    currentUser: currentUser,
-  );
+  // Initialize AuthService and get current user
+  final authService = AuthService(firestoreService);
+  final UserProfile? currentUser = await authService.getCurrentUser();
+
+  // Initialize required services
+  final analyticsService = AnalyticsService();
+  await analyticsService.initialize();
 
   runApp(
     MultiProvider(
@@ -115,15 +153,28 @@ void main() async {
         ChangeNotifierProvider<SettingsProvider>(
           create: (_) => SettingsProvider(),
         ),
+        Provider<AnalyticsService>.value(value: analyticsService),
       ],
-      child: MyApp(settingsService: settingsService),
+      child: Builder(
+        builder: (context) {
+          // Update app context with the build context
+          appContextService.updateContext(context);
+          
+          // Update current user
+          if (currentUser != null) {
+            appContextService.updateCurrentUser(currentUser);
+          }
+
+          return MyApp(settingsService: settingsService);
+        },
+      ),
     ),
   );
 }
 
-// Add this function to get the current user
-Future<User?> getCurrentUser() async {
-  // Implement your logic to get the current user
-  // This might involve Firebase Auth or your custom auth system
-  return null; // Replace with actual implementation
+// Extension method for RouteGenerator
+extension RouteGeneratorExtension on RouteGenerator {
+  static const String login = '/login';
+  static const String home = '/home';
+  static const String settings = '/settings';
 }
