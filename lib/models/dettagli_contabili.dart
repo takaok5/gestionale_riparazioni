@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 import '../enums/enums.dart';
+import '../utils/date_utils.dart' show AppDateUtils;
 
 @immutable
 class DettagliContabili {
@@ -9,7 +10,7 @@ class DettagliContabili {
   final String? metodoPagamento;
   final DateTime? dataPagamento;
 
-  // Rimossi i getter ricorsivi e aggiunti correttamente
+  // Getters per l'importo
   double get importoTotale {
     if (scontoApplicato == null) return importo;
     return importo - (importo * scontoApplicato! / 100);
@@ -18,8 +19,23 @@ class DettagliContabili {
   double get totale => importoTotale;
   double get costoRicambi => 0.0; // Implementa la logica appropriata
   double get costoManodopera => 0.0; // Implementa la logica appropriata
-  // Rimosso il getter ricorsivo pagato
-  // Rimosso il getter ricorsivo scontoApplicato
+
+  // Getters per le date formattate
+  String? get dataPagamentoFormattata => 
+      dataPagamento != null ? AppDateUtils.formatDate(dataPagamento!) : null;
+  
+  String? get dataPagamentoCompleta => 
+      dataPagamento != null ? AppDateUtils.formatDateTime(dataPagamento!) : null;
+  
+  String? get tempoTrascorsoDalPagamento => 
+      dataPagamento != null ? AppDateUtils.timeAgo(dataPagamento!) : null;
+
+  // Getters per lo stato del pagamento
+  bool get isPagamentoRecente => 
+      dataPagamento != null && AppDateUtils.isWithinDays(dataPagamento!, 7);
+
+  String get statoPagamento => 
+      pagato ? 'Pagato il ${dataPagamentoFormattata ?? "data non disponibile"}' : 'Non pagato';
 
   const DettagliContabili({
     required this.importo,
@@ -38,7 +54,7 @@ class DettagliContabili {
       pagato: map['pagato'] as bool? ?? false,
       metodoPagamento: map['metodoPagamento'] as String?,
       dataPagamento: map['dataPagamento'] != null
-          ? DateTime.parse(map['dataPagamento'] as String)
+          ? AppDateUtils.parseISOString(map['dataPagamento'] as String)
           : null,
     );
   }
@@ -49,7 +65,43 @@ class DettagliContabili {
       'scontoApplicato': scontoApplicato,
       'pagato': pagato,
       'metodoPagamento': metodoPagamento,
-      'dataPagamento': dataPagamento?.toIso8601String(),
+      'dataPagamento': dataPagamento != null 
+          ? AppDateUtils.toISOString(dataPagamento!)
+          : null,
     };
+  }
+
+  // Metodo di utilità per creare una copia con modifiche
+  DettagliContabili copyWith({
+    double? importo,
+    double? scontoApplicato,
+    bool? pagato,
+    String? metodoPagamento,
+    DateTime? dataPagamento,
+  }) {
+    return DettagliContabili(
+      importo: importo ?? this.importo,
+      scontoApplicato: scontoApplicato ?? this.scontoApplicato,
+      pagato: pagato ?? this.pagato,
+      metodoPagamento: metodoPagamento ?? this.metodoPagamento,
+      dataPagamento: dataPagamento ?? this.dataPagamento,
+    );
+  }
+
+  // Metodo per formattare l'importo come stringa di valuta
+  String getImportoFormattato({bool conSconto = true}) {
+    final importoDaMostrare = conSconto ? importoTotale : importo;
+    return '€${importoDaMostrare.toStringAsFixed(2)}';
+  }
+
+  // Metodo per ottenere una descrizione completa del pagamento
+  String getDescrizionePagamento() {
+    if (!pagato) return 'Non pagato';
+    
+    final data = dataPagamentoFormattata ?? 'data non disponibile';
+    final metodo = metodoPagamento ?? 'metodo non specificato';
+    final importoStr = getImportoFormattato();
+    
+    return 'Pagato $importoStr il $data con $metodo';
   }
 }

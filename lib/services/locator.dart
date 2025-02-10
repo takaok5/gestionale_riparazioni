@@ -6,23 +6,20 @@ import 'notification_service.dart';
 import 'ordini_service.dart';
 import 'garanzia_service.dart';
 import 'contabilita_service.dart';
+import 'app_context_service.dart'; // Aggiunto per correttezza
 
 final locator = GetIt.instance;
 
-void setupServiceLocator() {
-  getIt.registerLazySingleton<FirestoreService>(() => FirestoreService());
-  getIt.registerLazySingleton<InventoryService>(() => InventoryService());
-  getIt.registerLazySingleton<GaranziaService>(() => GaranziaService());
-}
-
+// Rimossa la funzione setupServiceLocator() duplicata e unita con setupLocator()
 void setupLocator() {
   // Services
+  locator.registerLazySingleton(() => AppContextService()); // Aggiunto perché richiesto da alcuni servizi
   locator.registerLazySingleton(() => AuthService());
-  locator.registerLazySingleton(() => FirestoreService());
-  locator.registerLazySingleton(() => InventoryService());
+  locator.registerLazySingleton(() => FirestoreService(locate<AppContextService>())); // Passaggio dipendenza
+  locator.registerLazySingleton(() => InventoryService(locate<AppContextService>())); // Passaggio dipendenza
   locator.registerLazySingleton(() => NotificationService());
   locator.registerLazySingleton(() => OrdiniService());
-  locator.registerLazySingleton(() => GaranziaService());
+  locator.registerLazySingleton(() => GaranziaService(locate<NotificationService>())); // Passaggio dipendenza
   locator.registerLazySingleton(() => ContabilitaService());
 }
 

@@ -1,31 +1,31 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/garanzia.dart';
 import '../services/notification_service.dart';
+import '../utils/date_utils.dart' show AppDateUtils;
 
 class GaranziaService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final NotificationService _notificationService;
 
-  Future<void> addGaranzia(Garanzia garanzia) async {
+  GaranziaService(this._notificationService);
+
+  Future<void> addGaranziaInterna(GaranziaInterna garanzia) async {
     try {
       final doc = await _db.collection('garanzie').add(garanzia.toMap());
-      await _scheduleNotificaScadenza(garanzia.copyWith(id: doc.id));
+      await _scheduleNotificaScadenza(garanzia, doc.id);
     } catch (e) {
       print('Error adding garanzia: $e');
       throw e;
     }
   }
 
-  GaranziaService(this._notificationService);
-
-  Future<GaranziaInfo?> getGaranzia(String id) async {
+  Future<void> addGaranziaFornitore(GaranziaFornitore garanzia) async {
     try {
-      // Implement your garanzia fetching logic here
-      // This is just a placeholder implementation
-      return null;
+      final doc = await _db.collection('garanzie').add(garanzia.toMap());
+      await _scheduleNotificaScadenza(garanzia, doc.id);
     } catch (e) {
-      print('Error getting garanzia: $e');
-      return null;
+      print('Error adding garanzia fornitore: $e');
+      throw e;
     }
   }
 
@@ -34,54 +34,68 @@ class GaranziaService {
     var query = _db.collection('garanzie').orderBy('dataFine');
 
     if (soloAttive == true) {
-      final now = DateTime.now();
+      final now = AppDateUtils.getCurrentDateTime();
       query = query
-          .where('dataFine',
-              isGreaterThan:
-                  now) // Corretto da dataScadenza a dataFine per match con il modello
-          .where('stato', isEqualTo: StatoGaranzia.attiva.toString());
+          .where('dataFine', isGreaterThan: Timestamp.fromDate(AppDateUtils.toUtc(now)))
+          .where('stato', isEqualTo: StatoGaranzia.attiva.toString().split('.').last);
     }
 
-    return query.snapshots().map((snapshot) => snapshot.docs
-        .map((doc) => Garanzia.fromMap({...doc.data(), 'id': doc.id}))
-        .toList());
+    return query.snapshots().map((snapshot) => snapshot.docs.map((doc) {
+          final data = doc.data();
+          final tipo = TipoGaranzia.values.firstWhere(
+            (e) => e.toString().split('.').last == data['tipo'],
+            orElse: () => TipoGaranzia.interna,
+          );
+
+          switch (tipo) {
+            case TipoGaranzia.interna:
+              return GaranziaInterna.fromMap({...data, 'id': doc.id});
+            case TipoGaranzia.fornitore:
+              return GaranziaFornitore.fromMap({...data, 'id': doc.id});
+          }
+        }).toList());
   }
 
-  // Metodi aggiunti per supportare l'interfaccia usata in GaranzieScreen
-  Stream<List<Garanzia>> getGaranzieAttive() {
-    return getGaranzie(soloAttive: true);
-  }
+  Stream<List<Garanzia>> getGaranzieAttive() => getGaranzie(soloAttive: true);
+  Stream<List<Garanzia>> getAllGaranzie() => getGaranzie();
 
-  Stream<List<Garanzia>> getAllGaranzie() {
-    return getGaranzie();
-  }
-
-  // Registra una nuova garanzia con i parametri richiesti
-  Future<void> registraGaranzia({
+  // Registra una nuova garanzia interna
+  Future<void> registraGaranziaInterna({
     required String riparazioneId,
     required String clienteId,
     required String dispositivo,
     required int durataGiorniGaranzia,
     required List<String> componentiCoperti,
+    String? seriale,
     String? note,
   }) async {
-    final now = DateTime.now();
-    final garanzia = Garanzia(
-      id: '', // sarà generato da Firestore
-      prodotto: dispositivo,
+    final now = AppDateUtils.getCurrentDateTime();
+    final dataFine = AppDateUtils.addDays(now, durataGiorniGaranzia);
+    
+    final garanzia = GaranziaInterna(
+      id: '',  // sarà generato da Firestore
+      numero: _generateNumeroGaranzia(),
       riparazioneId: riparazioneId,
       clienteId: clienteId,
       dispositivo: dispositivo,
+      seriale: seriale,
       dataInizio: now,
-      dataFine: now.add(Duration(days: durataGiorniGaranzia)),
+      dataFine: dataFine,
       stato: StatoGaranzia.attiva,
       note: note,
+      componentiCoperti: componentiCoperti,
       createdAt: now,
       updatedAt: now,
-      componentiCoperti: componentiCoperti,
     );
 
-    await addGaranzia(garanzia);
+    await addGaranziaInterna(garanzia);
+  }
+
+  String _generateNumeroGaranzia() {
+    final now = AppDateUtils.getCurrentDateTime();
+    final anno = now.year.toString();
+    final progressivo = DateTime.now().millisecondsSinceEpoch.toString().substring(8);
+    return 'GAR$anno$progressivo';
   }
 
   Future<Garanzia> getGaranziaById(String id) async {
@@ -89,77 +103,117 @@ class GaranziaService {
     if (!doc.exists) {
       throw Exception('Garanzia non trovata');
     }
-    return Garanzia.fromMap({...doc.data()!, 'id': doc.id});
+    
+    final data = doc.data()!;
+    final tipo = TipoGaranzia.values.firstWhere(
+      (e) => e.toString().split('.').last == data['tipo'],
+      orElse: () => TipoGaranzia.interna,
+    );
+
+    switch (tipo) {
+      case TipoGaranzia.interna:
+        return GaranziaInterna.fromMap({...data, 'id': doc.id});
+      case TipoGaranzia.fornitore:
+        return GaranziaFornitore.fromMap({...data, 'id': doc.id});
+    }
   }
 
-  Future<void> _scheduleNotificaScadenza(Garanzia garanzia) async {
-    final dataNotifica = garanzia.dataFine.subtract(const Duration(days: 7));
+  Future<void> _scheduleNotificaScadenza(Garanzia garanzia, String id) async {
+    final dataNotifica = AppDateUtils.addDays(garanzia.dataFine, -7);
+    final tipoGaranzia = garanzia is GaranziaInterna ? 'interna' : 'fornitore';
+
+    String body;
+    if (garanzia is GaranziaInterna) {
+      body = 'La garanzia per ${garanzia.dispositivo} sta per scadere';
+    } else if (garanzia is GaranziaFornitore) {
+      body = 'La garanzia del fornitore ${garanzia.fornitore} sta per scadere';
+    } else {
+      body = 'Una garanzia sta per scadere';
+    }
 
     await _notificationService.scheduleNotification(
-      id: garanzia.hashCode,
+      id: id.hashCode,
       title: 'Scadenza Garanzia',
-      body: 'La garanzia per ${garanzia.prodotto} sta per scadere',
+      body: body,
       scheduledDate: dataNotifica,
-      payload: '/garanzie/${garanzia.id}',
+      payload: '/garanzie/$id',
     );
   }
 
-  // Aggiorna una garanzia esistente
   Future<void> updateGaranzia(Garanzia garanzia) async {
-    await _db.collection('garanzie').doc(garanzia.id).update(garanzia.toMap());
-
-    await _scheduleNotificaScadenza(garanzia);
+    await _db.collection('garanzie').doc(garanzia.id).update({
+      ...garanzia.toMap(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    await _scheduleNotificaScadenza(garanzia, garanzia.id);
   }
 
-  // Elimina una garanzia
   Future<void> deleteGaranzia(String id) async {
     await _db.collection('garanzie').doc(id).delete();
     await _notificationService.cancelNotification(id.hashCode);
   }
 
-  // Invalida una garanzia
   Future<void> invalidaGaranzia(String garanziaId, String motivo) async {
+    final now = AppDateUtils.getCurrentDateTime();
     await _db.collection('garanzie').doc(garanziaId).update({
-      'stato': StatoGaranzia.invalidata.toString(),
+      'stato': StatoGaranzia.invalidata.toString().split('.').last,
       'motivazioneInvalidazione': motivo,
-      'dataInvalidazione': FieldValue.serverTimestamp(),
+      'dataInvalidazione': Timestamp.fromDate(AppDateUtils.toUtc(now)),
+      'updatedAt': Timestamp.fromDate(AppDateUtils.toUtc(now)),
     });
   }
 
-  // Aggiorna le note di una garanzia
   Future<void> updateNote(String garanziaId, String note) async {
+    final now = AppDateUtils.getCurrentDateTime();
     await _db.collection('garanzie').doc(garanziaId).update({
       'note': note,
-      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedAt': Timestamp.fromDate(AppDateUtils.toUtc(now)),
     });
   }
 
-  // Ottieni statistiche garanzie
-  Stream<Map<String, int>> getStatisticheGaranzie() {
+  Stream<Map<String, dynamic>> getStatisticheGaranzie() {
     return _db.collection('garanzie').snapshots().map((snapshot) {
-      final total = snapshot.docs.length;
-      final active = snapshot.docs
-          .where(
-              (doc) => doc.data()['stato'] == StatoGaranzia.attiva.toString())
-          .length;
-      final inScadenza = snapshot.docs.where((doc) {
-        if (doc.data()['stato'] != StatoGaranzia.attiva.toString())
-          return false;
-        final scadenza = (doc.data()['dataFine'] as Timestamp).toDate();
-        final now = DateTime.now();
-        final giorniAllaScadenza = scadenza.difference(now).inDays;
-        return giorniAllaScadenza <= 30 && giorniAllaScadenza > 0;
-      }).length;
-      final scadute = snapshot.docs.where((doc) {
-        final scadenza = (doc.data()['dataFine'] as Timestamp).toDate();
-        return scadenza.isBefore(DateTime.now());
-      }).length;
+      final now = AppDateUtils.getCurrentDateTime();
+      final docs = snapshot.docs;
+
+      int totale = docs.length;
+      int attive = 0;
+      int inScadenza = 0;
+      int scadute = 0;
+      Map<String, int> perTipo = {};
+
+      for (var doc in docs) {
+        final data = doc.data();
+        final dataFine = AppDateUtils.fromTimestamp(data['dataFine'] as Timestamp);
+        final stato = StatoGaranzia.values.firstWhere(
+          (e) => e.toString().split('.').last == data['stato'],
+          orElse: () => StatoGaranzia.invalidata,
+        );
+        final tipo = data['tipo'] as String;
+
+        // Aggiorna conteggio per tipo
+        perTipo[tipo] = (perTipo[tipo] ?? 0) + 1;
+
+        if (stato == StatoGaranzia.attiva) {
+          attive++;
+          final giorniAllaScadenza = AppDateUtils.daysBetween(now, dataFine);
+          if (giorniAllaScadenza <= 30 && giorniAllaScadenza > 0) {
+            inScadenza++;
+          }
+        }
+
+        if (dataFine.isBefore(now)) {
+          scadute++;
+        }
+      }
 
       return {
-        'totale': total,
-        'attive': active,
+        'totale': totale,
+        'attive': attive,
         'inScadenza': inScadenza,
         'scadute': scadute,
+        'perTipo': perTipo,
+        'aggiornamentoAl': AppDateUtils.formatDateTime(now),
       };
     });
   }

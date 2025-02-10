@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/garanzia.dart';
 import '../utils/validators.dart';
+import '../utils/date_utils.dart' show AppDateUtils;
 
 class GaranziaForm extends StatefulWidget {
-  final Garanzia? garanzia;
-  final Function(Garanzia) onSubmit;
+  final GaranziaInterna? garanzia;
+  final Function(GaranziaInterna) onSubmit;
   final String clienteId;
   final List<String> componentiCoperti;
   final String dispositivo;
@@ -28,26 +29,28 @@ class _GaranziaFormState extends State<GaranziaForm> {
   final _formKey = GlobalKey<FormState>();
   late DateTime _dataInizio;
   late DateTime _dataFine;
-  final _prodottoController = TextEditingController();
   final _serialeController = TextEditingController();
   final _noteController = TextEditingController();
+  List<String> _componentiSelezionati = [];
 
   @override
   void initState() {
     super.initState();
-    _dataInizio = widget.garanzia?.dataInizio ?? DateTime.now();
-    _dataFine = widget.garanzia?.dataFine ??
-        DateTime.now().add(const Duration(days: 365));
+    _dataInizio = widget.garanzia?.dataInizio ?? AppDateUtils.getCurrentDateTime();
+    _dataFine = widget.garanzia?.dataFine ?? 
+        AppDateUtils.addDays(AppDateUtils.getCurrentDateTime(), 365);
+    
     if (widget.garanzia != null) {
-      _prodottoController.text = widget.garanzia!.prodotto;
       _serialeController.text = widget.garanzia!.seriale ?? '';
       _noteController.text = widget.garanzia!.note ?? '';
+      _componentiSelezionati = List.from(widget.garanzia!.componentiCoperti);
+    } else {
+      _componentiSelezionati = List.from(widget.componentiCoperti);
     }
   }
 
   @override
   void dispose() {
-    _prodottoController.dispose();
     _serialeController.dispose();
     _noteController.dispose();
     super.dispose();
@@ -65,7 +68,7 @@ class _GaranziaFormState extends State<GaranziaForm> {
         if (isDataInizio) {
           _dataInizio = picked;
           if (_dataFine.isBefore(_dataInizio)) {
-            _dataFine = _dataInizio.add(const Duration(days: 1));
+            _dataFine = AppDateUtils.addDays(_dataInizio, 1);
           }
         } else {
           _dataFine = picked;
@@ -74,37 +77,42 @@ class _GaranziaFormState extends State<GaranziaForm> {
     }
   }
 
+  bool _validateForm() {
+    if (_componentiSelezionati.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Seleziona almeno un componente coperto da garanzia')),
+      );
+      return false;
+    }
+    return _formKey.currentState!.validate();
+  }
+
   void _submit() {
-    if (_formKey.currentState!.validate()) {
-      final garanzia = Garanzia(
+    if (_validateForm()) {
+      final now = AppDateUtils.getCurrentDateTime();
+      final garanzia = GaranziaInterna(
         id: widget.garanzia?.id ?? '',
-        prodotto: _prodottoController.text,
+        numero: widget.garanzia?.numero ?? _generateNumeroGaranzia(),
+        riparazioneId: widget.riparazioneId,
+        clienteId: widget.clienteId,
+        dispositivo: widget.dispositivo,
         dataInizio: _dataInizio,
         dataFine: _dataFine,
-        seriale:
-            _serialeController.text.isEmpty ? null : _serialeController.text,
+        seriale: _serialeController.text.isEmpty ? null : _serialeController.text,
         note: _noteController.text.isEmpty ? null : _noteController.text,
         stato: widget.garanzia?.stato ?? StatoGaranzia.attiva,
-        createdAt: widget.garanzia?.createdAt ?? DateTime.now(),
-        updatedAt: DateTime.now(),
+        componentiCoperti: _componentiSelezionati,
+        createdAt: widget.garanzia?.createdAt ?? now,
+        updatedAt: now,
       );
 
       widget.onSubmit(garanzia);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Cliente ID: $clienteId'),
-        Text('Dispositivo: $dispositivo'),
-        Text('Riparazione ID: $riparazioneId'),
-        const Text('Componenti Coperti:'),
-        for (var comp in componentiCoperti) Text('- $comp'),
-      ],
-    );
+  String _generateNumeroGaranzia() {
+    final now = AppDateUtils.getCurrentDateTime();
+    return 'GAR${now.year}${now.millisecondsSinceEpoch.toString().substring(8)}';
   }
 
   @override
@@ -113,44 +121,105 @@ class _GaranziaFormState extends State<GaranziaForm> {
       key: _formKey,
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextFormField(
-            controller: _prodottoController,
-            decoration: const InputDecoration(labelText: 'Prodotto *'),
-            validator: (value) => Validators.required(value, 'Prodotto'),
+          // Info Cliente e Dispositivo
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Dispositivo: ${widget.dispositivo}',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  Text('ID Riparazione: ${widget.riparazioneId}'),
+                  Text('ID Cliente: ${widget.clienteId}'),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 16),
+
+          // Date
           Row(
             children: [
               Expanded(
                 child: ListTile(
                   title: const Text('Data Inizio'),
-                  subtitle: Text(Validators.formatDate(_dataInizio)),
+                  subtitle: Text(AppDateUtils.formatDate(_dataInizio)),
                   onTap: () => _selectDate(context, true),
                 ),
               ),
               Expanded(
                 child: ListTile(
                   title: const Text('Data Fine'),
-                  subtitle: Text(Validators.formatDate(_dataFine)),
+                  subtitle: Text(AppDateUtils.formatDate(_dataFine)),
                   onTap: () => _selectDate(context, false),
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 16),
+
+          // Durata calcolata
+          Text('Durata: ${AppDateUtils.formatDuration(_dataFine.difference(_dataInizio))}',
+              style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 16),
+
+          // Seriale
           TextFormField(
             controller: _serialeController,
-            decoration: const InputDecoration(labelText: 'Numero Seriale'),
-          ),
-          TextFormField(
-            controller: _noteController,
-            decoration: const InputDecoration(labelText: 'Note'),
-            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Numero Seriale',
+              helperText: 'Opzionale',
+            ),
           ),
           const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _submit,
-            child: Text(widget.garanzia == null ? 'Aggiungi' : 'Salva'),
+
+          // Componenti coperti
+          Text('Componenti coperti:', 
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: widget.componentiCoperti.map((componente) {
+              final isSelected = _componentiSelezionati.contains(componente);
+              return FilterChip(
+                label: Text(componente),
+                selected: isSelected,
+                onSelected: (selected) {
+                  setState(() {
+                    if (selected) {
+                      _componentiSelezionati.add(componente);
+                    } else {
+                      _componentiSelezionati.remove(componente);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+
+          // Note
+          TextFormField(
+            controller: _noteController,
+            decoration: const InputDecoration(
+              labelText: 'Note',
+              helperText: 'Opzionale',
+            ),
+            maxLines: 3,
+          ),
+          const SizedBox(height: 24),
+
+          // Submit Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _submit,
+              child: Text(widget.garanzia == null ? 'Crea Garanzia' : 'Aggiorna Garanzia'),
+            ),
           ),
         ],
       ),
