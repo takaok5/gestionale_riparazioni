@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Aggiungi questo import
 import '../models/ordine.dart';
 import '../services/ordini_service.dart';
 import '..enums/enums.dart';
@@ -6,7 +7,8 @@ import 'dart:async';
 
 /// Controller per la gestione degli ordini
 class OrdiniController extends GetxController {
-  final OrdiniService _ordiniService = OrdiniService();
+  final OrdiniService _ordiniService =
+      OrdiniService(FirebaseFirestore.instance);
 
   final RxList<Ordine> ordini = <Ordine>[].obs;
   final Rx<Ordine?> selectedOrdine = Rx<Ordine?>(null);
@@ -42,7 +44,8 @@ class OrdiniController extends GetxController {
     error.value = '';
 
     try {
-      _ordiniSubscription = _ordiniService.getOrdini().listen(
+      _ordiniSubscription = _ordiniService.getOrdiniStream().listen(
+        // Corretto il nome del metodo
         (ordiniList) {
           ordini.value = ordiniList;
           isLoading.value = false;
@@ -54,6 +57,29 @@ class OrdiniController extends GetxController {
       );
     } catch (e) {
       error.value = OrdineError.loadError(e.toString());
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> createOrdine(Ordine ordine) async {
+    try {
+      isLoading.value = true;
+      error.value = '';
+
+      if (!_validateDates(ordine.dataOrdine, ordine.dataConsegna)) {
+        throw OrdineError.invalidDates();
+      }
+
+      if (ordine.ricambi.isEmpty) {
+        throw OrdineError.emptyRicambi();
+      }
+
+      await _ordiniService.createOrdine(ordine); // Corretto il nome del metodo
+      Get.snackbar('Successo', 'Ordine creato correttamente');
+    } catch (e) {
+      error.value = e.toString();
+      Get.snackbar('Errore', error.value);
+    } finally {
       isLoading.value = false;
     }
   }
