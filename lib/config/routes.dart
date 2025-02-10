@@ -48,7 +48,7 @@ class RouteGenerator {
       switch (settings.name) {
         case home:
           return MaterialPageRoute(
-            builder: (_) => const HomeScreen(
+            builder: (_) => HomeScreen(  // Removed const here
               authService: locator.get<AuthService>(),
               contabilitaService: locator.get<ContabilitaService>(),
             ),
@@ -85,7 +85,6 @@ class RouteGenerator {
           if (args == null) throw ArgumentError('Richiesto ID garanzia');
           return MaterialPageRoute(
             builder: (_) => FutureBuilder<Garanzia?>(
-              // Changed from GaranziaInfo to Garanzia
               future:
                   locator.get<GaranziaService>().getGaranzia(args as String),
               builder: (context, snapshot) {

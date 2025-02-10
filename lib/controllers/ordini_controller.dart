@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Aggiungi questo import
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/ordine.dart';
 import '../services/ordini_service.dart';
-import '..enums/enums.dart';
+import '../enums/enums.dart'; // Corretta l'importazione
 import 'dart:async';
 
 /// Controller per la gestione degli ordini
@@ -19,10 +19,10 @@ class OrdiniController extends GetxController {
 
   /// Mappa delle transizioni di stato valide
   final Map<StatoOrdine, List<StatoOrdine>> validTransitions = {
-    StatoOrdine.inCreazione: [StatoOrdine.inAttesa],
-    StatoOrdine.inAttesa: [StatoOrdine.confermato, StatoOrdine.annullato],
-    StatoOrdine.confermato: [StatoOrdine.consegnato, StatoOrdine.annullato],
-    StatoOrdine.consegnato: [],
+    StatoOrdine.inAttesa: [StatoOrdine.inLavorazione, StatoOrdine.annullato],
+    StatoOrdine.inLavorazione: [StatoOrdine.completato, StatoOrdine.inSospeso],
+    StatoOrdine.inSospeso: [StatoOrdine.inLavorazione, StatoOrdine.annullato],
+    StatoOrdine.completato: [StatoOrdine.annullato],
     StatoOrdine.annullato: [],
   };
 
@@ -44,8 +44,7 @@ class OrdiniController extends GetxController {
     error.value = '';
 
     try {
-      _ordiniSubscription = _ordiniService.getOrdiniStream().listen(
-        // Corretto il nome del metodo
+      _ordiniSubscription = _ordiniService.getOrdini().listen(
         (ordiniList) {
           ordini.value = ordiniList;
           isLoading.value = false;
@@ -59,35 +58,6 @@ class OrdiniController extends GetxController {
       error.value = OrdineError.loadError(e.toString());
       isLoading.value = false;
     }
-  }
-
-  Future<void> createOrdine(Ordine ordine) async {
-    try {
-      isLoading.value = true;
-      error.value = '';
-
-      if (!_validateDates(ordine.dataOrdine, ordine.dataConsegna)) {
-        throw OrdineError.invalidDates();
-      }
-
-      if (ordine.ricambi.isEmpty) {
-        throw OrdineError.emptyRicambi();
-      }
-
-      await _ordiniService.createOrdine(ordine); // Corretto il nome del metodo
-      Get.snackbar('Successo', 'Ordine creato correttamente');
-    } catch (e) {
-      error.value = e.toString();
-      Get.snackbar('Errore', error.value);
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  /// Valida le date dell'ordine
-  bool _validateDates(DateTime dataOrdine, DateTime? dataConsegna) {
-    if (dataConsegna == null) return true;
-    return dataConsegna.isAfter(dataOrdine);
   }
 
   /// Crea un nuovo ordine
@@ -112,6 +82,12 @@ class OrdiniController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  /// Valida le date dell'ordine
+  bool _validateDates(DateTime dataOrdine, DateTime? dataConsegna) {
+    if (dataConsegna == null) return true;
+    return dataConsegna.isAfter(dataOrdine);
   }
 
   /// Aggiorna un ordine esistente
@@ -175,9 +151,9 @@ class OrdiniController extends GetxController {
         orElse: () => throw OrdineError.notFound(ordineId),
       );
 
-      if (ordine.stato != StatoOrdine.inCreazione) {
+      if (ordine.stato != StatoOrdine.inAttesa) {  // Aggiornato per usare lo stato corretto
         throw OrdineError.invalidOperation(
-          'Non è possibile aggiungere ricambi a un ordine non in creazione',
+          'Non è possibile aggiungere ricambi a un ordine non in attesa',
         );
       }
 
@@ -206,9 +182,9 @@ class OrdiniController extends GetxController {
         orElse: () => throw OrdineError.notFound(ordineId),
       );
 
-      if (ordine.stato != StatoOrdine.inCreazione) {
+      if (ordine.stato != StatoOrdine.inAttesa) {  // Aggiornato per usare lo stato corretto
         throw OrdineError.invalidOperation(
-          'Non è possibile rimuovere ricambi da un ordine non in creazione',
+          'Non è possibile rimuovere ricambi da un ordine non in attesa',
         );
       }
 
