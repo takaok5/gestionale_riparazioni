@@ -128,7 +128,7 @@ void main() async {
 
   // Initialize FirestoreService
   final firestoreService = FirestoreService();
-  
+
   // Initialize AppContextService
   final appContextService = AppContextService();
 
@@ -159,7 +159,7 @@ void main() async {
         builder: (context) {
           // Update app context with the build context
           appContextService.updateContext(context);
-          
+
           // Update current user
           if (currentUser != null) {
             appContextService.updateCurrentUser(currentUser);
