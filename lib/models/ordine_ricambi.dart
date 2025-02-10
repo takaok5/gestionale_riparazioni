@@ -51,24 +51,7 @@ class OrdineRicambi extends BaseModel {
     };
   }
 
-  static OrdineRicambi fromMap(Map<String, dynamic> map) {
-    return OrdineRicambi(
-      id: map['id'] as String,
-      numeroOrdine: map['numeroOrdine'] as String,
-      fornitoreId: map['fornitoreId'] as String,
-      fornitoreNome: map['fornitoreNome'] as String,
-      dataOrdine: DateTime.parse(map['dataOrdine'] as String),
-      stato: StatoOrdine.values[map['stato'] as int],
-      ricambi: (map['ricambi'] as List)
-          .map((r) => RicambioOrdine.fromMap(r as Map<String, dynamic>))
-          .toList(),
-      totale: map['totale'] as double,
-      note: map['note'] as String?,
-      userId: map['userId'] as String,
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      updatedAt: DateTime.parse(map['updatedAt'] as String),
-    );
-  }
+
 
   factory OrdineRicambi.fromMap(Map<String, dynamic> map) {
     return OrdineRicambi(

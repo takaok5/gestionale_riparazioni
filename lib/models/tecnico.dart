@@ -23,35 +23,21 @@ class Tecnico extends BaseModel {
   final LivelloCertificazione livello;
   final bool disponibileTrasferte;
 
-  const Tecnico({
-    required super.id,
+  Tecnico({
+    required String id,
     required this.nome,
     required this.cognome,
+    required this.email,
     required this.telefono,
-    this.email,
     this.specializzazioni = const [],
     this.stato = StatoTecnico.attivo,
-    this.disponibilita = const [],
-    this.riparazioniPerStato = const {},
-    this.valutazioneMedia = 0.0,
-    this.numeroRiparazioni = 0,
-    this.certificazioni,
-    this.competenze = const [],
-    this.strumentiAssegnati,
-    this.note,
-    required this.userId,
-    this.livello = LivelloCertificazione.junior,
-    this.disponibileTrasferte = false,
-    super.createdAt,
-    super.updatedAt,
-  })  : assert(
-          Validators.isValidPhoneNumber(telefono),
-          'Numero di telefono non valido',
-        ),
-        assert(
-          email == null || Validators.isValidEmail(email),
-          'Email non valida',
-        );
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) : super(
+    id: id,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+  );
 
   @override
   Map<String, dynamic> toMap() {

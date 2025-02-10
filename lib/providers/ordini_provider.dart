@@ -2,10 +2,6 @@ import 'package:flutter/foundation.dart';
 import '../models/ordine_ricambi.dart';
 import '../services/ordini_service.dart';
 
-class AppState extends ChangeNotifier {
-  final AuthService _authService;
-  UserProfile? _currentUser;
-  bool _initialized = false;
 
   AppState(this._authService) {
     _init();
@@ -38,11 +34,17 @@ class AppState extends ChangeNotifier {
 
 class OrdiniProvider with ChangeNotifier {
   final OrdiniService _ordiniService = OrdiniService();
+  final AuthService _authService;
+  UserProfile? _currentUser; 
   List<OrdineRicambi> _ordini = [];
   bool _isLoading = false;
   String? _error;
   StatoOrdine? _filtroStato;
   String? _filtroFornitore;
+
+  OrdiniProvider(this._ordiniService, this._authService) {
+    _init();
+  }
 
   // Getters
   List<OrdineRicambi> get ordini => _ordini;
@@ -52,13 +54,18 @@ class OrdiniProvider with ChangeNotifier {
   String? get filtroFornitore => _filtroFornitore;
 
   // Stream subscription per gli ordini
-  Stream<List<OrdineRicambi>> getOrdiniStream() {
-    return _ordiniService.getOrdini(
-      stato: _filtroStato,
-      fornitoreId: _filtroFornitore,
+  Stream<List<OrdineRicambi>> getOrdiniStream({
+    StatoOrdine? stato,
+    String? fornitoreId,
+  }) {
+    if (_currentUser == null) return Stream.value([]);
+    
+    return _ordiniService.getOrdiniStream(
+      userId: _currentUser!.id,
+      stato: stato,
+      fornitoreId: fornitoreId,
     );
   }
-
   // Filtri
   void setFiltroStato(StatoOrdine? stato) {
     _filtroStato = stato;
@@ -71,6 +78,10 @@ class OrdiniProvider with ChangeNotifier {
   }
 
   // CRUD Operations
+  Future<void> _init() async {
+    _currentUser = await _authService.getCurrentUser();
+  }
+
   Future<void> createOrdine(OrdineRicambi ordine) async {
     try {
       _isLoading = true;
