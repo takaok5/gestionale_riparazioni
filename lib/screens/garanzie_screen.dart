@@ -7,11 +7,10 @@ import '../widgets/garanzia_form.dart';
 class GaranzieScreen extends GetView<GaranzieController> {
   const GaranzieScreen({Key? key}) : super(key: key);
 
-  // Metodo statico per l'inizializzazione delle dipendenze
   static void initDependencies() {
     Get.lazyPut<GaranzieController>(
       () => GaranzieController(),
-      fenix: true, // Mantiene il controller in memoria
+      fenix: true,
     );
   }
 
@@ -44,6 +43,7 @@ class GaranzieScreen extends GetView<GaranzieController> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showNuovaGaranziaDialog(context),
         child: const Icon(Icons.add),
+        tooltip: 'Aggiungi nuova garanzia',
       ),
     );
   }
@@ -120,8 +120,20 @@ class GaranzieScreen extends GetView<GaranzieController> {
       final garanzie = controller.garanzieFiltered;
 
       if (garanzie.isEmpty) {
-        return const Center(
-          child: Text('Nessuna garanzia trovata'),
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.security_off, size: 64, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text(
+                controller.searchQuery.value.isEmpty
+                    ? 'Nessuna garanzia presente'
+                    : 'Nessuna garanzia trovata',
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            ],
+          ),
         );
       }
 
@@ -137,52 +149,76 @@ class GaranzieScreen extends GetView<GaranzieController> {
 
   Widget _buildGaranziaCard(BuildContext context, Garanzia garanzia) {
     final statusColor = controller.getStatusColor(garanzia);
-    final giorniAllaScadenza = controller.getGiorniAllaScadenza(garanzia);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: ExpansionTile(
-        leading: Icon(
-          Icons.security,
-          color: statusColor,
-          size: 32,
+    if (garanzia is GaranziaFornitore) {
+      return Card(
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: ListTile(
+          leading: Icon(Icons.business, color: statusColor),
+          title: Text('Garanzia Fornitore: ${garanzia.fornitore}'),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('N° ${garanzia.numero}'),
+              Text(garanzia.getStatusMessage()),
+            ],
+          ),
+          trailing: garanzia.attiva
+              ? IconButton(
+                  icon: const Icon(Icons.more_vert),
+                  onPressed: () => _showGaranziaFornitoreOptions(context, garanzia),
+                )
+              : null,
         ),
-        title: Text(
-          garanzia.dispositivo,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+      );
+    }
+
+    if (garanzia is GaranziaInterna) {
+      return Card(
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: ExpansionTile(
+          leading: Icon(
+            Icons.security,
+            color: statusColor,
+            size: 32,
+          ),
+          title: Text(
+            garanzia.dispositivo,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Text(
+            'Scadenza: ${garanzia.dataFineFormattata}\n'
+            '${garanzia.getStatusMessage()}',
+          ),
+          trailing: garanzia.attiva
+              ? IconButton(
+                  icon: const Icon(Icons.more_vert),
+                  onPressed: () => _showGaranziaOptions(context, garanzia),
+                )
+              : null,
+          children: [
+            _buildGaranziaDetails(context, garanzia),
+          ],
         ),
-        subtitle: Text(
-          'Scadenza: ${controller.formatDate(garanzia.dataScadenza)}\n'
-          '${garanzia.attiva ? "Giorni rimanenti: $giorniAllaScadenza" : "GARANZIA NON ATTIVA"}',
-        ),
-        trailing: garanzia.attiva
-            ? IconButton(
-                icon: const Icon(Icons.more_vert),
-                onPressed: () => _showGaranziaOptions(context, garanzia),
-              )
-            : null,
-        children: [
-          _buildGaranziaDetails(context, garanzia),
-        ],
-      ),
-    );
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
-  Widget _buildGaranziaDetails(BuildContext context, Garanzia garanzia) {
+  Widget _buildGaranziaDetails(BuildContext context, GaranziaInterna garanzia) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildInfoSection('Informazioni Generali', [
-            _buildInfoRow(
-                'Data Inizio:', controller.formatDate(garanzia.dataInizio)),
-            _buildInfoRow(
-                'Data Scadenza:', controller.formatDate(garanzia.dataScadenza)),
-            _buildInfoRow(
-              'Durata:',
-              '${garanzia.dataScadenza.difference(garanzia.dataInizio).inDays} giorni',
-            ),
+            _buildInfoRow('Numero:', garanzia.numero),
+            _buildInfoRow('Data Inizio:', garanzia.dataInizioFormattata),
+            _buildInfoRow('Data Scadenza:', garanzia.dataFineFormattata),
+            _buildInfoRow('Durata:', garanzia.durataFormattata),
+            if (garanzia.seriale != null)
+              _buildInfoRow('Seriale:', garanzia.seriale!),
           ]),
           const SizedBox(height: 16),
           _buildComponentiCoperti(garanzia),
@@ -193,17 +229,19 @@ class GaranzieScreen extends GetView<GaranzieController> {
           const SizedBox(height: 16),
           _buildStato(garanzia),
           ButtonBar(
+            alignment: MainAxisAlignment.end,
             children: [
               TextButton.icon(
                 icon: const Icon(Icons.print),
                 label: const Text('Stampa'),
                 onPressed: () => controller.stampaCertificatoGaranzia(garanzia),
               ),
-              TextButton.icon(
-                icon: const Icon(Icons.edit),
-                label: const Text('Modifica'),
-                onPressed: () => _showEditNoteDialog(context, garanzia),
-              ),
+              if (garanzia.attiva)
+                TextButton.icon(
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Modifica'),
+                  onPressed: () => _showEditNoteDialog(context, garanzia),
+                ),
             ],
           ),
         ],
@@ -248,7 +286,7 @@ class GaranzieScreen extends GetView<GaranzieController> {
     );
   }
 
-  Widget _buildComponentiCoperti(Garanzia garanzia) {
+  Widget _buildComponentiCoperti(GaranziaInterna garanzia) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -264,7 +302,10 @@ class GaranzieScreen extends GetView<GaranzieController> {
           spacing: 8,
           runSpacing: 8,
           children: garanzia.componentiCoperti
-              .map((c) => Chip(label: Text(c)))
+              .map((c) => Chip(
+                    label: Text(c),
+                    backgroundColor: Colors.blue.shade100,
+                  ))
               .toList(),
         ),
       ],
@@ -289,6 +330,8 @@ class GaranzieScreen extends GetView<GaranzieController> {
   }
 
   Widget _buildStato(Garanzia garanzia) {
+    final Color statusColor = garanzia.attiva ? Colors.green : Colors.red;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -304,27 +347,33 @@ class GaranzieScreen extends GetView<GaranzieController> {
           children: [
             Icon(
               garanzia.attiva ? Icons.check_circle : Icons.cancel,
-              color: garanzia.attiva ? Colors.green : Colors.red,
+              color: statusColor,
             ),
             const SizedBox(width: 8),
             Text(
-              garanzia.attiva ? 'Attiva' : 'Non Attiva',
+              garanzia.getStatusMessage(),
               style: TextStyle(
-                color: garanzia.attiva ? Colors.green : Colors.red,
+                color: statusColor,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ],
         ),
-        if (!garanzia.attiva && garanzia.motivazioneInvalidazione != null) ...[
+        if (!garanzia.attiva && 
+            garanzia is GaranziaInterna && 
+            garanzia.motivazioneInvalidazione != null) ...[
           const SizedBox(height: 8),
           Text('Motivo: ${garanzia.motivazioneInvalidazione}'),
+          if (garanzia.dataInvalidazioneFormattata != null)
+            Text('Data: ${garanzia.dataInvalidazioneFormattata}'),
         ],
       ],
     );
   }
 
-  void _showGaranziaOptions(BuildContext context, Garanzia garanzia) {
+  void _showGaranziaOptions(BuildContext context, GaranziaInterna garanzia) {
+    if (!garanzia.attiva) return;
+
     Get.bottomSheet(
       SafeArea(
         child: Column(
@@ -357,7 +406,41 @@ class GaranzieScreen extends GetView<GaranzieController> {
           ],
         ),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+    );
+  }
+
+  void _showGaranziaFornitoreOptions(BuildContext context, GaranziaFornitore garanzia) {
+    if (!garanzia.attiva) return;
+
+    Get.bottomSheet(
+      SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Modifica Note'),
+              onTap: () {
+                Get.back();
+                _showEditNoteDialog(context, garanzia);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.print),
+              title: const Text('Stampa Dettagli'),
+              onTap: () {
+                Get.back();
+                controller.stampaCertificatoGaranzia(garanzia);
+              },
+            ),
+          ],
+        ),
+      ),
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -394,7 +477,7 @@ class GaranzieScreen extends GetView<GaranzieController> {
     );
   }
 
-  void _showInvalidaGaranziaDialog(BuildContext context, Garanzia garanzia) {
+  void _showInvalidaGaranziaDialog(BuildContext context, GaranziaInterna garanzia) {
     final motivazioneController = TextEditingController();
     Get.dialog(
       AlertDialog(
@@ -402,8 +485,12 @@ class GaranzieScreen extends GetView<GaranzieController> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Inserisci il motivo dell\'invalidazione:'),
-            const SizedBox(height: 8),
+            const Text(
+              'Questa operazione non può essere annullata. Sei sicuro di voler invalidare la garanzia?',
+              style: TextStyle(color: Colors.red),
+            ),
+
+const SizedBox(height: 16),
             TextField(
               controller: motivazioneController,
               maxLines: 2,
@@ -420,22 +507,27 @@ class GaranzieScreen extends GetView<GaranzieController> {
             child: const Text('Annulla'),
           ),
           TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
             onPressed: () {
               if (motivazioneController.text.trim().isEmpty) {
                 Get.snackbar(
                   'Errore',
                   'Inserisci un motivo valido',
                   snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red.shade100,
+                  colorText: Colors.red.shade900,
                 );
                 return;
               }
               Get.back();
               controller.invalidaGaranzia(
                 garanzia.id,
-                motivazioneController.text,
+                motivazioneController.text.trim(),
               );
             },
-            child: const Text('Conferma'),
+            child: const Text('Invalida'),
           ),
         ],
       ),
