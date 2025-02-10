@@ -76,8 +76,7 @@ class Tecnico extends BaseModel {
       competenze: List<String>.from(map['competenze'] ?? []),
       riparazioniPerStato: (map['riparazioniPerStato'] as Map<String, dynamic>?)
               ?.map((k, v) => MapEntry(
-                  StatoRiparazione.values.firstWhere(
-                      (e) => e.toString() == k,
+                  StatoRiparazione.values.firstWhere((e) => e.toString() == k,
                       orElse: () => StatoRiparazione.inAttesa),
                   v as int)) ??
           {},
