@@ -29,19 +29,20 @@ class AppState extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   // Getters per le informazioni temporali
-  String get sessionDuration => _sessionStartTime != null 
-      ? AppDateUtils.formatDuration(AppDateUtils.getCurrentDateTime().difference(_sessionStartTime!))
+  String get sessionDuration => _sessionStartTime != null
+      ? AppDateUtils.formatDuration(
+          AppDateUtils.getCurrentDateTime().difference(_sessionStartTime!))
       : 'N/A';
 
-  String? get lastRefreshFormatted => _lastRefresh != null
-      ? AppDateUtils.formatDateTime(_lastRefresh!)
-      : null;
+  String? get lastRefreshFormatted =>
+      _lastRefresh != null ? AppDateUtils.formatDateTime(_lastRefresh!) : null;
 
   String? get lastThemeUpdateFormatted => _lastThemeUpdate != null
       ? AppDateUtils.formatDateTime(_lastThemeUpdate!)
       : null;
 
-  bool get needsRefresh => _lastRefresh != null && 
+  bool get needsRefresh =>
+      _lastRefresh != null &&
       AppDateUtils.minutesSince(_lastRefresh!) > 30; // Refresh ogni 30 minuti
 
   Future<void> _init() async {
@@ -102,17 +103,17 @@ class AppState extends ChangeNotifier {
   // Metodo per verificare se è necessario un refresh dei dati
   bool shouldRefreshData() {
     if (_lastRefresh == null) return true;
-    
+
     final now = AppDateUtils.getCurrentDateTime();
     final refreshInterval = const Duration(minutes: 30);
-    
+
     return now.difference(_lastRefresh!) > refreshInterval;
   }
 
   // Metodo per verificare se la sessione è attiva da troppo tempo
   bool isSessionExpired() {
     if (_sessionStartTime == null) return true;
-    
+
     // Sessione scade dopo 8 ore
     return AppDateUtils.hoursSince(_sessionStartTime!) > 8;
   }

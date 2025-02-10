@@ -6,11 +6,11 @@ import '../utils/date_utils.dart' show AppDateUtils;
 class BackupService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  
+
   // Configurazione backup
   static const int _maxBackupsPerDay = 3;
   static const int _backupRetentionDays = 30;
-  
+
   // Singleton pattern
   static final BackupService _instance = BackupService._internal();
   factory BackupService() => _instance;
@@ -55,14 +55,13 @@ class BackupService {
         'collections': collections,
         'status': 'completed',
         'description': description,
-        'expiresAt': AppDateUtils.toUtc(
-            AppDateUtils.addDays(now, _backupRetentionDays)),
+        'expiresAt':
+            AppDateUtils.toUtc(AppDateUtils.addDays(now, _backupRetentionDays)),
         'retentionDays': _backupRetentionDays,
       });
 
       // Pulisci i backup vecchi
       await _cleanupOldBackups();
-      
     } catch (e) {
       final errorTime = AppDateUtils.getCurrentDateTime();
       await _db.collection('backups').add({
@@ -78,7 +77,7 @@ class BackupService {
   Future<Map<String, dynamic>> restoreBackup(String backupId) async {
     try {
       final now = AppDateUtils.getCurrentDateTime();
-      
+
       // Ottieni il backup dallo Storage
       final backupRef = _storage.ref('backups/$backupId.json');
       final backupData = await backupRef.getData();
@@ -126,31 +125,31 @@ class BackupService {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
-    var query = _db.collection('backups')
-        .orderBy('timestamp', descending: true);
-    
+    var query =
+        _db.collection('backups').orderBy('timestamp', descending: true);
+
     if (startDate != null) {
-      query = query.where('timestamp', 
+      query = query.where('timestamp',
           isGreaterThanOrEqualTo: AppDateUtils.toUtc(startDate));
     }
-    
+
     if (endDate != null) {
-      query = query.where('timestamp', 
+      query = query.where('timestamp',
           isLessThanOrEqualTo: AppDateUtils.toUtc(endDate));
     }
-    
+
     final backups = await query.get();
-    
+
     return backups.docs.map((doc) {
       final data = doc.data();
       return {
         'id': doc.id,
         ...data,
-        'ageInDays': AppDateUtils.daysSince(
-            (data['timestamp'] as Timestamp).toDate()),
+        'ageInDays':
+            AppDateUtils.daysSince((data['timestamp'] as Timestamp).toDate()),
         'formattedAge': AppDateUtils.formatDuration(
-            AppDateUtils.getCurrentDateTime().difference(
-                (data['timestamp'] as Timestamp).toDate())),
+            AppDateUtils.getCurrentDateTime()
+                .difference((data['timestamp'] as Timestamp).toDate())),
       };
     }).toList();
   }
@@ -187,16 +186,15 @@ class BackupService {
     String? description,
   }) async {
     final now = AppDateUtils.getCurrentDateTime();
-    
+
     // Verifica se è possibile eseguire un nuovo backup
     final todayBackups = await _db
         .collection('backups')
-        .where('timestamp', 
-            isGreaterThanOrEqualTo: AppDateUtils.toUtc(
-                AppDateUtils.startOfDay(now)))
-        .where('timestamp', 
-            isLessThanOrEqualTo: AppDateUtils.toUtc(
-                AppDateUtils.endOfDay(now)))
+        .where('timestamp',
+            isGreaterThanOrEqualTo:
+                AppDateUtils.toUtc(AppDateUtils.startOfDay(now)))
+        .where('timestamp',
+            isLessThanOrEqualTo: AppDateUtils.toUtc(AppDateUtils.endOfDay(now)))
         .get();
 
     if (todayBackups.docs.length >= _maxBackupsPerDay) {
@@ -205,7 +203,7 @@ class BackupService {
     }
 
     // Crea il backup con descrizione automatica
-    final autoDescription = description ?? 
+    final autoDescription = description ??
         'Backup automatico - ${AppDateUtils.formatDateTime(now)}';
     await createBackup(description: autoDescription);
   }
@@ -230,20 +228,25 @@ class BackupService {
   Future<Map<String, dynamic>> getBackupStats() async {
     final now = AppDateUtils.getCurrentDateTime();
     final backups = await getBackupsList();
-    
+
     return {
       'totalBackups': backups.length,
-      'oldestBackup': backups.isNotEmpty ? backups.last['timestampFormatted'] : 'N/A',
-      'newestBackup': backups.isNotEmpty ? backups.first['timestampFormatted'] : 'N/A',
-      'backupsToday': backups.where((b) => 
-          AppDateUtils.isSameDay(
-              (b['timestamp'] as Timestamp).toDate(), now)).length,
-      'backupsThisWeek': backups.where((b) => 
-          AppDateUtils.isSameWeek(
-              (b['timestamp'] as Timestamp).toDate(), now)).length,
-      'backupsThisMonth': backups.where((b) => 
-          AppDateUtils.isSameMonth(
-              (b['timestamp'] as Timestamp).toDate(), now)).length,
+      'oldestBackup':
+          backups.isNotEmpty ? backups.last['timestampFormatted'] : 'N/A',
+      'newestBackup':
+          backups.isNotEmpty ? backups.first['timestampFormatted'] : 'N/A',
+      'backupsToday': backups
+          .where((b) => AppDateUtils.isSameDay(
+              (b['timestamp'] as Timestamp).toDate(), now))
+          .length,
+      'backupsThisWeek': backups
+          .where((b) => AppDateUtils.isSameWeek(
+              (b['timestamp'] as Timestamp).toDate(), now))
+          .length,
+      'backupsThisMonth': backups
+          .where((b) => AppDateUtils.isSameMonth(
+              (b['timestamp'] as Timestamp).toDate(), now))
+          .length,
       'nextScheduledBackup': _calculateNextBackupTime(backups),
       'retentionPolicy': '$_backupRetentionDays giorni',
       'maxDailyBackups': _maxBackupsPerDay,
@@ -252,15 +255,16 @@ class BackupService {
 
   String _calculateNextBackupTime(List<Map<String, dynamic>> backups) {
     final now = AppDateUtils.getCurrentDateTime();
-    final todayBackups = backups.where((b) => 
-        AppDateUtils.isSameDay(
-            (b['timestamp'] as Timestamp).toDate(), now)).length;
-    
+    final todayBackups = backups
+        .where((b) =>
+            AppDateUtils.isSameDay((b['timestamp'] as Timestamp).toDate(), now))
+        .length;
+
     if (todayBackups >= _maxBackupsPerDay) {
       final tomorrow = AppDateUtils.addDays(now, 1);
       return 'Domani - ${AppDateUtils.formatDate(tomorrow)}';
     }
-    
+
     return 'Disponibile ora';
   }
 }

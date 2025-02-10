@@ -11,7 +11,8 @@ class AuthProvider with ChangeNotifier {
       : _firestoreService = firestoreService;
 
   // Getter per informazioni sull'utente con date formattate
-  String? get lastSignInTime => _auth.currentUser?.metadata.lastSignInTime != null
+  String? get lastSignInTime => _auth.currentUser?.metadata.lastSignInTime !=
+          null
       ? AppDateUtils.formatDateTime(_auth.currentUser!.metadata.lastSignInTime!)
       : null;
 
@@ -89,7 +90,7 @@ class AuthProvider with ChangeNotifier {
   bool shouldUpdatePassword() {
     final lastPasswordUpdate = _auth.currentUser?.metadata.creationTime;
     if (lastPasswordUpdate == null) return false;
-    
+
     // Suggerisci il cambio password dopo 90 giorni
     return AppDateUtils.daysSince(lastPasswordUpdate) > 90;
   }

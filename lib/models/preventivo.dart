@@ -27,10 +27,11 @@ class Preventivo {
   // Getters per la formattazione delle date
   String get dataFormatted => AppDateUtils.formatDate(data);
   String get dataOraFormatted => AppDateUtils.formatDateTime(data);
-  String get dataAccettazioneFormatted => 
-      dataAccettazione != null ? AppDateUtils.formatDateTime(dataAccettazione!) : 'Non accettato';
+  String get dataAccettazioneFormatted => dataAccettazione != null
+      ? AppDateUtils.formatDateTime(dataAccettazione!)
+      : 'Non accettato';
   String get dataRelativa => AppDateUtils.timeAgo(data);
-  
+
   bool get isScaduto => AppDateUtils.isPast(data.add(const Duration(days: 30)));
   bool get isRecente => !AppDateUtils.isPast(data.add(const Duration(days: 7)));
 
@@ -43,7 +44,7 @@ class Preventivo {
       'importo': importo,
       'descrizione': descrizione,
       'accettato': accettato,
-      'dataAccettazione': dataAccettazione != null 
+      'dataAccettazione': dataAccettazione != null
           ? AppDateUtils.toISOString(dataAccettazione!)
           : null,
       'note': note,

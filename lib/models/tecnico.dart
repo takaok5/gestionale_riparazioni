@@ -92,8 +92,10 @@ class Tecnico extends BaseModel {
       numeroRiparazioni: map['numeroRiparazioni'] ?? 0,
       strumentiAssegnati: List<String>.from(map['strumentiAssegnati'] ?? []),
       note: map['note'],
-      createdAt: AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
-      updatedAt: AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
+      createdAt:
+          AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
+      updatedAt:
+          AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
     );
   }
 

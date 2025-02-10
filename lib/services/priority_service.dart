@@ -29,7 +29,8 @@ class PriorityService {
     final now = AppDateUtils.getCurrentDateTime();
 
     // Tempo di attesa (max 30 punti)
-    final giorniAttesa = AppDateUtils.daysBetween(riparazione.dataIngresso, now);
+    final giorniAttesa =
+        AppDateUtils.daysBetween(riparazione.dataIngresso, now);
     punteggio += _calcolaPuntegggioAttesa(giorniAttesa);
 
     // Tipo cliente (max 20 punti)
@@ -54,23 +55,29 @@ class PriorityService {
     required int caricoLavoroAttuale,
   }) {
     final now = AppDateUtils.getCurrentDateTime();
-    final giorniAttesa = AppDateUtils.daysBetween(riparazione.dataIngresso, now);
+    final giorniAttesa =
+        AppDateUtils.daysBetween(riparazione.dataIngresso, now);
 
     final punteggioAttesa = _calcolaPuntegggioAttesa(giorniAttesa);
     final punteggioCliente = _calcolaPunteggioCliente(cliente.tipo);
     final punteggioUrgenza = _calcolaPunteggioUrgenza(riparazione.urgenza);
     final punteggioRicambi = _calcolaPunteggioRicambi(ricambiNecessari);
-    final punteggioCaricoLavoro = _calcolaPunteggioCaricoLavoro(caricoLavoroAttuale);
+    final punteggioCaricoLavoro =
+        _calcolaPunteggioCaricoLavoro(caricoLavoroAttuale);
 
     return {
-      'prioritaTotale': punteggioAttesa + punteggioCliente + punteggioUrgenza + 
-                       punteggioRicambi + punteggioCaricoLavoro,
+      'prioritaTotale': punteggioAttesa +
+          punteggioCliente +
+          punteggioUrgenza +
+          punteggioRicambi +
+          punteggioCaricoLavoro,
       'dettagli': {
         'tempoAttesa': {
           'giorni': giorniAttesa,
           'punteggio': punteggioAttesa,
           'dataIngresso': AppDateUtils.formatDateTime(riparazione.dataIngresso),
-          'tempoTrascorso': AppDateUtils.getTimeAgoString(riparazione.dataIngresso),
+          'tempoTrascorso':
+              AppDateUtils.getTimeAgoString(riparazione.dataIngresso),
         },
         'cliente': {
           'tipo': cliente.tipo,
@@ -81,7 +88,8 @@ class PriorityService {
           'punteggio': punteggioUrgenza,
         },
         'ricambi': {
-          'disponibilita': '${_calcolaPercentualeDisponibilitaRicambi(ricambiNecessari)}%',
+          'disponibilita':
+              '${_calcolaPercentualeDisponibilitaRicambi(ricambiNecessari)}%',
           'punteggio': punteggioRicambi,
         },
         'caricoLavoro': {
@@ -114,7 +122,8 @@ class PriorityService {
 
   int _calcolaPunteggioRicambi(List<Ricambio> ricambi) {
     if (ricambi.isEmpty) return 15; // Nessun ricambio necessario
-    return ((_calcolaPercentualeDisponibilitaRicambi(ricambi) / 100) * 15).round();
+    return ((_calcolaPercentualeDisponibilitaRicambi(ricambi) / 100) * 15)
+        .round();
   }
 
   double _calcolaPercentualeDisponibilitaRicambi(List<Ricambio> ricambi) {
@@ -126,7 +135,8 @@ class PriorityService {
   int _calcolaPunteggioCaricoLavoro(int caricoAttuale) {
     const caricoMassimo = 20;
     // Più il carico è alto, minore è la priorità
-    double percentualeCarico = 1 - (caricoAttuale / caricoMassimo).clamp(0.0, 1.0);
+    double percentualeCarico =
+        1 - (caricoAttuale / caricoMassimo).clamp(0.0, 1.0);
     return (percentualeCarico * 15).round();
   }
 
@@ -138,15 +148,18 @@ class PriorityService {
     final now = AppDateUtils.getCurrentDateTime();
 
     // Verifica tempi di attesa
-    final giorniAttesa = AppDateUtils.daysBetween(riparazione.dataIngresso, now);
+    final giorniAttesa =
+        AppDateUtils.daysBetween(riparazione.dataIngresso, now);
     if (giorniAttesa > 7) {
       suggerimenti.add({
         'tipo': 'attesa',
-        'messaggio': 'Riparazione in attesa da $giorniAttesa giorni. Considerare prioritizzazione.',
+        'messaggio':
+            'Riparazione in attesa da $giorniAttesa giorni. Considerare prioritizzazione.',
         'dettagli': {
           'giorniAttesa': giorniAttesa,
           'dataIngresso': AppDateUtils.formatDateTime(riparazione.dataIngresso),
-          'tempoTrascorso': AppDateUtils.getTimeAgoString(riparazione.dataIngresso),
+          'tempoTrascorso':
+              AppDateUtils.getTimeAgoString(riparazione.dataIngresso),
         },
         'priorita': 'alta',
       });
@@ -157,13 +170,15 @@ class PriorityService {
       if (ricambio.quantita <= ricambio.sogliaMinima) {
         suggerimenti.add({
           'tipo': 'ricambi',
-          'messaggio': 'Scorte basse per ${ricambio.descrizione}. Ordinare ricambi.',
+          'messaggio':
+              'Scorte basse per ${ricambio.descrizione}. Ordinare ricambi.',
           'dettagli': {
             'ricambio': ricambio.descrizione,
             'quantitaAttuale': ricambio.quantita,
             'sogliaMinima': ricambio.sogliaMinima,
-            'ultimoOrdine': ricambio.ultimoOrdine != null ? 
-                AppDateUtils.formatDateTime(ricambio.ultimoOrdine!) : 'N/D',
+            'ultimoOrdine': ricambio.ultimoOrdine != null
+                ? AppDateUtils.formatDateTime(ricambio.ultimoOrdine!)
+                : 'N/D',
           },
           'priorita': 'media',
         });
@@ -179,7 +194,8 @@ class PriorityService {
           'giorniAttesa': giorniAttesa,
           'dataIngresso': AppDateUtils.formatDateTime(riparazione.dataIngresso),
           'livelloUrgenza': riparazione.urgenza,
-          'tempoTrascorso': AppDateUtils.getTimeAgoString(riparazione.dataIngresso),
+          'tempoTrascorso':
+              AppDateUtils.getTimeAgoString(riparazione.dataIngresso),
         },
         'priorita': 'alta',
       });

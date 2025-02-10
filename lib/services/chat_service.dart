@@ -7,7 +7,7 @@ import 'dart:io';
 class ChatService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  
+
   static const int _messaggiLimite = 50;
   static const Duration _tempoScadenzaMessaggio = Duration(days: 30);
 
@@ -27,7 +27,8 @@ class ChatService {
     }
 
     final messaggio = Messaggio(
-      id: AppDateUtils.generateTimeBasedId(), // Metodo utility per generare ID basati sul tempo
+      id: AppDateUtils
+          .generateTimeBasedId(), // Metodo utility per generare ID basati sul tempo
       mittente: mittente,
       destinatario: destinatario,
       contenuto: contenuto,
@@ -83,7 +84,9 @@ class ChatService {
     return _db
         .collection('messaggi')
         .where('partecipanti', arrayContainsAny: [utente1, utente2])
-        .where('scadenza', isGreaterThan: AppDateUtils.toUtc(AppDateUtils.getCurrentDateTime()))
+        .where('scadenza',
+            isGreaterThan:
+                AppDateUtils.toUtc(AppDateUtils.getCurrentDateTime()))
         .orderBy('scadenza')
         .orderBy('timestamp', descending: true)
         .limit(_messaggiLimite)
@@ -104,7 +107,7 @@ class ChatService {
       String mittente, String destinatario) async {
     final now = AppDateUtils.getCurrentDateTime();
     final batch = _db.batch();
-    
+
     final messaggi = await _db
         .collection('messaggi')
         .where('mittente', isEqualTo: mittente)
@@ -134,7 +137,7 @@ class ChatService {
   // Ottieni chat attive con informazioni temporali formattate
   Stream<List<Map<String, dynamic>>> getChatAttive(String utente) {
     final now = AppDateUtils.getCurrentDateTime();
-    
+
     return _db
         .collection('chat_activity')
         .where('partecipanti', arrayContains: utente)
@@ -142,7 +145,8 @@ class ChatService {
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) {
               final data = doc.data();
-              final timestamp = (data['ultimoAggiornamento'] as Timestamp).toDate();
+              final timestamp =
+                  (data['ultimoAggiornamento'] as Timestamp).toDate();
               return {
                 ...data,
                 'timestampFormatted': AppDateUtils.formatDateTime(timestamp),
@@ -158,7 +162,7 @@ class ChatService {
   Future<void> eliminaMessaggiScaduti() async {
     final now = AppDateUtils.getCurrentDateTime();
     final batch = _db.batch();
-    
+
     final messaggiScaduti = await _db
         .collection('messaggi')
         .where('scadenza', isLessThan: AppDateUtils.toUtc(now))
@@ -175,7 +179,7 @@ class ChatService {
     final now = AppDateUtils.getCurrentDateTime();
     final chat = await _db.collection('chat_activity').doc(chatId).get();
     final data = chat.data() ?? {};
-    
+
     return {
       'ultima_attività': AppDateUtils.formatDateTime(
           (data['ultimoAggiornamento'] as Timestamp).toDate()),
@@ -196,7 +200,7 @@ class ChatService {
         .get();
 
     Map<String, int> messaggiPerGiorno = {};
-    
+
     for (var doc in messaggi.docs) {
       final timestamp = (doc.data()['timestamp'] as Timestamp).toDate();
       final giorno = AppDateUtils.formatDate(timestamp);

@@ -42,10 +42,11 @@ class _GaranziaFormState extends State<GaranziaForm> {
   }
 
   void _initializeForm() {
-    _dataInizio = widget.garanzia?.dataInizio ?? AppDateUtils.getCurrentDateTime();
-    _dataFine = widget.garanzia?.dataFine ?? 
+    _dataInizio =
+        widget.garanzia?.dataInizio ?? AppDateUtils.getCurrentDateTime();
+    _dataFine = widget.garanzia?.dataFine ??
         AppDateUtils.addDays(AppDateUtils.getCurrentDateTime(), 365);
-    
+
     if (widget.garanzia != null) {
       _serialeController.text = widget.garanzia!.seriale ?? '';
       _noteController.text = widget.garanzia!.note ?? '';
@@ -103,7 +104,8 @@ class _GaranziaFormState extends State<GaranziaForm> {
     if (_dataInizio.isAfter(_dataFine)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('La data di inizio non può essere successiva alla data di fine'),
+          content: Text(
+              'La data di inizio non può essere successiva alla data di fine'),
           backgroundColor: Colors.red,
         ),
       );
@@ -130,8 +132,12 @@ class _GaranziaFormState extends State<GaranziaForm> {
         dispositivo: widget.dispositivo,
         dataInizio: _dataInizio,
         dataFine: _dataFine,
-        seriale: _serialeController.text.trim().isEmpty ? null : _serialeController.text.trim(),
-        note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+        seriale: _serialeController.text.trim().isEmpty
+            ? null
+            : _serialeController.text.trim(),
+        note: _noteController.text.trim().isEmpty
+            ? null
+            : _noteController.text.trim(),
         stato: widget.garanzia?.stato ?? StatoGaranzia.attiva,
         componentiCoperti: _componentiSelezionati,
         createdAt: widget.garanzia?.createdAt ?? now,
@@ -236,7 +242,8 @@ class _GaranziaFormState extends State<GaranziaForm> {
           children: [
             const Icon(Icons.timer),
             const SizedBox(width: 8),
-            Text('Durata: ${AppDateUtils.formatDuration(_dataFine.difference(_dataInizio))}',
+            Text(
+                'Durata: ${AppDateUtils.formatDuration(_dataFine.difference(_dataInizio))}',
                 style: Theme.of(context).textTheme.bodyMedium),
           ],
         ),
@@ -261,7 +268,7 @@ class _GaranziaFormState extends State<GaranziaForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Componenti coperti:', 
+        Text('Componenti coperti:',
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         Wrap(
@@ -315,7 +322,9 @@ class _GaranziaFormState extends State<GaranziaForm> {
                 width: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : Text(widget.garanzia == null ? 'Crea Garanzia' : 'Aggiorna Garanzia'),
+            : Text(widget.garanzia == null
+                ? 'Crea Garanzia'
+                : 'Aggiorna Garanzia'),
       ),
     );
   }

@@ -21,21 +21,23 @@ class DettagliContabili {
   double get costoManodopera => 0.0; // Implementa la logica appropriata
 
   // Getters per le date formattate
-  String? get dataPagamentoFormattata => 
+  String? get dataPagamentoFormattata =>
       dataPagamento != null ? AppDateUtils.formatDate(dataPagamento!) : null;
-  
-  String? get dataPagamentoCompleta => 
-      dataPagamento != null ? AppDateUtils.formatDateTime(dataPagamento!) : null;
-  
-  String? get tempoTrascorsoDalPagamento => 
+
+  String? get dataPagamentoCompleta => dataPagamento != null
+      ? AppDateUtils.formatDateTime(dataPagamento!)
+      : null;
+
+  String? get tempoTrascorsoDalPagamento =>
       dataPagamento != null ? AppDateUtils.timeAgo(dataPagamento!) : null;
 
   // Getters per lo stato del pagamento
-  bool get isPagamentoRecente => 
+  bool get isPagamentoRecente =>
       dataPagamento != null && AppDateUtils.isWithinDays(dataPagamento!, 7);
 
-  String get statoPagamento => 
-      pagato ? 'Pagato il ${dataPagamentoFormattata ?? "data non disponibile"}' : 'Non pagato';
+  String get statoPagamento => pagato
+      ? 'Pagato il ${dataPagamentoFormattata ?? "data non disponibile"}'
+      : 'Non pagato';
 
   const DettagliContabili({
     required this.importo,
@@ -65,7 +67,7 @@ class DettagliContabili {
       'scontoApplicato': scontoApplicato,
       'pagato': pagato,
       'metodoPagamento': metodoPagamento,
-      'dataPagamento': dataPagamento != null 
+      'dataPagamento': dataPagamento != null
           ? AppDateUtils.toISOString(dataPagamento!)
           : null,
     };
@@ -97,11 +99,11 @@ class DettagliContabili {
   // Metodo per ottenere una descrizione completa del pagamento
   String getDescrizionePagamento() {
     if (!pagato) return 'Non pagato';
-    
+
     final data = dataPagamentoFormattata ?? 'data non disponibile';
     final metodo = metodoPagamento ?? 'metodo non specificato';
     final importoStr = getImportoFormattato();
-    
+
     return 'Pagato $importoStr il $data con $metodo';
   }
 }

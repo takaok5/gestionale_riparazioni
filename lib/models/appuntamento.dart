@@ -88,8 +88,10 @@ class Appuntamento extends BaseModel {
       cliente: map['cliente'] != null
           ? Cliente.fromMap(map['cliente'] as Map<String, dynamic>)
           : null,
-      createdAt: AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
-      updatedAt: AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
+      createdAt:
+          AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
+      updatedAt:
+          AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
     );
   }
 

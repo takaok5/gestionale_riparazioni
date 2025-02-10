@@ -23,7 +23,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get use24HourFormat => _use24HourFormat;
   String get firstDayOfWeek => _firstDayOfWeek;
   int get cacheDurationHours => _cacheDurationHours;
-  
+
   // Getters formattati per le date
   String? get lastSettingsUpdateFormatted => _lastSettingsUpdate != null
       ? AppDateUtils.formatDateTime(_lastSettingsUpdate!)
@@ -34,7 +34,8 @@ class SettingsProvider extends ChangeNotifier {
           _lastSettingsUpdate!.add(Duration(hours: _cacheDurationHours)))
       : 'Non impostato';
 
-  bool get needsCacheReset => _lastSettingsUpdate != null &&
+  bool get needsCacheReset =>
+      _lastSettingsUpdate != null &&
       AppDateUtils.hoursSince(_lastSettingsUpdate!) >= _cacheDurationHours;
 
   SettingsProvider() {
@@ -43,7 +44,7 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> _loadPreferences() async {
     _prefs = await SharedPreferences.getInstance();
-    
+
     // Carica impostazioni esistenti
     _themeMode = ThemeMode.values[_prefs?.getInt('themeMode') ?? 0];
     _locale = Locale(
@@ -121,7 +122,7 @@ class SettingsProvider extends ChangeNotifier {
   // Metodi di utilità per la gestione delle date
   void _updateLastSettingsTime() {
     _lastSettingsUpdate = AppDateUtils.getCurrentDateTime();
-    _prefs?.setString('lastSettingsUpdate', 
+    _prefs?.setString('lastSettingsUpdate',
         AppDateUtils.formatDateTime(_lastSettingsUpdate!));
   }
 
@@ -130,13 +131,12 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   String formatTime(DateTime time) {
-    return AppDateUtils.formatTime(time, 
-        format: _timeFormat, 
-        use24HourFormat: _use24HourFormat);
+    return AppDateUtils.formatTime(time,
+        format: _timeFormat, use24HourFormat: _use24HourFormat);
   }
 
   String formatDateTime(DateTime dateTime) {
-    return AppDateUtils.formatDateTime(dateTime, 
+    return AppDateUtils.formatDateTime(dateTime,
         dateFormat: _dateFormat,
         timeFormat: _timeFormat,
         use24HourFormat: _use24HourFormat);

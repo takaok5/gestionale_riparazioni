@@ -18,7 +18,8 @@ class OrdiniController extends GetxController {
     OrdiniService? ordiniService,
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
-  })  : _ordiniService = ordiniService ?? OrdiniService(FirebaseFirestore.instance),
+  })  : _ordiniService =
+            ordiniService ?? OrdiniService(FirebaseFirestore.instance),
         _auth = auth ?? FirebaseAuth.instance,
         _firestore = firestore ?? FirebaseFirestore.instance {
     _initController();
@@ -100,10 +101,10 @@ class OrdiniController extends GetxController {
     try {
       _ordiniSubscription = _ordiniService
           .getOrdiniStream(
-            userId: currentUserId,
-            stato: filtroStato.value,
-            fornitoreId: filtroFornitoreId.value,
-          )
+        userId: currentUserId,
+        stato: filtroStato.value,
+        fornitoreId: filtroFornitoreId.value,
+      )
           .listen(
         (ordiniList) {
           ordini.value = ordiniList;
@@ -132,7 +133,8 @@ class OrdiniController extends GetxController {
           .toList();
     }
 
-    if (filtroFornitoreId.value != null && filtroFornitoreId.value!.isNotEmpty) {
+    if (filtroFornitoreId.value != null &&
+        filtroFornitoreId.value!.isNotEmpty) {
       risultatiFiltrati = risultatiFiltrati
           .where((ordine) => ordine.fornitoreId == filtroFornitoreId.value)
           .toList();
@@ -141,8 +143,8 @@ class OrdiniController extends GetxController {
     if (filtroDataDa.value != null) {
       final dataDaInizio = AppDateUtils.startOfDay(filtroDataDa.value!);
       risultatiFiltrati = risultatiFiltrati
-          .where((ordine) => 
-              ordine.dataOrdine.isAfter(dataDaInizio) || 
+          .where((ordine) =>
+              ordine.dataOrdine.isAfter(dataDaInizio) ||
               AppDateUtils.isSameDay(ordine.dataOrdine, dataDaInizio))
           .toList();
     }
@@ -150,15 +152,15 @@ class OrdiniController extends GetxController {
     if (filtroDataA.value != null) {
       final dataAFine = AppDateUtils.endOfDay(filtroDataA.value!);
       risultatiFiltrati = risultatiFiltrati
-          .where((ordine) => ordine.dataOrdine.isBefore(dataAFine) || 
-                AppDateUtils.isSameDay(ordine.dataOrdine, dataAFine))
+          .where((ordine) =>
+              ordine.dataOrdine.isBefore(dataAFine) ||
+              AppDateUtils.isSameDay(ordine.dataOrdine, dataAFine))
           .toList();
     }
 
     if (mostraSoloUrgenti.value) {
-      risultatiFiltrati = risultatiFiltrati
-          .where((ordine) => ordine.isUrgente)
-          .toList();
+      risultatiFiltrati =
+          risultatiFiltrati.where((ordine) => ordine.isUrgente).toList();
     }
 
     if (searchQuery.value.isNotEmpty) {
@@ -175,7 +177,7 @@ class OrdiniController extends GetxController {
 
   // Metodi per gestire i filtri
   void setFiltroStato(StatoOrdine? stato) => filtroStato.value = stato;
-  
+
   void setFiltroFornitore(String? fornitoreId) =>
       filtroFornitoreId.value = fornitoreId;
 
@@ -183,20 +185,22 @@ class OrdiniController extends GetxController {
     // Validazione delle date
     if (dataDa != null && dataA != null) {
       if (!AppDateUtils.isSameDay(dataDa, dataA) && dataA.isBefore(dataDa)) {
-        error.value = 'La data di fine deve essere successiva alla data di inizio';
+        error.value =
+            'La data di fine deve essere successiva alla data di inizio';
         return;
       }
     }
-    
+
     // Imposta le date usando i metodi di AppDateUtils
-    filtroDataDa.value = dataDa != null ? AppDateUtils.startOfDay(dataDa) : null;
+    filtroDataDa.value =
+        dataDa != null ? AppDateUtils.startOfDay(dataDa) : null;
     filtroDataA.value = dataA != null ? AppDateUtils.endOfDay(dataA) : null;
   }
 
   void setMostraSoloUrgenti(bool value) => mostraSoloUrgenti.value = value;
-  
+
   void setSearchQuery(String query) => searchQuery.value = query;
-  
+
   void resetFiltri() {
     filtroStato.value = null;
     filtroFornitoreId.value = null;
@@ -279,14 +283,15 @@ class OrdiniController extends GetxController {
   /// Valida le date dell'ordine
   bool _validateDates(DateTime dataOrdine, DateTime? dataConsegna) {
     if (dataConsegna == null) return true;
-    
+
     // Se le date sono lo stesso giorno, è valido
     if (AppDateUtils.isSameDay(dataOrdine, dataConsegna)) {
       return true;
     }
-    
+
     // Altrimenti la data di consegna deve essere nel futuro e dopo la data ordine
-    return AppDateUtils.isFuture(dataConsegna) && dataConsegna.isAfter(dataOrdine);
+    return AppDateUtils.isFuture(dataConsegna) &&
+        dataConsegna.isAfter(dataOrdine);
   }
 
   /// Formatta una data per la visualizzazione

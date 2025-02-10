@@ -126,8 +126,9 @@ class Ordine extends BaseModel {
   String get dataOrdineFormatted => AppDateUtils.formatDateTime(dataOrdine);
 
   /// Formatta la data di consegna
-  String get dataConsegnaFormatted => 
-      dataConsegna != null ? AppDateUtils.formatDateTime(dataConsegna!) : 'Non specificata';
+  String get dataConsegnaFormatted => dataConsegna != null
+      ? AppDateUtils.formatDateTime(dataConsegna!)
+      : 'Non specificata';
 
   /// Verifica se l'ordine è stato creato negli ultimi n giorni
   bool isCreatedInLastDays(int days) {
@@ -143,7 +144,8 @@ class Ordine extends BaseModel {
       'fornitoreId': fornitoreId,
       'fornitoreNome': fornitoreNome,
       'dataOrdine': AppDateUtils.toISOString(dataOrdine),
-      'dataConsegna': dataConsegna != null ? AppDateUtils.toISOString(dataConsegna!) : null,
+      'dataConsegna':
+          dataConsegna != null ? AppDateUtils.toISOString(dataConsegna!) : null,
       'stato': stato.index,
       'ricambi': ricambi.map((r) => r.toMap()).toList(),
       'note': note,
@@ -159,7 +161,8 @@ class Ordine extends BaseModel {
       numeroOrdine: map['numeroOrdine'] as String,
       fornitoreId: map['fornitoreId'] as String,
       fornitoreNome: map['fornitoreNome'] as String,
-      dataOrdine: AppDateUtils.parseISOString(map['dataOrdine']) ?? DateTime.now(),
+      dataOrdine:
+          AppDateUtils.parseISOString(map['dataOrdine']) ?? DateTime.now(),
       dataConsegna: map['dataConsegna'] != null
           ? AppDateUtils.parseISOString(map['dataConsegna'])
           : null,
@@ -169,8 +172,10 @@ class Ordine extends BaseModel {
           .toList(),
       note: map['note'] as String?,
       userId: map['userId'] as String,
-      createdAt: AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
-      updatedAt: AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
+      createdAt:
+          AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
+      updatedAt:
+          AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
       isUrgente: map['isUrgente'] as bool? ?? false,
       descrizione: map['descrizione'] as String,
     );

@@ -6,19 +6,21 @@ import '../utils/date_utils.dart' show AppDateUtils;
 
 class NotificationService {
   static final navigatorKey = GlobalKey<NavigatorState>();
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
 
   Future<void> initialize() async {
     // Inizializza timezone
     tz.initializeTimeZones();
-    
+
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings();
 
-    const InitializationSettings initializationSettings = InitializationSettings(
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
     );
@@ -58,11 +60,12 @@ class NotificationService {
 
     final now = AppDateUtils.getCurrentDateTime();
     final formattedDate = AppDateUtils.formatDateTime(now);
-    
+
     // Aggiunge timestamp alla notifica
     final enhancedBody = '$body\n\nInviato il: $formattedDate';
-    
-    await _notifications.show(id, title, enhancedBody, details, payload: payload);
+
+    await _notifications.show(id, title, enhancedBody, details,
+        payload: payload);
   }
 
   Future<void> scheduleNotification({
@@ -90,7 +93,7 @@ class NotificationService {
     // Converti alla timezone corretta usando AppDateUtils
     final scheduledUtc = AppDateUtils.toUtc(scheduledDate);
     final formattedDate = AppDateUtils.formatDateTime(scheduledDate);
-    
+
     // Aggiungi informazioni temporali al body
     final enhancedBody = '''
 $body
@@ -177,10 +180,11 @@ Intervallo: ${_formatDuration(interval)}
   Future<void> cancelAllNotifications() async {
     await _notifications.cancelAll();
   }
-  
+
   // Nuovo metodo per verificare notifiche programmate
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
-    final pendingNotifications = await _notifications.pendingNotificationRequests();
+    final pendingNotifications =
+        await _notifications.pendingNotificationRequests();
     // Aggiungi informazioni temporali alle notifiche pendenti
     return pendingNotifications.map((notification) {
       final now = AppDateUtils.getCurrentDateTime();

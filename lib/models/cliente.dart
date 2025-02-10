@@ -74,15 +74,15 @@ class Cliente extends Equatable {
   // Nuovi getters per le date
   String get dataCreazione => AppDateUtils.formatDateTime(createdAt);
   String get dataUltimoAggiornamento => AppDateUtils.formatDateTime(updatedAt);
-  String get dataUltimaRiparazione => ultimaRiparazione != null 
+  String get dataUltimaRiparazione => ultimaRiparazione != null
       ? AppDateUtils.formatDateTime(ultimaRiparazione!)
       : 'Nessuna riparazione';
 
-  bool get hasRiparazioniRecenti => ultimaRiparazione != null && 
+  bool get hasRiparazioniRecenti =>
+      ultimaRiparazione != null &&
       AppDateUtils.isWithinLastDays(ultimaRiparazione!, 30);
 
-  bool get isClienteRecente => 
-      AppDateUtils.isWithinLastDays(createdAt, 90);
+  bool get isClienteRecente => AppDateUtils.isWithinLastDays(createdAt, 90);
 
   void validate() {
     // ... [il resto del metodo validate rimane invariato]
@@ -183,7 +183,7 @@ class Cliente extends Equatable {
       cap: map['cap'],
       provincia: map['provincia'],
       note: map['note'],
-      createdAt: map['createdAt'] is Timestamp 
+      createdAt: map['createdAt'] is Timestamp
           ? (map['createdAt'] as Timestamp).toDate()
           : AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
       updatedAt: map['updatedAt'] is Timestamp

@@ -16,11 +16,12 @@ class InventoryService extends BaseService {
         super('ricambi');
 
   // Utility per aggiungere metadati temporali
-  Map<String, dynamic> _addMetadata(Map<String, dynamic> data, {bool isNew = true}) {
+  Map<String, dynamic> _addMetadata(Map<String, dynamic> data,
+      {bool isNew = true}) {
     final now = AppDateUtils.getCurrentDateTime();
     data['updatedAt'] = Timestamp.fromDate(AppDateUtils.toUtc(now));
     data['updatedAtFormatted'] = AppDateUtils.formatDateTime(now);
-    
+
     if (isNew) {
       data['createdAt'] = Timestamp.fromDate(AppDateUtils.toUtc(now));
       data['createdAtFormatted'] = AppDateUtils.formatDateTime(now);
@@ -138,11 +139,13 @@ class InventoryService extends BaseService {
         ? FieldValue.increment(movimento.quantita)
         : FieldValue.increment(-movimento.quantita);
 
-    batch.update(ricambioRef, _addMetadata({
-      'quantita': quantitaAggiornata,
-      'lastMovimento': Timestamp.fromDate(AppDateUtils.toUtc(now)),
-      'lastMovimentoFormatted': AppDateUtils.formatDateTime(now),
-    }, isNew: false));
+    batch.update(
+        ricambioRef,
+        _addMetadata({
+          'quantita': quantitaAggiornata,
+          'lastMovimento': Timestamp.fromDate(AppDateUtils.toUtc(now)),
+          'lastMovimentoFormatted': AppDateUtils.formatDateTime(now),
+        }, isNew: false));
 
     try {
       await batch.commit();
@@ -155,29 +158,31 @@ class InventoryService extends BaseService {
   Stream<List<MovimentoMagazzino>> getMovimentiRecenti() {
     final now = AppDateUtils.getCurrentDateTime();
     final startOfMonth = AppDateUtils.startOfMonth(now);
-    
+
     return _firestore
         .collection('movimenti')
-        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(AppDateUtils.toUtc(startOfMonth)))
+        .where('timestamp',
+            isGreaterThanOrEqualTo:
+                Timestamp.fromDate(AppDateUtils.toUtc(startOfMonth)))
         .orderBy('timestamp', descending: true)
         .limit(50)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) {
-          final data = doc.data();
-          final timestamp = (data['timestamp'] as Timestamp).toDate();
-          
-          return MovimentoMagazzino.fromMap({
-            ...data,
-            'id': doc.id,
-            'timestampFormatted': AppDateUtils.formatDateTime(timestamp),
-            'giorniPassati': AppDateUtils.daysBetween(timestamp, now),
-            'periodo': {
-              'anno': AppDateUtils.getYear(timestamp),
-              'mese': AppDateUtils.getMonth(timestamp),
-              'settimana': AppDateUtils.getWeekNumber(timestamp),
-            }
-          });
-        }).toList());
+              final data = doc.data();
+              final timestamp = (data['timestamp'] as Timestamp).toDate();
+
+              return MovimentoMagazzino.fromMap({
+                ...data,
+                'id': doc.id,
+                'timestampFormatted': AppDateUtils.formatDateTime(timestamp),
+                'giorniPassati': AppDateUtils.daysBetween(timestamp, now),
+                'periodo': {
+                  'anno': AppDateUtils.getYear(timestamp),
+                  'mese': AppDateUtils.getMonth(timestamp),
+                  'settimana': AppDateUtils.getWeekNumber(timestamp),
+                }
+              });
+            }).toList());
   }
 
   // Statistiche Magazzino
@@ -203,22 +208,26 @@ class InventoryService extends BaseService {
     // Aggiungi statistiche movimenti
     final movimenti = await _firestore
         .collection('movimenti')
-        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(AppDateUtils.toUtc(startOfMonth)))
+        .where('timestamp',
+            isGreaterThanOrEqualTo:
+                Timestamp.fromDate(AppDateUtils.toUtc(startOfMonth)))
         .get();
 
     for (var doc in movimenti.docs) {
       final data = doc.data();
       final timestamp = (data['timestamp'] as Timestamp).toDate();
       final giornoKey = AppDateUtils.formatDate(timestamp);
-      
+
       stats['movimenti']['totali'] = (stats['movimenti']['totali'] as int) + 1;
-      stats['movimenti']['perGiorno'][giornoKey] = 
+      stats['movimenti']['perGiorno'][giornoKey] =
           (stats['movimenti']['perGiorno'][giornoKey] ?? 0) + 1;
 
       if (data['tipo'] == TipoMovimento.carico.toString()) {
-        stats['movimenti']['carichi'] = (stats['movimenti']['carichi'] as int) + 1;
+        stats['movimenti']['carichi'] =
+            (stats['movimenti']['carichi'] as int) + 1;
       } else {
-        stats['movimenti']['scarichi'] = (stats['movimenti']['scarichi'] as int) + 1;
+        stats['movimenti']['scarichi'] =
+            (stats['movimenti']['scarichi'] as int) + 1;
       }
     }
 

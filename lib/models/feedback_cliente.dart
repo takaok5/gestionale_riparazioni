@@ -25,7 +25,7 @@ class FeedbackCliente {
   String get dataFormattata => AppDateUtils.formatDate(data);
   String get dataOraFormattata => AppDateUtils.formatDateTime(data);
   String get tempoTrascorso => AppDateUtils.timeAgo(data);
-  
+
   // Getter per la valutazione in formato stelline
   String get valutazioneStelle => '⭐' * valutazione;
 

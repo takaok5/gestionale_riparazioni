@@ -29,7 +29,7 @@ class Messaggio {
   String get tempoInvio => AppDateUtils.timeAgo(timestamp);
   bool get isOggi => AppDateUtils.isToday(timestamp);
   bool get isIeri => AppDateUtils.isYesterday(timestamp);
-  
+
   // Getter per lo stato del messaggio
   String get statoLettura => letto ? 'Letto' : 'Non letto';
 
@@ -52,7 +52,8 @@ class Messaggio {
       mittente: map['mittente'],
       destinatario: map['destinatario'],
       contenuto: map['contenuto'],
-      timestamp: AppDateUtils.parseISOString(map['timestamp']) ?? DateTime.now(),
+      timestamp:
+          AppDateUtils.parseISOString(map['timestamp']) ?? DateTime.now(),
       urlAllegato: map['urlAllegato'],
       riparazioneId: map['riparazioneId'],
       letto: map['letto'] ?? false,

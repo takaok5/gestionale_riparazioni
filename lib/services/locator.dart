@@ -13,13 +13,17 @@ final locator = GetIt.instance;
 // Rimossa la funzione setupServiceLocator() duplicata e unita con setupLocator()
 void setupLocator() {
   // Services
-  locator.registerLazySingleton(() => AppContextService()); // Aggiunto perché richiesto da alcuni servizi
+  locator.registerLazySingleton(
+      () => AppContextService()); // Aggiunto perché richiesto da alcuni servizi
   locator.registerLazySingleton(() => AuthService());
-  locator.registerLazySingleton(() => FirestoreService(locate<AppContextService>())); // Passaggio dipendenza
-  locator.registerLazySingleton(() => InventoryService(locate<AppContextService>())); // Passaggio dipendenza
+  locator.registerLazySingleton(() =>
+      FirestoreService(locate<AppContextService>())); // Passaggio dipendenza
+  locator.registerLazySingleton(() =>
+      InventoryService(locate<AppContextService>())); // Passaggio dipendenza
   locator.registerLazySingleton(() => NotificationService());
   locator.registerLazySingleton(() => OrdiniService());
-  locator.registerLazySingleton(() => GaranziaService(locate<NotificationService>())); // Passaggio dipendenza
+  locator.registerLazySingleton(() =>
+      GaranziaService(locate<NotificationService>())); // Passaggio dipendenza
   locator.registerLazySingleton(() => ContabilitaService());
 }
 

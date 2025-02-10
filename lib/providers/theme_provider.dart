@@ -18,7 +18,7 @@ class ThemeProvider with ChangeNotifier {
   // Getters esistenti migliorati
   ThemeMode get currentTheme => _themeMode;
   bool get isAutoThemeEnabled => _isAutoThemeEnabled;
-  
+
   // Nuovi getters per le informazioni temporali
   String? get lastThemeChangeFormatted => _lastThemeChange != null
       ? AppDateUtils.formatDateTime(_lastThemeChange!)
@@ -37,29 +37,33 @@ class ThemeProvider with ChangeNotifier {
   Future<void> _loadThemeMode() async {
     _themeMode = await _settingsService.getThemeMode();
     _loadThemeSettings();
-    
+
     if (_isAutoThemeEnabled) {
       _checkAutoTheme();
     }
-    
+
     notifyListeners();
   }
 
   Future<void> _loadThemeSettings() async {
     // Carica le impostazioni salvate
-    _isAutoThemeEnabled = await _settingsService.getBool('autoThemeEnabled') ?? false;
-    
+    _isAutoThemeEnabled =
+        await _settingsService.getBool('autoThemeEnabled') ?? false;
+
     final lastChangeStr = await _settingsService.getString('lastThemeChange');
     if (lastChangeStr != null) {
       _lastThemeChange = AppDateUtils.parseDateTime(lastChangeStr);
     }
 
-    final startHour = await _settingsService.getInt('autoDarkThemeStartHour') ?? 20;
-    final startMinute = await _settingsService.getInt('autoDarkThemeStartMinute') ?? 0;
+    final startHour =
+        await _settingsService.getInt('autoDarkThemeStartHour') ?? 20;
+    final startMinute =
+        await _settingsService.getInt('autoDarkThemeStartMinute') ?? 0;
     _autoDarkThemeStart = TimeOfDay(hour: startHour, minute: startMinute);
 
     final endHour = await _settingsService.getInt('autoDarkThemeEndHour') ?? 6;
-    final endMinute = await _settingsService.getInt('autoDarkThemeEndMinute') ?? 0;
+    final endMinute =
+        await _settingsService.getInt('autoDarkThemeEndMinute') ?? 0;
     _autoDarkThemeEnd = TimeOfDay(hour: endHour, minute: endMinute);
   }
 
@@ -68,26 +72,24 @@ class ThemeProvider with ChangeNotifier {
 
     _themeMode = mode;
     _lastThemeChange = AppDateUtils.getCurrentDateTime();
-    
+
     await Future.wait([
       _settingsService.saveThemeMode(mode),
       _settingsService.setString(
-        'lastThemeChange',
-        AppDateUtils.formatDateTime(_lastThemeChange!)
-      ),
+          'lastThemeChange', AppDateUtils.formatDateTime(_lastThemeChange!)),
     ]);
-    
+
     notifyListeners();
   }
 
   Future<void> setAutoThemeEnabled(bool enabled) async {
     _isAutoThemeEnabled = enabled;
     await _settingsService.setBool('autoThemeEnabled', enabled);
-    
+
     if (enabled) {
       _checkAutoTheme();
     }
-    
+
     notifyListeners();
   }
 
@@ -114,7 +116,7 @@ class ThemeProvider with ChangeNotifier {
     if (_isAutoThemeEnabled) {
       _checkAutoTheme();
     }
-    
+
     notifyListeners();
   }
 
@@ -124,17 +126,20 @@ class ThemeProvider with ChangeNotifier {
 
     // Converti l'ora corrente in minuti dalla mezzanotte
     final currentMinutes = now.hour * 60 + now.minute;
-    final startMinutes = _autoDarkThemeStart.hour * 60 + _autoDarkThemeStart.minute;
+    final startMinutes =
+        _autoDarkThemeStart.hour * 60 + _autoDarkThemeStart.minute;
     final endMinutes = _autoDarkThemeEnd.hour * 60 + _autoDarkThemeEnd.minute;
 
     // Determina se dovrebbe essere attivo il tema scuro
     bool shouldBeDark;
     if (startMinutes < endMinutes) {
       // Periodo nel stesso giorno
-      shouldBeDark = currentMinutes >= startMinutes && currentMinutes < endMinutes;
+      shouldBeDark =
+          currentMinutes >= startMinutes && currentMinutes < endMinutes;
     } else {
       // Periodo attraverso la mezzanotte
-      shouldBeDark = currentMinutes >= startMinutes || currentMinutes < endMinutes;
+      shouldBeDark =
+          currentMinutes >= startMinutes || currentMinutes < endMinutes;
     }
 
     // Imposta il tema appropriato
@@ -166,34 +171,43 @@ class ThemeProvider with ChangeNotifier {
   DateTime getNextThemeChange() {
     final now = AppDateUtils.getCurrentDateTime();
     final currentMinutes = now.hour * 60 + now.minute;
-    
+
     if (_themeMode == ThemeMode.dark) {
       // Se siamo in modalità scura, il prossimo cambio sarà all'ora di fine
       final endMinutes = _autoDarkThemeEnd.hour * 60 + _autoDarkThemeEnd.minute;
       if (currentMinutes >= endMinutes) {
         // Se l'ora di fine è già passata, sarà domani
-        return now.add(const Duration(days: 1))
+        return now
+            .add(const Duration(days: 1))
             .subtract(Duration(hours: now.hour, minutes: now.minute))
-            .add(Duration(hours: _autoDarkThemeEnd.hour, minutes: _autoDarkThemeEnd.minute));
+            .add(Duration(
+                hours: _autoDarkThemeEnd.hour,
+                minutes: _autoDarkThemeEnd.minute));
       } else {
         // Altrimenti sarà oggi
-        return now
-            .subtract(Duration(hours: now.hour, minutes: now.minute))
-            .add(Duration(hours: _autoDarkThemeEnd.hour, minutes: _autoDarkThemeEnd.minute));
+        return now.subtract(Duration(hours: now.hour, minutes: now.minute)).add(
+            Duration(
+                hours: _autoDarkThemeEnd.hour,
+                minutes: _autoDarkThemeEnd.minute));
       }
     } else {
       // Se siamo in modalità chiara, il prossimo cambio sarà all'ora di inizio
-      final startMinutes = _autoDarkThemeStart.hour * 60 + _autoDarkThemeStart.minute;
+      final startMinutes =
+          _autoDarkThemeStart.hour * 60 + _autoDarkThemeStart.minute;
       if (currentMinutes >= startMinutes) {
         // Se l'ora di inizio è già passata, sarà domani
-        return now.add(const Duration(days: 1))
+        return now
+            .add(const Duration(days: 1))
             .subtract(Duration(hours: now.hour, minutes: now.minute))
-            .add(Duration(hours: _autoDarkThemeStart.hour, minutes: _autoDarkThemeStart.minute));
+            .add(Duration(
+                hours: _autoDarkThemeStart.hour,
+                minutes: _autoDarkThemeStart.minute));
       } else {
         // Altrimenti sarà oggi
-        return now
-            .subtract(Duration(hours: now.hour, minutes: now.minute))
-            .add(Duration(hours: _autoDarkThemeStart.hour, minutes: _autoDarkThemeStart.minute));
+        return now.subtract(Duration(hours: now.hour, minutes: now.minute)).add(
+            Duration(
+                hours: _autoDarkThemeStart.hour,
+                minutes: _autoDarkThemeStart.minute));
       }
     }
   }

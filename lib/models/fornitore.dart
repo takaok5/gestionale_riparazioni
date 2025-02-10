@@ -40,7 +40,8 @@ class Fornitore {
 
   // Getters per le date formattate
   String get dataRegistrazione => AppDateUtils.formatDate(createdAt);
-  String get dataRegistrazioneCompleta => AppDateUtils.formatDateTime(createdAt);
+  String get dataRegistrazioneCompleta =>
+      AppDateUtils.formatDateTime(createdAt);
   String get ultimoAggiornamento => AppDateUtils.formatDateTime(updatedAt);
   String get tempoTrascorsoDaRegistrazione => AppDateUtils.timeAgo(createdAt);
   String get tempoTrascorsoDaAggiornamento => AppDateUtils.timeAgo(updatedAt);
@@ -80,8 +81,10 @@ class Fornitore {
       scontoAcquisto: map['scontoAcquisto']?.toDouble() ?? 0.0,
       scontoVendita: map['scontoVendita']?.toDouble() ?? 0.0,
       margine: map['margine']?.toDouble() ?? 0.0,
-      createdAt: AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
-      updatedAt: AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
+      createdAt:
+          AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
+      updatedAt:
+          AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
     );
   }
 

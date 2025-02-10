@@ -33,7 +33,8 @@ abstract class BaseModel {
   static DateTime parseTimestamp(dynamic value) {
     if (value == null) return DateTime.now();
     if (value is Timestamp) return value.toDate();
-    if (value is String) return AppDateUtils.parseISOString(value) ?? DateTime.now();
+    if (value is String)
+      return AppDateUtils.parseISOString(value) ?? DateTime.now();
     return DateTime.now();
   }
 

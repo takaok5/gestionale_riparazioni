@@ -28,7 +28,8 @@ class FirestoreService extends BaseService {
 
   @override
   Future<void> initialize() async {
-    await _db.enablePersistence(const PersistenceSettings(synchronizeTabs: true));
+    await _db
+        .enablePersistence(const PersistenceSettings(synchronizeTabs: true));
     await _clearExpiredCache();
   }
 
@@ -38,7 +39,8 @@ class FirestoreService extends BaseService {
   }
 
   // Utility methods con gestione ottimizzata delle date
-  Map<String, dynamic> addMetadata(Map<String, dynamic> data, {bool isNew = true}) {
+  Map<String, dynamic> addMetadata(Map<String, dynamic> data,
+      {bool isNew = true}) {
     final now = AppDateUtils.getCurrentDateTime();
     final Map<String, dynamic> metadata = {
       'updatedAt': Timestamp.fromDate(AppDateUtils.toUtc(now)),
@@ -60,7 +62,8 @@ class FirestoreService extends BaseService {
     return {...data, ...metadata};
   }
 
-  Future<void> logOperation(String collection, String operation, String docId) async {
+  Future<void> logOperation(
+      String collection, String operation, String docId) async {
     final now = AppDateUtils.getCurrentDateTime();
     final logEntry = {
       'collection': collection,
@@ -79,7 +82,8 @@ class FirestoreService extends BaseService {
   }
 
   // CRUD Operations ottimizzate
-  Future<DocumentReference> create(String collection, Map<String, dynamic> data) async {
+  Future<DocumentReference> create(
+      String collection, Map<String, dynamic> data) async {
     try {
       final docData = addMetadata(data);
       final docRef = await _db.collection(collection).add(docData);
@@ -91,14 +95,16 @@ class FirestoreService extends BaseService {
     }
   }
 
-  Future<void> update(String collection, String id, Map<String, dynamic> data) async {
+  Future<void> update(
+      String collection, String id, Map<String, dynamic> data) async {
     try {
       final updateData = addMetadata(data, isNew: false);
       await _db.collection(collection).doc(id).update(updateData);
       await logOperation(collection, 'update', id);
       _invalidateCollectionCache(collection);
     } catch (e) {
-      throw FirestoreException('Errore durante l\'aggiornamento del documento: $e');
+      throw FirestoreException(
+          'Errore durante l\'aggiornamento del documento: $e');
     }
   }
 
@@ -108,7 +114,8 @@ class FirestoreService extends BaseService {
       await logOperation(collection, 'delete', id);
       _invalidateCollectionCache(collection);
     } catch (e) {
-      throw FirestoreException('Errore durante l\'eliminazione del documento: $e');
+      throw FirestoreException(
+          'Errore durante l\'eliminazione del documento: $e');
     }
   }
 
@@ -122,21 +129,21 @@ class FirestoreService extends BaseService {
       'settimana': AppDateUtils.getWeekNumber(now),
       'mese': AppDateUtils.formatYearMonth(now),
     };
-    
+
     await create('riparazioni', data);
   }
 
   Future<void> updateRiparazione(String id, Map<String, dynamic> data) async {
     if (data.containsKey('dataCompletamento')) {
       final completamento = AppDateUtils.getCurrentDateTime();
-      data['dataCompletamento'] = Timestamp.fromDate(AppDateUtils.toUtc(completamento));
-      data['dataCompletamentoFormatted'] = AppDateUtils.formatDateTime(completamento);
+      data['dataCompletamento'] =
+          Timestamp.fromDate(AppDateUtils.toUtc(completamento));
+      data['dataCompletamentoFormatted'] =
+          AppDateUtils.formatDateTime(completamento);
       data['durataRiparazione'] = AppDateUtils.daysBetween(
-        (data['dataIngresso'] as Timestamp).toDate(),
-        completamento
-      );
+          (data['dataIngresso'] as Timestamp).toDate(), completamento);
     }
-    
+
     await update('riparazioni', id, data);
   }
 
@@ -179,7 +186,8 @@ class FirestoreService extends BaseService {
       return Riparazione.fromMap({
         ...data,
         'id': doc.id,
-        'tempoTrascorso': _calcolaTempoTrascorso(data['dataIngresso'] as Timestamp),
+        'tempoTrascorso':
+            _calcolaTempoTrascorso(data['dataIngresso'] as Timestamp),
       });
     }).toList();
   }
@@ -198,15 +206,15 @@ class FirestoreService extends BaseService {
         .orderBy('cognome')
         .snapshots()
         .map((snapshot) {
-          final clienti = snapshot.docs
-              .map((doc) => Cliente.fromMap({...doc.data(), 'id': doc.id}))
-              .toList();
-          _queryCache[cacheKey] = {
-            'data': clienti,
-            'timestamp': AppDateUtils.getCurrentDateTime()
-          };
-          return clienti;
-        });
+      final clienti = snapshot.docs
+          .map((doc) => Cliente.fromMap({...doc.data(), 'id': doc.id}))
+          .toList();
+      _queryCache[cacheKey] = {
+        'data': clienti,
+        'timestamp': AppDateUtils.getCurrentDateTime()
+      };
+      return clienti;
+    });
   }
 
   Future<Cliente> getCliente(String id) async {
@@ -281,21 +289,21 @@ class FirestoreService extends BaseService {
       final riparazioniSnapshot = await _db
           .collection('riparazioni')
           .where('dataCompletamento',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(AppDateUtils.toUtc(startOfMonth)))
+              isGreaterThanOrEqualTo:
+                  Timestamp.fromDate(AppDateUtils.toUtc(startOfMonth)))
           .where('dataCompletamento',
-              isLessThanOrEqualTo: Timestamp.fromDate(AppDateUtils.toUtc(endOfMonth)))
+              isLessThanOrEqualTo:
+                  Timestamp.fromDate(AppDateUtils.toUtc(endOfMonth)))
           .get();
 
       final stats = await _calcolaStatistiche(riparazioniSnapshot.docs, now);
-      
-      _queryCache[cacheKey] = {
-        'data': stats,
-        'timestamp': now
-      };
+
+      _queryCache[cacheKey] = {'data': stats, 'timestamp': now};
 
       return stats;
     } catch (e) {
-      throw FirestoreException('Errore durante il recupero delle statistiche: $e');
+      throw FirestoreException(
+          'Errore durante il recupero delle statistiche: $e');
     }
   }
 
@@ -303,7 +311,7 @@ class FirestoreService extends BaseService {
       List<QueryDocumentSnapshot> docs, DateTime now) async {
     final startOfMonth = AppDateUtils.startOfMonth(now);
     final endOfMonth = AppDateUtils.endOfMonth(now);
-    
+
     double ricaviTotali = 0;
     int riparazioniCompletate = 0;
     int riparazioniInCorso = 0;
@@ -313,18 +321,19 @@ class FirestoreService extends BaseService {
     for (var doc in docs) {
       final data = doc.data() as Map<String, dynamic>;
       final riparazione = Riparazione.fromMap({...data, 'id': doc.id});
-      final dataCompletamento = (data['dataCompletamento'] as Timestamp).toDate();
+      final dataCompletamento =
+          (data['dataCompletamento'] as Timestamp).toDate();
       final giornoKey = AppDateUtils.formatDate(dataCompletamento);
 
       if (riparazione.stato == StatoRiparazione.completata ||
           riparazione.stato == StatoRiparazione.consegnata) {
         ricaviTotali += riparazione.prezzo;
         riparazioniCompletate++;
-        
-        ricaviGiornalieri[giornoKey] = 
+
+        ricaviGiornalieri[giornoKey] =
             (ricaviGiornalieri[giornoKey] ?? 0) + riparazione.prezzo;
-        
-        riparazioniPerTipo[riparazione.tipo] = 
+
+        riparazioniPerTipo[riparazione.tipo] =
             (riparazioniPerTipo[riparazione.tipo] ?? 0) + 1;
       } else if (riparazione.stato == StatoRiparazione.inLavorazione) {
         riparazioniInCorso++;
@@ -353,8 +362,7 @@ class FirestoreService extends BaseService {
       'meta': {
         'aggiornamento': AppDateUtils.formatDateTime(now),
         'prossimoCaching': AppDateUtils.formatDateTime(
-          now.add(const Duration(minutes: CACHE_DURATION_MINUTES))
-        ),
+            now.add(const Duration(minutes: CACHE_DURATION_MINUTES))),
       }
     };
   }
@@ -384,5 +392,75 @@ class FirestoreService extends BaseService {
       }
 
       await batch.commit();
-      
-      // Invalida le cache delle collezioni interessate
+
+// Invalida le cache delle collezioni interessate
+      for (var collection in collectionsToInvalidate) {
+        _invalidateCollectionCache(collection);
+      }
+
+      // Log delle operazioni batch
+      final now = AppDateUtils.getCurrentDateTime();
+      final logEntry = {
+        'operations': operations.length,
+        'collections': collectionsToInvalidate.toList(),
+        'timestamp': Timestamp.fromDate(AppDateUtils.toUtc(now)),
+        'timestampFormatted': AppDateUtils.formatDateTime(now),
+        'userId': FirebaseAuth.instance.currentUser?.uid,
+      };
+
+      await _db.collection('logs').doc().set(logEntry);
+    } catch (e) {
+      throw FirestoreException('Errore durante l\'esecuzione del batch: $e');
+    }
+  }
+
+  // Cache management
+  bool _isCacheValid(String key) {
+    if (!_queryCache.containsKey(key)) return false;
+
+    final cacheEntry = _queryCache[key];
+    final cacheTime = cacheEntry['timestamp'] as DateTime;
+    final now = AppDateUtils.getCurrentDateTime();
+
+    return now.difference(cacheTime).inMinutes < CACHE_DURATION_MINUTES;
+  }
+
+  void _invalidateCollectionCache(String collection) {
+    _queryCache.removeWhere((key, _) => key.startsWith(collection));
+  }
+
+  Future<void> _clearExpiredCache() async {
+    final now = AppDateUtils.getCurrentDateTime();
+    _queryCache.removeWhere((_, value) {
+      final cacheTime = value['timestamp'] as DateTime;
+      return now.difference(cacheTime).inMinutes >= CACHE_DURATION_MINUTES;
+    });
+  }
+}
+
+class FirestoreException implements Exception {
+  final String message;
+
+  FirestoreException(this.message);
+
+  @override
+  String toString() => 'FirestoreException: $message';
+}
+
+class BatchOperation {
+  final String path;
+  final BatchOperationType type;
+  final Map<String, dynamic> data;
+
+  BatchOperation({
+    required this.path,
+    required this.type,
+    required this.data,
+  });
+}
+
+enum BatchOperationType {
+  create,
+  update,
+  delete,
+}

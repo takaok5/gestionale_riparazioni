@@ -8,7 +8,7 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirestoreService _firestoreService;
-  
+
   // Nuovi campi per il tracciamento temporale
   DateTime? _lastSignIn;
   DateTime? _lastSignOut;
@@ -19,17 +19,16 @@ class AuthService {
   AuthService(this._firestoreService);
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
-  
+
   // Nuovi getters per le informazioni temporali
-  String? get lastSignInFormatted => _lastSignIn != null
-      ? AppDateUtils.formatDateTime(_lastSignIn!)
-      : null;
-      
-  String? get lastSignOutFormatted => _lastSignOut != null
-      ? AppDateUtils.formatDateTime(_lastSignOut!)
-      : null;
-      
-  bool get isSessionExpired => _lastSignIn != null &&
+  String? get lastSignInFormatted =>
+      _lastSignIn != null ? AppDateUtils.formatDateTime(_lastSignIn!) : null;
+
+  String? get lastSignOutFormatted =>
+      _lastSignOut != null ? AppDateUtils.formatDateTime(_lastSignOut!) : null;
+
+  bool get isSessionExpired =>
+      _lastSignIn != null &&
       AppDateUtils.minutesSince(_lastSignIn!) > _sessionTimeout;
 
   Future<UserProfile?> getCurrentUser() async {
@@ -37,11 +36,11 @@ class AuthService {
     if (user == null) return null;
 
     final userProfile = await _firestoreService.getUserProfile(user.uid);
-    
+
     if (userProfile != null) {
       _recordAuthOperation('getUserProfile');
     }
-    
+
     return userProfile;
   }
 
@@ -53,10 +52,10 @@ class AuthService {
       email: email,
       password: password,
     );
-    
+
     _lastSignIn = AppDateUtils.getCurrentDateTime();
     _recordAuthOperation('signIn');
-    
+
     // Aggiorna il timestamp di accesso nel profilo
     if (credential.user != null) {
       await _firestore.collection('users').doc(credential.user!.uid).update({
@@ -89,10 +88,10 @@ class AuthService {
           'updatedAt': AppDateUtils.toUtc(now),
           'updatedAtFormatted': AppDateUtils.formatDateTime(now),
           'passwordLastChanged': AppDateUtils.toUtc(now),
-          'passwordExpiresAt': AppDateUtils.toUtc(
-              AppDateUtils.addDays(now, _maxPasswordAge)),
+          'passwordExpiresAt':
+              AppDateUtils.toUtc(AppDateUtils.addDays(now, _maxPasswordAge)),
         });
-        
+
         _recordAuthOperation('createUser');
       }
 
@@ -113,7 +112,7 @@ class AuthService {
       'updatedAt': AppDateUtils.toUtc(now),
       'updatedAtFormatted': AppDateUtils.formatDateTime(now),
     });
-    
+
     _recordAuthOperation('updateProfile');
   }
 
@@ -133,15 +132,15 @@ class AuthService {
     if (user == null) throw Exception('No user logged in');
 
     await user.updatePassword(newPassword);
-    
+
     final now = AppDateUtils.getCurrentDateTime();
     await _firestore.collection('users').doc(user.uid).update({
       'passwordLastChanged': AppDateUtils.toUtc(now),
       'passwordLastChangedFormatted': AppDateUtils.formatDateTime(now),
-      'passwordExpiresAt': AppDateUtils.toUtc(
-          AppDateUtils.addDays(now, _maxPasswordAge)),
+      'passwordExpiresAt':
+          AppDateUtils.toUtc(AppDateUtils.addDays(now, _maxPasswordAge)),
     });
-    
+
     _recordAuthOperation('updatePassword');
   }
 
@@ -167,10 +166,12 @@ class AuthService {
     final userData = await _firestore.collection('users').doc(user.uid).get();
     if (!userData.exists) return false;
 
-    final passwordLastChanged = userData.data()?['passwordLastChanged'] as Timestamp?;
+    final passwordLastChanged =
+        userData.data()?['passwordLastChanged'] as Timestamp?;
     if (passwordLastChanged == null) return true;
 
-    final daysSinceChange = AppDateUtils.daysSince(passwordLastChanged.toDate());
+    final daysSinceChange =
+        AppDateUtils.daysSince(passwordLastChanged.toDate());
     return daysSinceChange >= _maxPasswordAge;
   }
 
@@ -188,7 +189,8 @@ class AuthService {
       'Account creato il': data['createdAtFormatted'] ?? 'N/A',
       'Ultima modifica password': data['passwordLastChangedFormatted'] ?? 'Mai',
       'Password scade il': data['passwordExpiresAt'] != null
-          ? AppDateUtils.formatDateTime((data['passwordExpiresAt'] as Timestamp).toDate())
+          ? AppDateUtils.formatDateTime(
+              (data['passwordExpiresAt'] as Timestamp).toDate())
           : 'N/A',
       'Sessione scade tra': _lastSignIn != null
           ? '${_sessionTimeout - AppDateUtils.minutesSince(_lastSignIn!)} minuti'

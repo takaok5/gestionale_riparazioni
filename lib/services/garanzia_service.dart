@@ -36,8 +36,10 @@ class GaranziaService {
     if (soloAttive == true) {
       final now = AppDateUtils.getCurrentDateTime();
       query = query
-          .where('dataFine', isGreaterThan: Timestamp.fromDate(AppDateUtils.toUtc(now)))
-          .where('stato', isEqualTo: StatoGaranzia.attiva.toString().split('.').last);
+          .where('dataFine',
+              isGreaterThan: Timestamp.fromDate(AppDateUtils.toUtc(now)))
+          .where('stato',
+              isEqualTo: StatoGaranzia.attiva.toString().split('.').last);
     }
 
     return query.snapshots().map((snapshot) => snapshot.docs.map((doc) {
@@ -101,13 +103,14 @@ class GaranziaService {
   }) async {
     final now = AppDateUtils.getCurrentDateTime();
     final dataFine = AppDateUtils.addDays(now, durataGiorniGaranzia);
-    
+
     // Verifica esistenza riparazione
-    final riparazioneDoc = await _db.collection('riparazioni').doc(riparazioneId).get();
+    final riparazioneDoc =
+        await _db.collection('riparazioni').doc(riparazioneId).get();
     if (!riparazioneDoc.exists) {
       throw Exception('Riparazione non trovata');
     }
-    
+
     final garanzia = GaranziaInterna(
       id: '',
       numero: _generateNumeroGaranzia(),
@@ -126,10 +129,12 @@ class GaranziaService {
 
     await addGaranziaInterna(garanzia);
   }
+
   String _generateNumeroGaranzia() {
     final now = AppDateUtils.getCurrentDateTime();
     final anno = now.year.toString();
-    final progressivo = DateTime.now().millisecondsSinceEpoch.toString().substring(8);
+    final progressivo =
+        DateTime.now().millisecondsSinceEpoch.toString().substring(8);
     return 'GAR$anno$progressivo';
   }
 
@@ -138,7 +143,7 @@ class GaranziaService {
     if (!doc.exists) {
       throw Exception('Garanzia non trovata');
     }
-    
+
     final data = doc.data()!;
     final tipo = TipoGaranzia.values.firstWhere(
       (e) => e.toString().split('.').last == data['tipo'],
@@ -219,7 +224,8 @@ class GaranziaService {
 
       for (var doc in docs) {
         final data = doc.data();
-        final dataFine = AppDateUtils.fromTimestamp(data['dataFine'] as Timestamp);
+        final dataFine =
+            AppDateUtils.fromTimestamp(data['dataFine'] as Timestamp);
         final stato = StatoGaranzia.values.firstWhere(
           (e) => e.toString().split('.').last == data['stato'],
           orElse: () => StatoGaranzia.invalidata,

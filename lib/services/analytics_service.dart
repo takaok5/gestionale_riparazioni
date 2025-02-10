@@ -14,18 +14,16 @@ class AnalyticsService {
 
     final riparazioni = await _db
         .collection('riparazioni')
-        .where('dataIngresso', 
+        .where('dataIngresso',
             isGreaterThanOrEqualTo: AppDateUtils.toUtc(inizioMese))
-        .where('dataIngresso', 
+        .where('dataIngresso',
             isLessThanOrEqualTo: AppDateUtils.toUtc(fineMese))
         .get();
 
     final preventivi = await _db
         .collection('preventivi')
-        .where('data', 
-            isGreaterThanOrEqualTo: AppDateUtils.toUtc(inizioMese))
-        .where('data', 
-            isLessThanOrEqualTo: AppDateUtils.toUtc(fineMese))
+        .where('data', isGreaterThanOrEqualTo: AppDateUtils.toUtc(inizioMese))
+        .where('data', isLessThanOrEqualTo: AppDateUtils.toUtc(fineMese))
         .get();
 
     int totaleRiparazioni = riparazioni.docs.length;
@@ -53,9 +51,7 @@ class AnalyticsService {
       if (riparazione.dataUscita != null) {
         // Utilizzo di AppDateUtils per calcolare la differenza in ore
         tempoMedioRiparazione += AppDateUtils.hoursBetween(
-          riparazione.dataIngresso,
-          riparazione.dataUscita!
-        );
+            riparazione.dataIngresso, riparazione.dataUscita!);
       }
     }
 
@@ -76,8 +72,8 @@ class AnalyticsService {
       'fatturato': fatturato,
       'tipiDispositivi': tipiDispositivi,
       'tempoMedioRiparazione': tempoMedioRiparazione,
-      'ultimoAggiornamento': AppDateUtils.formatDateTime(
-          AppDateUtils.getCurrentDateTime()),
+      'ultimoAggiornamento':
+          AppDateUtils.formatDateTime(AppDateUtils.getCurrentDateTime()),
     };
   }
 
@@ -88,7 +84,7 @@ class AnalyticsService {
 
     final riparazioni = await _db
         .collection('riparazioni')
-        .where('dataIngresso', 
+        .where('dataIngresso',
             isGreaterThanOrEqualTo: AppDateUtils.toUtc(seiMesiFa))
         .orderBy('dataIngresso')
         .get();
@@ -102,10 +98,8 @@ class AnalyticsService {
       if (!datiMensili.containsKey(chiaveMese)) {
         datiMensili[chiaveMese] = {
           'mese': chiaveMese,
-          'inizioMese': AppDateUtils.formatDate(
-              AppDateUtils.getFirstDayOfMonth(
-                  riparazione.dataIngresso.year,
-                  riparazione.dataIngresso.month)),
+          'inizioMese': AppDateUtils.formatDate(AppDateUtils.getFirstDayOfMonth(
+              riparazione.dataIngresso.year, riparazione.dataIngresso.month)),
           'totaleRiparazioni': 0,
           'fatturato': 0.0,
           'tipiDispositivi': <String, int>{},
@@ -144,18 +138,18 @@ class AnalyticsService {
       final riparazioni = await _db
           .collection('riparazioni')
           .where('clienteId', isEqualTo: cliente.id)
-          .where('dataIngresso', 
+          .where('dataIngresso',
               isGreaterThanOrEqualTo: AppDateUtils.toUtc(start))
-          .where('dataIngresso', 
-              isLessThanOrEqualTo: AppDateUtils.toUtc(end))
+          .where('dataIngresso', isLessThanOrEqualTo: AppDateUtils.toUtc(end))
           .orderBy('dataIngresso', descending: true)
           .get();
 
       if (riparazioni.docs.isNotEmpty) {
         riparazioniPerCliente[cliente.id] = riparazioni.docs.length;
-        
+
         // Trova l'ultima riparazione
-        final ultimaData = riparazioni.docs.first.data()['dataIngresso'] as DateTime;
+        final ultimaData =
+            riparazioni.docs.first.data()['dataIngresso'] as DateTime;
         ultimaRiparazione[cliente.id] = AppDateUtils.formatDateTime(ultimaData);
 
         // Calcola il fatturato totale
@@ -187,7 +181,7 @@ class AnalyticsService {
   }) async {
     final start = AppDateUtils.toUtc(startDate);
     final end = AppDateUtils.toUtc(endDate);
-    
+
     final riparazioni = await _db
         .collection('riparazioni')
         .where('dataIngresso', isGreaterThanOrEqualTo: start)
@@ -206,7 +200,8 @@ class AnalyticsService {
           chiave = AppDateUtils.formatDate(riparazione.dataIngresso);
           break;
         case 'settimana':
-          chiave = 'Settimana ${AppDateUtils.getWeekNumber(riparazione.dataIngresso)}';
+          chiave =
+              'Settimana ${AppDateUtils.getWeekNumber(riparazione.dataIngresso)}';
           break;
         case 'mese':
         default:
@@ -229,8 +224,9 @@ class AnalyticsService {
 
       if (riparazione.dataUscita != null) {
         gruppedStats[chiave]!['riparazioniCompletate']++;
-        gruppedStats[chiave]!['tempoMedioRiparazione'] += 
-            AppDateUtils.hoursBetween(riparazione.dataIngresso, riparazione.dataUscita!);
+        gruppedStats[chiave]!['tempoMedioRiparazione'] +=
+            AppDateUtils.hoursBetween(
+                riparazione.dataIngresso, riparazione.dataUscita!);
       }
     }
 
@@ -253,13 +249,13 @@ class AnalyticsService {
         'fatturato': gruppedStats.values
             .fold(0.0, (sum, stats) => sum + (stats['fatturato'] as double)),
         'tempoMedioComplessivo': gruppedStats.values
-            .where((stats) => stats['riparazioniCompletate'] > 0)
-            .map((stats) => stats['tempoMedioRiparazione'] as double)
-            .fold(0.0, (sum, time) => sum + time) /
+                .where((stats) => stats['riparazioniCompletate'] > 0)
+                .map((stats) => stats['tempoMedioRiparazione'] as double)
+                .fold(0.0, (sum, time) => sum + time) /
             gruppedStats.length,
       },
-      'ultimoAggiornamento': AppDateUtils.formatDateTime(
-          AppDateUtils.getCurrentDateTime()),
+      'ultimoAggiornamento':
+          AppDateUtils.formatDateTime(AppDateUtils.getCurrentDateTime()),
     };
   }
 }

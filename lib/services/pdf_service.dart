@@ -26,14 +26,16 @@ class PdfService {
             pw.SizedBox(height: 20),
             _buildInfoRow('Cliente:', datiGaranzia['nomeCliente']),
             _buildInfoRow('Dispositivo:', datiGaranzia['dispositivo']),
-            _buildInfoRow('Data Inizio:', 
-                AppDateUtils.formatDateTime(DateTime.parse(datiGaranzia['dataInizio']))),
-            _buildInfoRow('Data Scadenza:', 
-                AppDateUtils.formatDateTime(DateTime.parse(datiGaranzia['dataScadenza']))),
-            _buildInfoRow('Durata:', 
-                '${AppDateUtils.daysBetween(
-                    DateTime.parse(datiGaranzia['dataInizio']), 
-                    DateTime.parse(datiGaranzia['dataScadenza']))} giorni'),
+            _buildInfoRow(
+                'Data Inizio:',
+                AppDateUtils.formatDateTime(
+                    DateTime.parse(datiGaranzia['dataInizio']))),
+            _buildInfoRow(
+                'Data Scadenza:',
+                AppDateUtils.formatDateTime(
+                    DateTime.parse(datiGaranzia['dataScadenza']))),
+            _buildInfoRow('Durata:',
+                '${AppDateUtils.daysBetween(DateTime.parse(datiGaranzia['dataInizio']), DateTime.parse(datiGaranzia['dataScadenza']))} giorni'),
             pw.SizedBox(height: 20),
             pw.Text('Componenti coperti da garanzia:'),
             pw.SizedBox(height: 10),
@@ -63,10 +65,12 @@ class PdfService {
     return file;
   }
 
-  Future<File> generateRicevutaRiparazione(Map<String, dynamic> datiRiparazione) async {
+  Future<File> generateRicevutaRiparazione(
+      Map<String, dynamic> datiRiparazione) async {
     final pdf = pw.Document();
     final now = AppDateUtils.getCurrentDateTime();
-    final dataCompletamento = DateTime.parse(datiRiparazione['dataCompletamento']);
+    final dataCompletamento =
+        DateTime.parse(datiRiparazione['dataCompletamento']);
 
     pdf.addPage(
       pw.Page(
@@ -80,9 +84,9 @@ class PdfService {
             pw.SizedBox(height: 20),
             _buildInfoRow('Cliente:', datiRiparazione['nomeCliente']),
             _buildInfoRow('Dispositivo:', datiRiparazione['dispositivo']),
-            _buildInfoRow('Data Completamento:', 
+            _buildInfoRow('Data Completamento:',
                 AppDateUtils.formatDateTime(dataCompletamento)),
-            _buildInfoRow('Tempo Trascorso:', 
+            _buildInfoRow('Tempo Trascorso:',
                 '${AppDateUtils.daysBetween(dataCompletamento, now)} giorni fa'),
             pw.SizedBox(height: 20),
             pw.Text('Interventi effettuati:'),
@@ -135,9 +139,9 @@ class PdfService {
               child: pw.Text('Report Periodico'),
             ),
             pw.SizedBox(height: 20),
-            _buildInfoRow('Periodo:', 
+            _buildInfoRow('Periodo:',
                 '${AppDateUtils.formatDate(inizioPeriodo)} - ${AppDateUtils.formatDate(finePeriodo)}'),
-            _buildInfoRow('Durata:', 
+            _buildInfoRow('Durata:',
                 '${AppDateUtils.daysBetween(inizioPeriodo, finePeriodo)} giorni'),
             _buildStatistichePeriodo(datiReport['statistiche']),
             pw.SizedBox(height: 40),
@@ -149,7 +153,8 @@ class PdfService {
 
     // Salva il PDF con periodo nel nome
     final output = await getTemporaryDirectory();
-    final periodoString = '${AppDateUtils.formatYearMonth(inizioPeriodo)}_${AppDateUtils.formatYearMonth(finePeriodo)}';
+    final periodoString =
+        '${AppDateUtils.formatYearMonth(inizioPeriodo)}_${AppDateUtils.formatYearMonth(finePeriodo)}';
     final file = File('${output.path}/report_$periodoString.pdf');
     await file.writeAsBytes(await pdf.save());
 
@@ -194,21 +199,21 @@ class PdfService {
           ],
         ),
         ...ricambi.map((r) => pw.TableRow(
-          children: [
-            pw.Padding(
-              padding: const pw.EdgeInsets.all(4),
-              child: pw.Text(r['descrizione']),
-            ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.all(4),
-              child: pw.Text(r['quantita'].toString()),
-            ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.all(4),
-              child: pw.Text('€ ${r['prezzo'].toStringAsFixed(2)}'),
-            ),
-          ],
-        )),
+              children: [
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(4),
+                  child: pw.Text(r['descrizione']),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(4),
+                  child: pw.Text(r['quantita'].toString()),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(4),
+                  child: pw.Text('€ ${r['prezzo'].toStringAsFixed(2)}'),
+                ),
+              ],
+            )),
       ],
     );
   }
@@ -220,9 +225,8 @@ class PdfService {
         pw.SizedBox(height: 20),
         pw.Text('Statistiche del periodo:'),
         pw.SizedBox(height: 10),
-        ...statistiche.entries.map((entry) => 
-          _buildInfoRow(entry.key, entry.value.toString())
-        ),
+        ...statistiche.entries
+            .map((entry) => _buildInfoRow(entry.key, entry.value.toString())),
       ],
     );
   }

@@ -69,7 +69,8 @@ class Garanzia extends BaseModel {
       throw Exception('Il numero della garanzia è obbligatorio');
     }
     if (dataInizio.isAfter(dataFine)) {
-      throw Exception('La data di inizio non può essere successiva alla data di fine');
+      throw Exception(
+          'La data di inizio non può essere successiva alla data di fine');
     }
   }
 
@@ -79,7 +80,7 @@ class Garanzia extends BaseModel {
       ...super.toMap(),
       'numero': numero,
       'dataInizio': Timestamp.fromDate(AppDateUtils.toUtc(dataInizio)),
-      'dataFine': Timestamp.fromDate(AppDateUtils.toUtc(dataFine)), 
+      'dataFine': Timestamp.fromDate(AppDateUtils.toUtc(dataFine)),
       'note': note,
       'stato': stato.toString().split('.').last,
       'tipo': tipo.toString().split('.').last,
@@ -146,8 +147,9 @@ class GaranziaInterna extends Garanzia {
         );
 
   String? get motivazioneInvalidazione => _motivazioneInvalidazione;
-  String? get dataInvalidazioneFormattata => 
-      _dataInvalidazione != null ? AppDateUtils.formatDateTime(_dataInvalidazione!) : null;
+  String? get dataInvalidazioneFormattata => _dataInvalidazione != null
+      ? AppDateUtils.formatDateTime(_dataInvalidazione!)
+      : null;
 
   @override
   void validate() {
@@ -206,7 +208,8 @@ class GaranziaInterna extends Garanzia {
       note: note ?? this.note,
       stato: stato ?? this.stato,
       componentiCoperti: componentiCoperti ?? List.from(this.componentiCoperti),
-      motivazioneInvalidazione: motivazioneInvalidazione ?? this._motivazioneInvalidazione,
+      motivazioneInvalidazione:
+          motivazioneInvalidazione ?? this._motivazioneInvalidazione,
       dataInvalidazione: dataInvalidazione ?? this._dataInvalidazione,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

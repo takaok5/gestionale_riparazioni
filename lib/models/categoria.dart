@@ -37,8 +37,10 @@ class Categoria {
       id: map['id'] as String,
       nome: map['nome'] as String,
       descrizione: map['descrizione'] as String?,
-      createdAt: AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
-      updatedAt: AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
+      createdAt:
+          AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
+      updatedAt:
+          AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
     );
   }
 

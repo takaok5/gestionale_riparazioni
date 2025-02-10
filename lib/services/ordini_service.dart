@@ -11,11 +11,12 @@ class OrdiniService {
   OrdiniService(this._db);
 
   // Utility per aggiungere metadati temporali
-  Map<String, dynamic> _addMetadata(Map<String, dynamic> data, {bool isNew = true}) {
+  Map<String, dynamic> _addMetadata(Map<String, dynamic> data,
+      {bool isNew = true}) {
     final now = AppDateUtils.getCurrentDateTime();
     data['updatedAt'] = Timestamp.fromDate(AppDateUtils.toUtc(now));
     data['updatedAtFormatted'] = AppDateUtils.formatDateTime(now);
-    
+
     if (isNew) {
       data['createdAt'] = Timestamp.fromDate(AppDateUtils.toUtc(now));
       data['createdAtFormatted'] = AppDateUtils.formatDateTime(now);
@@ -35,7 +36,8 @@ class OrdiniService {
     DateTime? dataInizio,
     DateTime? dataFine,
   }) {
-    Query query = _db.collection(collectionName).where('userId', isEqualTo: userId);
+    Query query =
+        _db.collection(collectionName).where('userId', isEqualTo: userId);
 
     if (stato != null) {
       query = query.where('stato', isEqualTo: stato.index);
@@ -46,13 +48,15 @@ class OrdiniService {
     }
 
     if (dataInizio != null) {
-      query = query.where('createdAt', 
-          isGreaterThanOrEqualTo: Timestamp.fromDate(AppDateUtils.toUtc(dataInizio)));
+      query = query.where('createdAt',
+          isGreaterThanOrEqualTo:
+              Timestamp.fromDate(AppDateUtils.toUtc(dataInizio)));
     }
 
     if (dataFine != null) {
-      query = query.where('createdAt', 
-          isLessThanOrEqualTo: Timestamp.fromDate(AppDateUtils.toUtc(dataFine)));
+      query = query.where('createdAt',
+          isLessThanOrEqualTo:
+              Timestamp.fromDate(AppDateUtils.toUtc(dataFine)));
     }
 
     return query.snapshots().map((snapshot) {
@@ -94,11 +98,14 @@ class OrdiniService {
     startDate ??= AppDateUtils.startOfMonth(now);
     endDate ??= now;
 
-    Query query = _db.collection(collectionName)
-        .where('createdAt', 
-            isGreaterThanOrEqualTo: Timestamp.fromDate(AppDateUtils.toUtc(startDate)))
-        .where('createdAt', 
-            isLessThanOrEqualTo: Timestamp.fromDate(AppDateUtils.toUtc(endDate)));
+    Query query = _db
+        .collection(collectionName)
+        .where('createdAt',
+            isGreaterThanOrEqualTo:
+                Timestamp.fromDate(AppDateUtils.toUtc(startDate)))
+        .where('createdAt',
+            isLessThanOrEqualTo:
+                Timestamp.fromDate(AppDateUtils.toUtc(endDate)));
 
     final QuerySnapshot snapshot = await query.get();
 
@@ -123,7 +130,8 @@ class OrdiniService {
         ...doc.data() as Map<String, dynamic>,
       });
 
-      final createdAt = (doc.data() as Map<String, dynamic>)['createdAt'] as Timestamp;
+      final createdAt =
+          (doc.data() as Map<String, dynamic>)['createdAt'] as Timestamp;
       final dataOrdine = createdAt.toDate();
       final periodoKey = AppDateUtils.formatYearMonth(dataOrdine);
 
@@ -138,8 +146,9 @@ class OrdiniService {
       }
 
       statistiche['fornitori'][ordine.fornitoreId]['totaleOrdini']++;
-      statistiche['fornitori'][ordine.fornitoreId]['totaleSpesa'] += ordine.totale;
-      statistiche['fornitori'][ordine.fornitoreId]['ultimoOrdine'] = 
+      statistiche['fornitori'][ordine.fornitoreId]['totaleSpesa'] +=
+          ordine.totale;
+      statistiche['fornitori'][ordine.fornitoreId]['ultimoOrdine'] =
           AppDateUtils.formatDateTime(dataOrdine);
 
       // Aggiorna statistiche per periodo
@@ -161,7 +170,7 @@ class OrdiniService {
     // Calcola media giornaliera
     final giorniTotali = AppDateUtils.daysBetween(startDate, endDate);
     if (giorniTotali > 0) {
-      statistiche['totali']['mediaGiornaliera'] = 
+      statistiche['totali']['mediaGiornaliera'] =
           statistiche['totali']['spesaTotale'] / giorniTotali;
     }
 
@@ -171,15 +180,17 @@ class OrdiniService {
   }
 
   // Nuovo metodo per ottenere gli ordini recenti di un fornitore
-  Future<List<Ordine>> getOrdiniRecentiFornitori(String fornitoreId, {int limit = 5}) async {
+  Future<List<Ordine>> getOrdiniRecentiFornitori(String fornitoreId,
+      {int limit = 5}) async {
     final now = AppDateUtils.getCurrentDateTime();
     final treeMesiFa = AppDateUtils.addMonths(now, -3);
 
     final snapshot = await _db
         .collection(collectionName)
         .where('fornitoreId', isEqualTo: fornitoreId)
-        .where('createdAt', 
-            isGreaterThanOrEqualTo: Timestamp.fromDate(AppDateUtils.toUtc(treeMesiFa)))
+        .where('createdAt',
+            isGreaterThanOrEqualTo:
+                Timestamp.fromDate(AppDateUtils.toUtc(treeMesiFa)))
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .get();
@@ -187,7 +198,7 @@ class OrdiniService {
     return snapshot.docs.map((doc) {
       final data = doc.data();
       final createdAt = (data['createdAt'] as Timestamp).toDate();
-      
+
       return Ordine.fromMap({
         ...data,
         'id': doc.id,

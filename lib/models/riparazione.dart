@@ -9,23 +9,23 @@ import 'tecnico.dart';
 import 'ricambio.dart';
 import 'base_model.dart';
 
-// Base class for common repair properties
+@immutable
 abstract class BaseRiparazione extends BaseModel {
-  final String id;
   final String descrizione;
   final DateTime dataIngresso;
   final double? costoFinale;
 
   const BaseRiparazione({
-    required this.id,
+    required String id,
     required this.descrizione,
     required this.dataIngresso,
     this.costoFinale,
-  });
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) : super(id: id, createdAt: createdAt, updatedAt: updatedAt);
 }
 
-// Main repair model
-class Riparazione extends BaseModel {
+class Riparazione extends BaseRiparazione {
   final Cliente cliente;
   final Dispositivo dispositivo;
   final String? noteInterne;
@@ -39,14 +39,9 @@ class Riparazione extends BaseModel {
   final List<Ricambio>? ricambiUtilizzati;
   final bool inGaranzia;
   final String? numeroGaranzia;
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
   const Riparazione({
     required String id,
-    required DateTime createdAt,
-    required DateTime updatedAt,
-    required super.id,
     required this.cliente,
     required this.dispositivo,
     required String descrizioneProblema,
@@ -58,24 +53,26 @@ class Riparazione extends BaseModel {
     required this.priorita,
     this.tecnicoAssegnato,
     this.preventivo,
-    super.costoFinale,
+    double? costoFinale,
     this.ricambiUtilizzati,
     required this.inGaranzia,
     this.numeroGaranzia,
-    required this.createdAt,
-    required this.updatedAt,
-  }) : super(id: id, createdAt: createdAt, updatedAt: updatedAt);
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) : super(
+          id: id,
+          descrizione: descrizioneProblema,
+          dataIngresso: createdAt,
+          costoFinale: costoFinale,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+        );
 
   // Getters for common properties
   String get tipo => tipoRiparazione.toString().split('.').last;
   DateTime? get appuntamento => dataCompletamento;
   double get prezzo => preventivo ?? 0.0;
-  double get costoRicambi =>
-      ricambiUtilizzati?.fold(
-        0.0,
-        (sum, ricambio) => sum + (ricambio.prezzo ?? 0),
-      ) ??
-      0.0;
+  double get costoRicambi => ricambiUtilizzati?.fold(0.0, (sum, ricambio) => sum + (ricambio.prezzo ?? 0)) ?? 0.0;
   double get costoManodopera => (costoFinale ?? 0.0) - costoRicambi;
 
   bool get isCompletato => dataCompletamento != null;
@@ -88,71 +85,65 @@ class Riparazione extends BaseModel {
   @override
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      ...super.toMap(),
       'clienteId': cliente.id,
       'dispositivo': dispositivo.toMap(),
       'descrizioneProblema': descrizione,
       'noteInterne': noteInterne,
-      'dataRicezione': AppDateUtils.toISOString(dataIngresso),
-      'dataCompletamento': dataCompletamento != null
-          ? AppDateUtils.toISOString(dataCompletamento!)
-          : null,
-      'dataConsegna':
-          dataConsegna != null ? AppDateUtils.toISOString(dataConsegna!) : null,
-      'stato': stato.name,
-      'tipoRiparazione': tipoRiparazione.name,
-      'priorita': priorita.name,
+      'dataCompletamento': dataCompletamento != null ? Timestamp.fromDate(AppDateUtils.toUtc(dataCompletamento!)) : null,
+      'dataConsegna': dataConsegna != null ? Timestamp.fromDate(AppDateUtils.toUtc(dataConsegna!)) : null,
+      'stato': stato.toString().split('.').last,
+      'tipoRiparazione': tipoRiparazione.toString().split('.').last,
+      'priorita': priorita.toString().split('.').last,
       'tecnicoAssegnatoId': tecnicoAssegnato?.id,
       'preventivo': preventivo,
       'costoFinale': costoFinale,
       'ricambiUtilizzati': ricambiUtilizzati?.map((r) => r.toMap()).toList(),
       'inGaranzia': inGaranzia,
       'numeroGaranzia': numeroGaranzia,
-      'createdAt': AppDateUtils.toISOString(createdAt),
-      'updatedAt': AppDateUtils.toISOString(updatedAt),
     };
   }
 
-  static Riparazione fromMap(
-    Map<String, dynamic> map, {
+  static Riparazione fromMap(Map<String, dynamic> map, {
     required Cliente cliente,
     Tecnico? tecnico,
     List<Ricambio>? ricambi,
   }) {
     return Riparazione(
-      id: map['id'] ?? '',
+      id: map['id'] as String,
       cliente: cliente,
-      dispositivo:
-          Dispositivo.fromMap(map['dispositivo'] as Map<String, dynamic>),
-      descrizioneProblema: map['descrizioneProblema'] ?? '',
-      noteInterne: map['noteInterne'],
-      dataRicezione: AppDateUtils.parseISOString(map['dataRicezione']) ?? DateTime.now(),
-      dataCompletamento: AppDateUtils.parseISOString(map['dataCompletamento']),
-      dataConsegna: AppDateUtils.parseISOString(map['dataConsegna']),
+      dispositivo: Dispositivo.fromMap(map['dispositivo'] as Map<String, dynamic>),
+      descrizioneProblema: map['descrizioneProblema'] as String,
+      noteInterne: map['noteInterne'] as String?,
+      dataCompletamento: map['dataCompletamento'] != null 
+          ? (map['dataCompletamento'] as Timestamp).toDate()
+          : null,
+      dataConsegna: map['dataConsegna'] != null 
+          ? (map['dataConsegna'] as Timestamp).toDate()
+          : null,
       stato: StatoRiparazione.values.firstWhere(
-        (e) => e.name == map['stato'],
+        (e) => e.toString().split('.').last == map['stato'],
         orElse: () => StatoRiparazione.inAttesa,
       ),
       tipoRiparazione: TipoRiparazione.values.firstWhere(
-        (e) => e.name == map['tipoRiparazione'],
+        (e) => e.toString().split('.').last == map['tipoRiparazione'],
         orElse: () => TipoRiparazione.riparazione,
       ),
       priorita: PrioritaRiparazione.values.firstWhere(
-        (e) => e.name == map['priorita'],
+        (e) => e.toString().split('.').last == map['priorita'],
         orElse: () => PrioritaRiparazione.normale,
       ),
       tecnicoAssegnato: tecnico,
-      preventivo: map['preventivo']?.toDouble(),
-      costoFinale: map['costoFinale']?.toDouble(),
+      preventivo: map['preventivo'] as double?,
+      costoFinale: map['costoFinale'] as double?,
       ricambiUtilizzati: ricambi,
-      inGaranzia: map['inGaranzia'] ?? false,
-      numeroGaranzia: map['numeroGaranzia'],
-      createdAt: AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
-      updatedAt: AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
+      inGaranzia: map['inGaranzia'] as bool? ?? false,
+      numeroGaranzia: map['numeroGaranzia'] as String?,
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
     );
   }
 
-  // Convert to archived repair
   RiparazioneArchiviata toArchiviata() {
     return RiparazioneArchiviata(
       id: id,
@@ -165,10 +156,15 @@ class Riparazione extends BaseModel {
       costoManodopera: costoManodopera,
       totalePattuito: costoFinale ?? 0.0,
       note: noteInterne,
-      dettagliRicambi: {
-        for (var ricambio in (ricambiUtilizzati ?? []))
+      dettagliRicambi: ricambiUtilizzati?.fold<Map<String, dynamic>>(
+        {},
+        (map, ricambio) => {
+          ...map,
           ricambio.id: ricambio.toMap(),
-      },
+        },
+      ),
+      createdAt: createdAt,
+      updatedAt: DateTime.now(),
     );
   }
 
@@ -178,7 +174,6 @@ class Riparazione extends BaseModel {
     Dispositivo? dispositivo,
     String? descrizioneProblema,
     String? noteInterne,
-    DateTime? dataRicezione,
     DateTime? dataCompletamento,
     DateTime? dataConsegna,
     StatoRiparazione? stato,
@@ -197,9 +192,8 @@ class Riparazione extends BaseModel {
       id: id ?? this.id,
       cliente: cliente ?? this.cliente,
       dispositivo: dispositivo ?? this.dispositivo,
-      descrizioneProblema: descrizioneProblema ?? this.descrizione,
+      descrizioneProblema: descrizioneProblema ?? descrizione,
       noteInterne: noteInterne ?? this.noteInterne,
-      dataRicezione: dataRicezione ?? this.dataIngresso,
       dataCompletamento: dataCompletamento ?? this.dataCompletamento,
       dataConsegna: dataConsegna ?? this.dataConsegna,
       stato: stato ?? this.stato,
@@ -217,9 +211,9 @@ class Riparazione extends BaseModel {
   }
 }
 
-// Archived repair model
 class RiparazioneArchiviata extends BaseRiparazione {
   final String clienteId;
+  final String dispositivo;
   final DateTime dataUscita;
   final double costoRicambi;
   final double costoManodopera;
@@ -227,32 +221,37 @@ class RiparazioneArchiviata extends BaseRiparazione {
   final String? note;
   final Map<String, dynamic>? dettagliRicambi;
 
-  RiparazioneArchiviata({
-    required super.id,
+  const RiparazioneArchiviata({
+    required String id,
     required this.clienteId,
-    required String dispositivo,
+    required this.dispositivo,
     required String problema,
-    required super.dataIngresso,
+    required DateTime dataIngresso,
     required this.dataUscita,
     required this.costoRicambi,
     required this.costoManodopera,
     required this.totalePattuito,
     this.note,
     this.dettagliRicambi,
+    required DateTime createdAt,
+    required DateTime updatedAt,
   }) : super(
+          id: id,
           descrizione: problema,
+          dataIngresso: dataIngresso,
           costoFinale: totalePattuito,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
         );
 
   @override
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      ...super.toMap(),
       'clienteId': clienteId,
-      'dispositivo': descrizione,
+      'dispositivo': dispositivo,
       'problema': descrizione,
-      'dataIngresso': AppDateUtils.toISOString(dataIngresso),
-      'dataUscita': AppDateUtils.toISOString(dataUscita),
+      'dataUscita': Timestamp.fromDate(AppDateUtils.toUtc(dataUscita)),
       'costoRicambi': costoRicambi,
       'costoManodopera': costoManodopera,
       'totalePattuito': totalePattuito,
@@ -263,22 +262,23 @@ class RiparazioneArchiviata extends BaseRiparazione {
 
   factory RiparazioneArchiviata.fromMap(Map<String, dynamic> map) {
     return RiparazioneArchiviata(
-      id: map['id'] ?? '',
-      clienteId: map['clienteId'] ?? '',
-      dispositivo: map['dispositivo'] ?? '',
-      problema: map['problema'] ?? '',
-      dataIngresso: AppDateUtils.parseISOString(map['dataIngresso']) ?? DateTime.now(),
-      dataUscita: AppDateUtils.parseISOString(map['dataUscita']) ?? DateTime.now(),
-      costoRicambi: map['costoRicambi']?.toDouble() ?? 0.0,
-      costoManodopera: map['costoManodopera']?.toDouble() ?? 0.0,
-      totalePattuito: map['totalePattuito']?.toDouble() ?? 0.0,
-      note: map['note'],
-      dettagliRicambi: map['dettagliRicambi'],
+      id: map['id'] as String,
+      clienteId: map['clienteId'] as String,
+      dispositivo: map['dispositivo'] as String,
+      problema: map['problema'] as String,
+      dataIngresso: (map['dataIngresso'] as Timestamp).toDate(),
+      dataUscita: (map['dataUscita'] as Timestamp).toDate(),
+      costoRicambi: (map['costoRicambi'] as num).toDouble(),
+      costoManodopera: (map['costoManodopera'] as num).toDouble(),
+      totalePattuito: (map['totalePattuito'] as num).toDouble(),
+      note: map['note'] as String?,
+      dettagliRicambi: map['dettagliRicambi'] as Map<String, dynamic>?,
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
     );
   }
 }
 
-// Widget for displaying repair information
 class RiparazioneCard extends StatelessWidget {
   final Riparazione riparazione;
   final VoidCallback onTap;
@@ -316,14 +316,15 @@ class RiparazioneCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: riparazione.stato.color.withOpacity(0.2),
+                      color: _getStatusColor().withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      riparazione.stato.display,
+                      _getStatusText(),
                       style: TextStyle(
-                        color: riparazione.stato.color,
+                        color: _getStatusColor(),
                         fontSize: 12,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
@@ -339,10 +340,7 @@ class RiparazioneCard extends StatelessWidget {
               if (riparazione.appuntamento != null) ...[
                 Text(
                   'Appuntamento: ${AppDateUtils.formatDateTime(riparazione.appuntamento!)}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
               Row(
@@ -350,15 +348,85 @@ class RiparazioneCard extends StatelessWidget {
                 children: [
                   Text(
                     'Ingresso: ${AppDateUtils.formatDate(riparazione.dataIngresso)}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   if (riparazione.prezzo > 0)
                     Text(
-                      '€ ${riparazione.costoFinale?.toStringAsFixed(2) ?? '-'}',
+                      '€ ${riparazione.costoFinale?.toStringAsFixed(2) ?? riparazione.prezzo.toStringAsFixed(2)}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                ],
+              ),
+              if (riparazione.tecnicoAssegnato != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.person, size: 16, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Tecnico: ${riparazione.tecnicoAssegnato!.nome}',
+                      style: const TextStyle(fontSize: 12, color: Colors.
+'Tecnico: ${riparazione.tecnicoAssegnato!.nome}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ],
+              if (riparazione.inGaranzia) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.security, size: 16, color: Colors.green),
+                    const SizedBox(width: 4),
+                    Text(
+                      'In Garanzia${riparazione.numeroGaranzia != null ? ' (${riparazione.numeroGaranzia})' : ''}',
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: Colors.green,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor() {
+    switch (riparazione.stato) {
+      case StatoRiparazione.inAttesa:
+        return Colors.orange;
+      case StatoRiparazione.inLavorazione:
+        return Colors.blue;
+      case StatoRiparazione.completata:
+        return Colors.green;
+      case StatoRiparazione.consegnata:
+        return Colors.purple;
+      case StatoRiparazione.annullata:
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getStatusText() {
+    switch (riparazione.stato) {
+      case StatoRiparazione.inAttesa:
+        return 'In Attesa';
+      case StatoRiparazione.inLavorazione:
+        return 'In Lavorazione';
+      case StatoRiparazione.completata:
+        return 'Completata';
+      case StatoRiparazione.consegnata:
+        return 'Consegnata';
+      case StatoRiparazione.annullata:
+        return 'Annullata';
+      default:
+        return 'Sconosciuto';
+    }
+  }
+}

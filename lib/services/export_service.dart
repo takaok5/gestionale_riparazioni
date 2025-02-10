@@ -37,7 +37,8 @@ class ExportService {
       'Numero Clienti': clienti.length,
       'Numero Riparazioni': riparazioni.length,
       'Numero Preventivi': preventivi.length,
-      'Periodo': '${AppDateUtils.formatDate(now)} - ${AppDateUtils.formatDate(now)}',
+      'Periodo':
+          '${AppDateUtils.formatDate(now)} - ${AppDateUtils.formatDate(now)}',
     });
 
     // Salva il file con nome formattato
@@ -102,7 +103,8 @@ class ExportService {
     for (var i = 0; i < riparazioni.length; i++) {
       final riparazione = riparazioni[i];
       final durataGiorni = riparazione.dataChiusura != null
-          ? AppDateUtils.daysBetween(riparazione.dataApertura, riparazione.dataChiusura!)
+          ? AppDateUtils.daysBetween(
+              riparazione.dataApertura, riparazione.dataChiusura!)
           : AppDateUtils.daysSince(riparazione.dataApertura);
 
       sheet.insertRowIterables([
@@ -137,12 +139,11 @@ class ExportService {
     ], 0);
 
     final now = AppDateUtils.getCurrentDateTime();
-    
+
     for (var i = 0; i < preventivi.length; i++) {
       final preventivo = preventivi[i];
-      final giorniAllaScadenza = AppDateUtils.daysBetween(
-          now, 
-          preventivo.dataScadenza);
+      final giorniAllaScadenza =
+          AppDateUtils.daysBetween(now, preventivo.dataScadenza);
 
       sheet.insertRowIterables([
         preventivo.id,
@@ -160,8 +161,7 @@ class ExportService {
 
   void _setupMetadataSheet(Sheet sheet, Map<String, dynamic> metadata) {
     metadata.forEach((key, value) {
-      sheet.insertRowIterables([key, value.toString()], 
-          sheet.maxRows);
+      sheet.insertRowIterables([key, value.toString()], sheet.maxRows);
     });
   }
 
@@ -172,15 +172,13 @@ class ExportService {
     String? titoloReport,
   }) async {
     final now = AppDateUtils.getCurrentDateTime();
-    
+
     final Map<String, dynamic> datiReport = {
       'dataGenerazione': now,
       'dataGenerazioneFormatted': AppDateUtils.formatDateTime(now),
       'periodoReport': {
-        'inizio': AppDateUtils.formatDate(
-            AppDateUtils.startOfMonth(now)),
-        'fine': AppDateUtils.formatDate(
-            AppDateUtils.endOfMonth(now)),
+        'inizio': AppDateUtils.formatDate(AppDateUtils.startOfMonth(now)),
+        'fine': AppDateUtils.formatDate(AppDateUtils.endOfMonth(now)),
       },
       'clienti': clienti,
       'riparazioni': riparazioni,
@@ -200,21 +198,22 @@ class ExportService {
   ) async {
     final now = AppDateUtils.getCurrentDateTime();
     final fileTimestamp = AppDateUtils.formatFileTimestamp(now);
-    final period = '${AppDateUtils.formatDate(startDate)}_${AppDateUtils.formatDate(endDate)}';
-    
+    final period =
+        '${AppDateUtils.formatDate(startDate)}_${AppDateUtils.formatDate(endDate)}';
+
     final files = <String, String>{};
-    
+
     // Excel export
     final excelPath = await exportToExcel(/* ... */);
     files['excel'] = excelPath;
-    
+
     // PDF export
     final pdfPath = await exportToPdf(
       titoloReport: 'Report Periodo: $period',
       /* ... */
     );
     files['pdf'] = pdfPath;
-    
+
     return files;
   }
 }

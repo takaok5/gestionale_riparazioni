@@ -6,7 +6,7 @@ import '../utils/date_utils.dart' show AppDateUtils;
 
 class ContabilitaService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   // Cache per i report
   final Map<String, Map<String, dynamic>> _reportCache = {};
   static const Duration _cacheDuration = Duration(minutes: 15);
@@ -18,7 +18,7 @@ class ContabilitaService {
     // Converti le date in UTC per Firestore
     final startUtc = AppDateUtils.toUtc(startDate);
     final endUtc = AppDateUtils.toUtc(endDate);
-    
+
     return _firestore
         .collection('riparazioni')
         .where('dataIngresso', isGreaterThanOrEqualTo: startUtc)
@@ -45,7 +45,7 @@ class ContabilitaService {
       final giornoFormattato = AppDateUtils.formatDate(dataIngresso);
 
       // Aggiorna conteggi giornalieri
-      riparazioniPerGiorno[giornoFormattato] = 
+      riparazioniPerGiorno[giornoFormattato] =
           (riparazioniPerGiorno[giornoFormattato] ?? 0) + 1;
 
       if (riparazione.stato == StatoRiparazione.completata ||
@@ -53,9 +53,10 @@ class ContabilitaService {
         totaleIncassi += riparazione.prezzoTotale;
         totaleCosti += riparazione.costoRicambi;
         riparazioniCompletate++;
-        
-        incassiGiornalieri[giornoFormattato] = 
-            (incassiGiornalieri[giornoFormattato] ?? 0) + riparazione.prezzoTotale;
+
+        incassiGiornalieri[giornoFormattato] =
+            (incassiGiornalieri[giornoFormattato] ?? 0) +
+                riparazione.prezzoTotale;
       } else if (riparazione.stato == StatoRiparazione.inLavorazione) {
         riparazioniInCorso++;
       }
@@ -83,7 +84,8 @@ class ContabilitaService {
         'riparazioni': riparazioniPerGiorno,
         'mediaIncassi': mediaGiornaliera,
       },
-      'timestampReport': AppDateUtils.formatDateTime(AppDateUtils.getCurrentDateTime()),
+      'timestampReport':
+          AppDateUtils.formatDateTime(AppDateUtils.getCurrentDateTime()),
     };
   }
 
@@ -92,12 +94,13 @@ class ContabilitaService {
     final inizioMese = AppDateUtils.startOfMonth(mese);
     final fineMese = AppDateUtils.endOfMonth(mese);
     final meseFormattato = AppDateUtils.formatYearMonth(mese);
-    
+
     // Controlla cache
     if (_reportCache.containsKey(meseFormattato)) {
       final cached = _reportCache[meseFormattato]!;
       final timestampCache = DateTime.parse(cached['timestampReport']);
-      if (AppDateUtils.getCurrentDateTime().difference(timestampCache) < _cacheDuration) {
+      if (AppDateUtils.getCurrentDateTime().difference(timestampCache) <
+          _cacheDuration) {
         return cached;
       }
     }
@@ -114,8 +117,10 @@ class ContabilitaService {
     DateTime inizioPeriodo2,
     DateTime finePeriodo2,
   ) async {
-    final report1 = await getReportContabilita(inizioPeriodo1, finePeriodo1).first;
-    final report2 = await getReportContabilita(inizioPeriodo2, finePeriodo2).first;
+    final report1 =
+        await getReportContabilita(inizioPeriodo1, finePeriodo1).first;
+    final report2 =
+        await getReportContabilita(inizioPeriodo2, finePeriodo2).first;
 
     final giorni1 = AppDateUtils.daysBetween(inizioPeriodo1, finePeriodo1);
     final giorni2 = AppDateUtils.daysBetween(inizioPeriodo2, finePeriodo2);
@@ -134,20 +139,23 @@ class ContabilitaService {
         ...report2,
       },
       'confronto': {
-        'differenzaIncassi': report2['totaleIncassi'] - report1['totaleIncassi'],
+        'differenzaIncassi':
+            report2['totaleIncassi'] - report1['totaleIncassi'],
         'differenzaMargine': report2['margine'] - report1['margine'],
         'crescitaPercentuale': report1['totaleIncassi'] > 0
-            ? ((report2['totaleIncassi'] - report1['totaleIncassi']) / 
-               report1['totaleIncassi'] * 100).toStringAsFixed(2) + '%'
+            ? ((report2['totaleIncassi'] - report1['totaleIncassi']) /
+                        report1['totaleIncassi'] *
+                        100)
+                    .toStringAsFixed(2) +
+                '%'
             : 'N/A',
-        'mediaGiornalieraPeriodo1': giorni1 > 0 
-            ? report1['totaleIncassi'] / giorni1 
-            : 0,
-        'mediaGiornalieraPeriodo2': giorni2 > 0 
-            ? report2['totaleIncassi'] / giorni2 
-            : 0,
+        'mediaGiornalieraPeriodo1':
+            giorni1 > 0 ? report1['totaleIncassi'] / giorni1 : 0,
+        'mediaGiornalieraPeriodo2':
+            giorni2 > 0 ? report2['totaleIncassi'] / giorni2 : 0,
       },
-      'generatoIl': AppDateUtils.formatDateTime(AppDateUtils.getCurrentDateTime()),
+      'generatoIl':
+          AppDateUtils.formatDateTime(AppDateUtils.getCurrentDateTime()),
     };
   }
 }

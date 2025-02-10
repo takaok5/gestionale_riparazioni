@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'base_model.dart';
 import 'garanzia.dart';
 import '../enums/enums.dart';
+import '../utils/date_utils.dart' show AppDateUtils;
 
 @immutable
 class Dispositivo extends BaseModel {
@@ -19,7 +20,7 @@ class Dispositivo extends BaseModel {
   final StatoDispositivo stato;
   final DateTime? ultimaRiparazione;
   final String? note;
-  final Garanzia? garanzia; // Manteniamo solo questo campo per la garanzia
+  final Garanzia? garanzia;
   final List<String>? fotoProdotto;
 
   Dispositivo({
@@ -57,7 +58,7 @@ class Dispositivo extends BaseModel {
 
   @override
   Map<String, dynamic> toMap() {
-    final map = <String, dynamic>{
+    return {
       ...super.toMap(),
       'tipo': tipo.toString().split('.').last,
       'marca': marca,
@@ -71,13 +72,12 @@ class Dispositivo extends BaseModel {
       'accessoriInclusi': accessoriInclusi.map((a) => a.toMap()).toList(),
       'stato': stato.toString().split('.').last,
       'ultimaRiparazione': ultimaRiparazione != null 
-          ? AppDateUtils.toISOString(ultimaRiparazione!)
+          ? Timestamp.fromDate(AppDateUtils.toUtc(ultimaRiparazione!))
           : null,
       'note': note,
       'garanzia': garanzia?.toMap(),
       'fotoProdotto': fotoProdotto,
     };
-    return map;
   }
 
   factory Dispositivo.fromMap(Map<String, dynamic> map) {
@@ -105,7 +105,7 @@ class Dispositivo extends BaseModel {
         orElse: () => StatoDispositivo.funzionante,
       ),
       ultimaRiparazione: map['ultimaRiparazione'] != null
-          ? AppDateUtils.parseISOString(map['ultimaRiparazione'])
+          ? (map['ultimaRiparazione'] as Timestamp).toDate()
           : null,
       note: map['note'] as String?,
       garanzia: map['garanzia'] != null
@@ -115,12 +115,8 @@ class Dispositivo extends BaseModel {
                   map['garanzia'] as Map<String, dynamic>)
           : null,
       fotoProdotto: List<String>.from(map['fotoProdotto'] ?? []),
-      createdAt: map['createdAt'] is Timestamp 
-          ? (map['createdAt'] as Timestamp).toDate()
-          : AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
-      updatedAt: map['updatedAt'] is Timestamp
-          ? (map['updatedAt'] as Timestamp).toDate()
-          : AppDateUtils.parseISOString(map['updatedAt']) ?? DateTime.now(),
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
     );
   }
 
@@ -152,15 +148,15 @@ class Dispositivo extends BaseModel {
       serialNumber: serialNumber ?? this.serialNumber,
       imei: imei ?? this.imei,
       clienteId: clienteId ?? this.clienteId,
-      problemiRicorrenti: problemiRicorrenti ?? this.problemiRicorrenti,
-      riparazioniIds: riparazioniIds ?? this.riparazioniIds,
-      specificheTecniche: specificheTecniche ?? this.specificheTecniche,
-      accessoriInclusi: accessoriInclusi ?? this.accessoriInclusi,
+      problemiRicorrenti: problemiRicorrenti ?? List.from(this.problemiRicorrenti),
+      riparazioniIds: riparazioniIds ?? List.from(this.riparazioniIds),
+      specificheTecniche: specificheTecniche ?? Map.from(this.specificheTecniche),
+      accessoriInclusi: accessoriInclusi ?? List.from(this.accessoriInclusi),
       stato: stato ?? this.stato,
       ultimaRiparazione: ultimaRiparazione ?? this.ultimaRiparazione,
       note: note ?? this.note,
       garanzia: garanzia ?? this.garanzia,
-      fotoProdotto: fotoProdotto ?? this.fotoProdotto,
+      fotoProdotto: fotoProdotto ?? (this.fotoProdotto != null ? List.from(this.fotoProdotto!) : null),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -174,6 +170,7 @@ class Dispositivo extends BaseModel {
   bool get hasFoto => fotoProdotto?.isNotEmpty ?? false;
   bool get isSmartphone => tipo == TipoDispositivo.smartphone;
   bool get isTablet => tipo == TipoDispositivo.tablet;
+  bool get isComputer => tipo == TipoDispositivo.computer;
   bool get hasUltimaRiparazioneRecente => 
       ultimaRiparazione != null && 
       DateTime.now().difference(ultimaRiparazione!).inDays <= 30;
@@ -188,8 +185,6 @@ class Dispositivo extends BaseModel {
     return ultimaRiparazione != null && 
            AppDateUtils.isSameDay(ultimaRiparazione!, data);
   }
-}
-  bool get isComputer => tipo == TipoDispositivo.computer;
 }
 
 @immutable
@@ -218,4 +213,16 @@ class Accessorio {
           orElse: () => StatoAccessorio.presente,
         ),
       );
+
+  Accessorio copyWith({
+    String? nome,
+    String? descrizione,
+    StatoAccessorio? stato,
+  }) {
+    return Accessorio(
+      nome: nome ?? this.nome,
+      descrizione: descrizione ?? this.descrizione,
+      stato: stato ?? this.stato,
+    );
+  }
 }

@@ -27,16 +27,15 @@ class OrdiniProvider with ChangeNotifier {
   String? get filtroFornitore => _filtroFornitore;
 
   // Nuovi getters per le informazioni temporali
-  String? get lastUpdateFormatted => _lastUpdate != null 
-      ? AppDateUtils.formatDateTime(_lastUpdate!)
-      : null;
+  String? get lastUpdateFormatted =>
+      _lastUpdate != null ? AppDateUtils.formatDateTime(_lastUpdate!) : null;
 
   String get lastFilterChangeFormatted => _lastFilterChange != null
       ? AppDateUtils.timeAgo(_lastFilterChange!)
       : 'Mai';
 
-  bool get needsRefresh => _lastUpdate == null || 
-      AppDateUtils.minutesSince(_lastUpdate!) > 5;
+  bool get needsRefresh =>
+      _lastUpdate == null || AppDateUtils.minutesSince(_lastUpdate!) > 5;
 
   // Stream subscription per gli ordini con filtro temporale
   Stream<List<OrdineRicambi>> getOrdiniStream({
@@ -107,7 +106,7 @@ class OrdiniProvider with ChangeNotifier {
   List<OrdineRicambi> getOrdiniInRange(DateTime start, DateTime end) {
     final startUtc = AppDateUtils.toUtc(start);
     final endUtc = AppDateUtils.toUtc(end);
-    
+
     return _ordini.where((ordine) {
       final dataOrdine = AppDateUtils.toUtc(ordine.dataCreazione);
       return dataOrdine.isAfter(startUtc) && dataOrdine.isBefore(endUtc);
@@ -117,20 +116,22 @@ class OrdiniProvider with ChangeNotifier {
   List<OrdineRicambi> getOrdiniRecenti({int giorni = 7}) {
     final now = AppDateUtils.getCurrentDateTime();
     final limitDate = now.subtract(Duration(days: giorni));
-    
-    return _ordini.where((ordine) => 
-      AppDateUtils.toUtc(ordine.dataCreazione).isAfter(limitDate)
-    ).toList();
+
+    return _ordini
+        .where((ordine) =>
+            AppDateUtils.toUtc(ordine.dataCreazione).isAfter(limitDate))
+        .toList();
   }
 
   Map<String, dynamic> getStatisticheOrdini() {
     final now = AppDateUtils.getCurrentDateTime();
     final ordiniRecenti = getOrdiniRecenti();
-    
+
     return {
       'totaleOrdini': ordiniRecenti.length,
       'ultimoAggiornamento': AppDateUtils.formatDateTime(now),
-      'periodoAnalisi': '${AppDateUtils.formatDate(now.subtract(const Duration(days: 7)))} - ${AppDateUtils.formatDate(now)}',
+      'periodoAnalisi':
+          '${AppDateUtils.formatDate(now.subtract(const Duration(days: 7)))} - ${AppDateUtils.formatDate(now)}',
       'totaleImporto': calcolaTotaleOrdiniInCorso(),
       'mediaGiornaliera': calcolaTotaleOrdiniInCorso() / 7,
     };
@@ -156,11 +157,11 @@ class OrdiniProvider with ChangeNotifier {
 
   String getStatoConsegna(OrdineRicambi ordine) {
     if (ordine.dataConsegnaPrevista == null) return 'Data non specificata';
-    
+
     if (isOrdineScaduto(ordine)) {
       return 'In ritardo di ${AppDateUtils.daysSince(ordine.dataConsegnaPrevista!)} giorni';
     }
-    
+
     final giorniMancanti = AppDateUtils.daysUntil(ordine.dataConsegnaPrevista!);
     return 'Consegna prevista tra $giorniMancanti giorni';
   }

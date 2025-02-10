@@ -5,7 +5,7 @@ import '../utils/date_utils.dart' show AppDateUtils;
 
 class FirebaseStorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  
+
   // Costanti per i percorsi di storage
   static const String FOLDER_IMAGES = 'images';
   static const String FOLDER_DOCUMENTS = 'documents';
@@ -15,11 +15,11 @@ class FirebaseStorageService {
   Future<String> uploadFile(File file, String folder) async {
     final now = AppDateUtils.getCurrentDateTime();
     final fileName = path.basename(file.path);
-    
+
     // Organizza i file in cartelle per anno/mese
     final yearMonth = AppDateUtils.formatYearMonth(now);
     final destination = '$folder/$yearMonth/$fileName';
-    
+
     // Aggiungi timestamp al nome del file se necessario
     final String timestampedFileName = _addTimestampToFilename(fileName, now);
     final String finalDestination = '$folder/$yearMonth/$timestampedFileName';
@@ -44,7 +44,8 @@ class FirebaseStorageService {
   }
 
   /// Upload di file multipli mantenendo l'ordine temporale
-  Future<List<String>> uploadMultipleFiles(List<File> files, String folder) async {
+  Future<List<String>> uploadMultipleFiles(
+      List<File> files, String folder) async {
     final now = AppDateUtils.getCurrentDateTime();
     final yearMonth = AppDateUtils.formatYearMonth(now);
     final List<String> uploadedUrls = [];
@@ -81,7 +82,7 @@ class FirebaseStorageService {
       final ref = _storage.refFromURL(url);
       final metadata = await ref.getMetadata();
       final now = AppDateUtils.getCurrentDateTime();
-      
+
       // Registra i metadati di eliminazione
       final deletionMetadata = {
         'deletedAt': AppDateUtils.formatDateTime(now),
@@ -91,9 +92,8 @@ class FirebaseStorageService {
       };
 
       await ref.delete();
-      
+
       // Qui potresti voler salvare deletionMetadata in un log o database
-      
     } catch (e) {
       print('Errore durante l\'eliminazione del file: $e');
       throw e;
@@ -111,12 +111,12 @@ class FirebaseStorageService {
     final endYearMonth = AppDateUtils.formatYearMonth(endDate);
 
     final ListResult result = await _storage.ref(folder).listAll();
-    
+
     for (var item in result.items) {
       try {
         final metadata = await item.getMetadata();
         final uploadDate = metadata.customMetadata?['uploadDate'];
-        
+
         if (uploadDate != null) {
           final fileDate = DateTime.parse(uploadDate);
           if (fileDate.isAfter(startDate) && fileDate.isBefore(endDate)) {

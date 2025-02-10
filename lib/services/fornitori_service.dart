@@ -7,7 +7,8 @@ class FornitoriService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Aggiunge metadati temporali ai documenti
-  Map<String, dynamic> _addMetadata(Map<String, dynamic> data, {bool isNew = true}) {
+  Map<String, dynamic> _addMetadata(Map<String, dynamic> data,
+      {bool isNew = true}) {
     final now = AppDateUtils.getCurrentDateTime();
     final metadata = {
       'updatedAt': Timestamp.fromDate(AppDateUtils.toUtc(now)),
@@ -34,12 +35,15 @@ class FornitoriService {
               // Aggiungi informazioni temporali formattate
               if (data['createdAt'] != null) {
                 final createdAt = (data['createdAt'] as Timestamp).toDate();
-                data['createdAtFormatted'] = AppDateUtils.formatDateTime(createdAt);
+                data['createdAtFormatted'] =
+                    AppDateUtils.formatDateTime(createdAt);
               }
               if (data['updatedAt'] != null) {
                 final updatedAt = (data['updatedAt'] as Timestamp).toDate();
-                data['updatedAtFormatted'] = AppDateUtils.formatDateTime(updatedAt);
-                data['ultimoAggiornamento'] = AppDateUtils.formatTimeAgo(updatedAt);
+                data['updatedAtFormatted'] =
+                    AppDateUtils.formatDateTime(updatedAt);
+                data['ultimoAggiornamento'] =
+                    AppDateUtils.formatTimeAgo(updatedAt);
               }
               return Fornitore.fromMap({...data, 'id': doc.id});
             }).toList());
@@ -49,11 +53,13 @@ class FornitoriService {
     final now = AppDateUtils.getCurrentDateTime();
     // Calcola la data di 3 mesi fa per limitare gli ordini recenti
     final treeMesiFa = AppDateUtils.addMonths(now, -3);
-    
+
     final snapshot = await _firestore
         .collection('ordini')
         .where('fornitoreId', isEqualTo: fornitoreId)
-        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(AppDateUtils.toUtc(treeMesiFa)))
+        .where('createdAt',
+            isGreaterThanOrEqualTo:
+                Timestamp.fromDate(AppDateUtils.toUtc(treeMesiFa)))
         .orderBy('createdAt', descending: true)
         .limit(5)
         .get();
@@ -61,7 +67,7 @@ class FornitoriService {
     return snapshot.docs.map((doc) {
       final data = doc.data();
       final createdAt = (data['createdAt'] as Timestamp).toDate();
-      
+
       return Ordine.fromMap({
         ...data,
         'id': doc.id,
@@ -94,10 +100,12 @@ class FornitoriService {
     final ordiniSnapshot = await _firestore
         .collection('ordini')
         .where('fornitoreId', isEqualTo: fornitoreId)
-        .where('createdAt', 
-            isGreaterThanOrEqualTo: Timestamp.fromDate(AppDateUtils.toUtc(inizioMese)))
-        .where('createdAt', 
-            isLessThanOrEqualTo: Timestamp.fromDate(AppDateUtils.toUtc(fineMese)))
+        .where('createdAt',
+            isGreaterThanOrEqualTo:
+                Timestamp.fromDate(AppDateUtils.toUtc(inizioMese)))
+        .where('createdAt',
+            isLessThanOrEqualTo:
+                Timestamp.fromDate(AppDateUtils.toUtc(fineMese)))
         .get();
 
     double totaleOrdini = 0;
@@ -107,7 +115,7 @@ class FornitoriService {
       final data = doc.data();
       final dataOrdine = (data['createdAt'] as Timestamp).toDate();
       final importo = data['importo'] as double? ?? 0;
-      
+
       final giornoKey = AppDateUtils.formatDate(dataOrdine);
       ordiniPerGiorno[giornoKey] = (ordiniPerGiorno[giornoKey] ?? 0) + importo;
       totaleOrdini += importo;
@@ -121,7 +129,8 @@ class FornitoriService {
       },
       'totaleOrdini': totaleOrdini,
       'ordiniPerGiorno': ordiniPerGiorno,
-      'mediaGiornaliera': totaleOrdini / AppDateUtils.daysBetween(inizioMese, now),
+      'mediaGiornaliera':
+          totaleOrdini / AppDateUtils.daysBetween(inizioMese, now),
       'aggiornamento': AppDateUtils.formatDateTime(now),
     };
   }

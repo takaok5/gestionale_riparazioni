@@ -74,7 +74,8 @@ class MovimentoMagazzino {
       quantita: map['quantita'],
       nota: map['nota'],
       operatoreId: map['operatoreId'],
-      createdAt: AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
+      createdAt:
+          AppDateUtils.parseISOString(map['createdAt']) ?? DateTime.now(),
     );
   }
 }

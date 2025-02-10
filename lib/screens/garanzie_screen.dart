@@ -166,7 +166,8 @@ class GaranzieScreen extends GetView<GaranzieController> {
           trailing: garanzia.attiva
               ? IconButton(
                   icon: const Icon(Icons.more_vert),
-                  onPressed: () => _showGaranziaFornitoreOptions(context, garanzia),
+                  onPressed: () =>
+                      _showGaranziaFornitoreOptions(context, garanzia),
                 )
               : null,
         ),
@@ -331,7 +332,7 @@ class GaranzieScreen extends GetView<GaranzieController> {
 
   Widget _buildStato(Garanzia garanzia) {
     final Color statusColor = garanzia.attiva ? Colors.green : Colors.red;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -359,8 +360,8 @@ class GaranzieScreen extends GetView<GaranzieController> {
             ),
           ],
         ),
-        if (!garanzia.attiva && 
-            garanzia is GaranziaInterna && 
+        if (!garanzia.attiva &&
+            garanzia is GaranziaInterna &&
             garanzia.motivazioneInvalidazione != null) ...[
           const SizedBox(height: 8),
           Text('Motivo: ${garanzia.motivazioneInvalidazione}'),
@@ -413,7 +414,8 @@ class GaranzieScreen extends GetView<GaranzieController> {
     );
   }
 
-  void _showGaranziaFornitoreOptions(BuildContext context, GaranziaFornitore garanzia) {
+  void _showGaranziaFornitoreOptions(
+      BuildContext context, GaranziaFornitore garanzia) {
     if (!garanzia.attiva) return;
 
     Get.bottomSheet(
@@ -477,7 +479,8 @@ class GaranzieScreen extends GetView<GaranzieController> {
     );
   }
 
-  void _showInvalidaGaranziaDialog(BuildContext context, GaranziaInterna garanzia) {
+  void _showInvalidaGaranziaDialog(
+      BuildContext context, GaranziaInterna garanzia) {
     final motivazioneController = TextEditingController();
     Get.dialog(
       AlertDialog(
@@ -489,8 +492,7 @@ class GaranzieScreen extends GetView<GaranzieController> {
               'Questa operazione non può essere annullata. Sei sicuro di voler invalidare la garanzia?',
               style: TextStyle(color: Colors.red),
             ),
-
-const SizedBox(height: 16),
+            const SizedBox(height: 16),
             TextField(
               controller: motivazioneController,
               maxLines: 2,
