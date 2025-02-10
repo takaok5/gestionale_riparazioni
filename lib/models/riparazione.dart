@@ -1,17 +1,35 @@
 import 'package:equatable/equatable.dart';
 import '../utils/exceptions.dart';
-import 'tipo_riparazione.dart';
-import 'stato_riparazione.dart';
-import 'tipo_dispositivo.dart';
-import 'package:gestionale_riparazioni/utils/imports.dart'; // Usa l'import centralizzato invece dei singoli file
+import 'enums/tipo_riparazione.dart';
+import 'enums/stato_riparazione.dart';
+import 'enums/tipo_dispositivo.dart';
+import 'package:gestionale_riparazioni/utils/imports.dart';
 
-enum PrioritaRiparazione { bassa, normale, alta, urgente }
+enum PrioritaRiparazione {
+  bassa,
+  normale,
+  alta,
+  urgente;
+
+  String get label {
+    switch (this) {
+      case PrioritaRiparazione.bassa:
+        return 'Bassa';
+      case PrioritaRiparazione.normale:
+        return 'Normale';
+      case PrioritaRiparazione.alta:
+        return 'Alta';
+      case PrioritaRiparazione.urgente:
+        return 'Urgente';
+    }
+  }
+}
 
 class Riparazione extends Equatable {
   final String id;
   final String clienteId;
-  final TipoDispositivo tipoDispositivo; // Cambiato da tipo a tipoDispositivo
-  final TipoRiparazione tipoRiparazione; // Aggiunto nuovo campo
+  final TipoDispositivo tipoDispositivo;
+  final TipoRiparazione tipoRiparazione;
   final String modelloDispositivo;
   final String descrizione;
   final String? diagnosi;
@@ -31,7 +49,7 @@ class Riparazione extends Equatable {
   final Map<String, dynamic>? metadati;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final String? dispositivo; // Aggiungi questo campo
+  final String? dispositivo;
   final DateTime? dataApertura;
   final DateTime? dataChiusura;
   final String? tecnicoId;
@@ -40,8 +58,8 @@ class Riparazione extends Equatable {
   const Riparazione({
     required this.id,
     required this.clienteId,
-    required this.tipoDispositivo, // Aggiornato
-    required this.tipoRiparazione, // Aggiunto
+    required this.tipoDispositivo,
+    required this.tipoRiparazione,
     required this.modelloDispositivo,
     required this.descrizione,
     this.diagnosi,
@@ -71,13 +89,13 @@ class Riparazione extends Equatable {
         updatedAt = updatedAt ?? DateTime.now();
 
   // Getters
-  double get costoFinale => inGaranzia ? 0 : prezzo + costoRicambi;
+  double get costoFinale =>
+      inGaranzia ? 0 : (costoTotale ?? (prezzo + costoRicambi));
   bool get isInLavorazione => stato == StatoRiparazione.inLavorazione;
   bool get isCompletata => stato == StatoRiparazione.completata;
   bool get isConsegnata => stato == StatoRiparazione.consegnata;
-  TipoDispositivo get tipo => tipoDispositivo;
-  PrioritaRiparazione get urgenza => priorita;
-  double get prezzoTotale => costoTotale ?? (prezzo + costoRicambi);
+  bool get isInAttesa => stato == StatoRiparazione.inAttesa;
+  bool get isAnnullata => stato == StatoRiparazione.annullata;
   Duration? get tempoLavorazione {
     if (dataUscita == null) return null;
     return dataUscita!.difference(dataIngresso);
@@ -85,15 +103,19 @@ class Riparazione extends Equatable {
 
   // Metodi di Business Logic
   bool isInRitardo() {
-    if (dataConsegnaPrevista == null || isConsegnata) return false;
+    if (dataConsegnaPrevista == null || isConsegnata || isAnnullata)
+      return false;
     return DateTime.now().isAfter(dataConsegnaPrevista!);
   }
 
-  bool pueEssereConsegnata() {
+  bool puoEssereConsegnata() {
     return stato == StatoRiparazione.completata;
   }
 
   void validate() {
+    if (id.isEmpty) {
+      throw ValidationException('ID riparazione non può essere vuoto');
+    }
     if (clienteId.isEmpty) {
       throw ValidationException('ID cliente non può essere vuoto');
     }
@@ -117,18 +139,25 @@ class Riparazione extends Equatable {
       throw ValidationException(
           'La data di uscita non può essere precedente alla data di ingresso');
     }
+    if (dataChiusura != null &&
+        dataApertura != null &&
+        dataChiusura!.isBefore(dataApertura!)) {
+      throw ValidationException(
+          'La data di chiusura non può essere precedente alla data di apertura');
+    }
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'clienteId': clienteId,
       'tipoDispositivo': tipoDispositivo.name,
       'tipoRiparazione': tipoRiparazione.name,
       'modelloDispositivo': modelloDispositivo,
       'descrizione': descrizione,
       'diagnosi': diagnosi,
-      'stato': stato.toString(),
-      'priorita': priorita.toString(),
+      'stato': stato.name,
+      'priorita': priorita.name,
       'prezzo': prezzo,
       'costoRicambi': costoRicambi,
       'dataIngresso': dataIngresso.toIso8601String(),
@@ -164,21 +193,15 @@ class Riparazione extends Equatable {
           (t) => t.name == map['tipoRiparazione'],
           orElse: () => TipoRiparazione.standard,
         ),
-        tipoIntervento: TipoRiparazione.values.firstWhere(
-          // <-- Aggiunto
-          (t) => t.toString() == map['tipoIntervento'],
-          orElse: () => TipoRiparazione.standard,
-        ),
-        // .
         modelloDispositivo: map['modelloDispositivo'] as String,
         descrizione: map['descrizione'] as String,
         diagnosi: map['diagnosi'] as String?,
         stato: StatoRiparazione.values.firstWhere(
-          (s) => s.toString() == map['stato'],
+          (s) => s.name == map['stato'],
           orElse: () => StatoRiparazione.inAttesa,
         ),
         priorita: PrioritaRiparazione.values.firstWhere(
-          (p) => p.toString() == map['priorita'],
+          (p) => p.name == map['priorita'],
           orElse: () => PrioritaRiparazione.normale,
         ),
         prezzo: (map['prezzo'] as num).toDouble(),
@@ -203,14 +226,14 @@ class Riparazione extends Equatable {
         metadati: map['metadati'] as Map<String, dynamic>?,
         createdAt: DateTime.parse(map['createdAt'] as String),
         updatedAt: DateTime.parse(map['updatedAt'] as String),
-        dispositivo: map['dispositivo'],
+        dispositivo: map['dispositivo'] as String?,
         dataApertura: map['dataApertura'] != null
-            ? DateTime.parse(map['dataApertura'])
+            ? DateTime.parse(map['dataApertura'] as String)
             : null,
         dataChiusura: map['dataChiusura'] != null
-            ? DateTime.parse(map['dataChiusura'])
+            ? DateTime.parse(map['dataChiusura'] as String)
             : null,
-        tecnicoId: map['tecnicoId'],
+        tecnicoId: map['tecnicoId'] as String?,
         costoTotale: map['costoTotale']?.toDouble(),
       );
     } catch (e) {
@@ -274,7 +297,7 @@ class Riparazione extends Equatable {
       numeroSeriale: numeroSeriale ?? this.numeroSeriale,
       metadati: metadati ?? Map.from(this.metadati ?? {}),
       createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      updatedAt: updatedAt ?? DateTime.now(),
       dispositivo: dispositivo ?? this.dispositivo,
       dataApertura: dataApertura ?? this.dataApertura,
       dataChiusura: dataChiusura ?? this.dataChiusura,
@@ -287,7 +310,8 @@ class Riparazione extends Equatable {
   List<Object?> get props => [
         id,
         clienteId,
-        tipo,
+        tipoDispositivo,
+        tipoRiparazione,
         modelloDispositivo,
         descrizione,
         diagnosi,
@@ -307,8 +331,14 @@ class Riparazione extends Equatable {
         metadati,
         createdAt,
         updatedAt,
+        dispositivo,
+        dataApertura,
+        dataChiusura,
+        tecnicoId,
+        costoTotale,
       ];
 
   @override
-  String toString() => 'Riparazione(id: $id, tipo: $tipo, stato: $stato)';
+  String toString() =>
+      'Riparazione(id: $id, tipo: $tipoDispositivo, stato: $stato)';
 }
