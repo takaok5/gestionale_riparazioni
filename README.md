@@ -1,2 +1,0 @@
-# gestionale_riparazioni
- 
