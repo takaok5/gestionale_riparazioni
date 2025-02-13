@@ -22,7 +22,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'whitenoise.runserver_nostatic',  # per gestire i file statici
-    'user',  # la tua app user
 ]
 
 MIDDLEWARE = [
