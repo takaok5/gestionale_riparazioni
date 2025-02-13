@@ -4,6 +4,22 @@ from django.conf import settings
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
+class Role(models.Model):
+    """
+    Modello per la gestione dei ruoli nel sistema.
+    Definisce i ruoli disponibili con nome e descrizione.
+    """
+    name = models.CharField(max_length=50, unique=True)
+    description = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Ruolo'
+        verbose_name_plural = 'Ruoli'
+
+    def __str__(self):
+        return self.name
+
 class User(AbstractUser):
     """
     Custom user model che estende AbstractUser.
