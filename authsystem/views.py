@@ -8,7 +8,8 @@ from django.views.generic.edit import CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.exceptions import ValidationError
 from django import forms
-from django.contrib.auth import views as auth_views
+from django.db import DatabaseError
+from django.http import HttpResponseServerError
 
 from .models import User, Role
 
@@ -19,14 +20,16 @@ class RoleForm(forms.ModelForm):
         fields = ['name', 'description']
 
     def clean_name(self):
-        name = self.cleaned_data.get('name')
-        if not name:
-            raise ValidationError('Il nome del ruolo è obbligatorio.')
-        if Role.objects.filter(name=name).exists():
-            raise ValidationError('Questo nome di ruolo esiste già.')
-        return name
+        try:
+            name = self.cleaned_data.get('name')
+            if not name:
+                raise ValidationError('Il nome del ruolo è obbligatorio.')
+            if Role.objects.filter(name=name).exists():
+                raise ValidationError('Questo nome di ruolo esiste già.')
+            return name
+        except DatabaseError:
+            raise ValidationError('Errore di connessione al database. Riprova più tardi.')
 
-# Vista per la creazione dei ruoli
 class RoleCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = Role
     form_class = RoleForm
@@ -34,39 +37,63 @@ class RoleCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     success_url = reverse_lazy('role-list')
 
     def test_func(self):
-        return self.request.user.role == User.ADMIN
+        try:
+            return self.request.user.role == User.ADMIN
+        except DatabaseError:
+            messages.error(self.request, 'Errore di connessione al database.')
+            return False
 
     def form_invalid(self, form):
         messages.error(self.request, 'Si prega di correggere gli errori nel form.')
         return super().form_invalid(form)
 
     def form_valid(self, form):
-        messages.success(self.request, 'Ruolo creato con successo!')
-        return super().form_valid(form)
+        try:
+            response = super().form_valid(form)
+            messages.success(self.request, 'Ruolo creato con successo!')
+            return response
+        except DatabaseError:
+            messages.error(self.request, 'Errore durante il salvataggio. Riprova più tardi.')
+            return self.form_invalid(form)
 
-class LoginView(auth_views.LoginView):
-    template_name = 'authsystem/login.html'
-    success_url = reverse_lazy('home')
+def login_view(request):
+    """Vista di login."""
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            try:
+                user = form.get_user()
+                login(request, user)
+                messages.success(request, "Login effettuato con successo!")
+                return redirect('home')
+            except DatabaseError:
+                messages.error(request, "Errore di connessione al database. Riprova più tardi.")
+                return render(request, 'authsystem/login.html', {'form': form})
+    else:
+        form = AuthenticationForm()
+    return render(request, 'authsystem/login.html', {'form': form})
 
-    def form_valid(self, form):
-        messages.success(self.request, "Login effettuato con successo!")
-        return super().form_valid(form)
-
-class LogoutView(auth_views.LogoutView):
-    next_page = 'login'
-
-    def dispatch(self, request, *args, **kwargs):
+def logout_view(request):
+    """Vista di logout."""
+    try:
+        logout(request)
         messages.info(request, "Logout effettuato correttamente.")
-        return super().dispatch(request, *args, **kwargs)
+    except DatabaseError:
+        messages.error(request, "Errore durante il logout. Riprova più tardi.")
+    return redirect('login')
 
 def register_view(request):
     """Vista di registrazione utente."""
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            messages.success(request, "Registrazione effettuata con successo!")
-            return redirect('login')
+            try:
+                user = form.save()
+                messages.success(request, "Registrazione effettuata con successo!")
+                return redirect('login')
+            except DatabaseError:
+                messages.error(request, "Errore durante la registrazione. Riprova più tardi.")
+                return render(request, 'authsystem/register.html', {'form': form})
     else:
         form = UserCreationForm()
     return render(request, 'authsystem/register.html', {'form': form})
@@ -79,16 +106,27 @@ class MyPasswordResetView(PasswordResetView):
     email_template_name = 'authsystem/password_reset_email.html'
     success_url = reverse_lazy('password_reset_done')
 
+    def form_valid(self, form):
+        try:
+            return super().form_valid(form)
+        except DatabaseError:
+            messages.error(self.request, "Errore durante il reset della password. Riprova più tardi.")
+            return self.form_invalid(form)
+
 def restricted_view(request):
     """
     Esempio di vista che richiede ruoli 'admin' o 'commerciale'.
     """
-    if not request.user.is_authenticated:
-        messages.error(request, "Devi effettuare il login per accedere a questa pagina.")
-        return redirect('login')
-    
-    if request.user.role not in ['admin', 'commerciale']:
-        messages.error(request, "Non hai i permessi necessari per accedere a questa pagina.")
-        return redirect('home')
+    try:
+        if not request.user.is_authenticated:
+            messages.error(request, "Devi effettuare il login per accedere a questa pagina.")
+            return redirect('login')
         
-    return render(request, 'authsystem/restricted.html')
+        if request.user.role not in ['admin', 'commerciale']:
+            messages.error(request, "Non hai i permessi necessari per accedere a questa pagina.")
+            return redirect('home')
+            
+        return render(request, 'authsystem/restricted.html')
+    except DatabaseError:
+        messages.error(request, "Errore di connessione al database. Riprova più tardi.")
+        return redirect('login')
