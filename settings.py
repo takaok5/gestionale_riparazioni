@@ -1,12 +1,17 @@
 import os
 import dj_database_url
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / '.env')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', '(Fazzoletti1993.')
+
+
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    raise ValueError("La variabile d'ambiente SECRET_KEY non è impostata!")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
@@ -15,6 +20,7 @@ ALLOWED_HOSTS = ['*']  # Modifica questo con il tuo dominio in produzione
 
 # Application definition
 INSTALLED_APPS = [
+    'authsystem.apps.AuthsystemConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -99,7 +105,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'mediafiles')
 
 # Custom user model
-AUTH_USER_MODEL = 'user.User'
+AUTH_USER_MODEL = 'authsystem.User'
 
 # Authentication settings
 LOGIN_REDIRECT_URL = 'home'
