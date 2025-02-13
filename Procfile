@@ -1,0 +1,1 @@
+web: gunicorn gestionale_riparazioni.wsgi --log-file -
