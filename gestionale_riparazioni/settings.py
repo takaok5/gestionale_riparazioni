@@ -63,11 +63,20 @@ WSGI_APPLICATION = 'gestionale_riparazioni.wsgi.application'
 
 # Database configuration
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
-        conn_max_age=600
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'railway',
+        'USER': 'postgres',
+        'PASSWORD': 'sqTytghvhLhgrxfnXSaHTxantJiGgCEe',
+        'HOST': 'postgres.railway.internal',
+        'PORT': 5432,  # o altra porta indicata da Railway
+        # Se Railway richiede SSL forzato, potresti dover aggiungere:
+        # 'OPTIONS': {
+        #     'sslmode': 'require',
+        # }
+    }
 }
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
