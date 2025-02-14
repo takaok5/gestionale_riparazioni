@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractUser
 from django.conf import settings
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.db.utils import ProgrammingError
+import sys
 
 class Role(models.Model):
     """
@@ -38,17 +40,15 @@ class User(AbstractUser):
     role = models.CharField(
         max_length=20,
         choices=ROLE_CHOICES,
-        default=TECNICO  # per esempio di default 'tecnico'
+        default=TECNICO
     )
 
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
 
-
 class AuditLog(models.Model):
     """
     Registra ogni creazione, modifica o cancellazione di oggetti
-    (inclusi eventuali oggetti di altre app, se vogliamo).
     """
     ACTION_CREATE = 'create'
     ACTION_UPDATE = 'update'
@@ -69,57 +69,70 @@ class AuditLog(models.Model):
     )
     action = models.CharField(max_length=6, choices=ACTION_CHOICES)
     model_name = models.CharField(max_length=100)
-    object_id = models.CharField(max_length=50)  # usare CharField per generalità
+    object_id = models.CharField(max_length=50)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"[{self.timestamp}] {self.user} {self.action} {self.model_name} (ID {self.object_id})"
 
-
-# -------------- SEZIONE SEGNALI PER L'AUDIT LOG --------------
-# Esempio semplificato: se vuoi tracciare TUTTI i modelli, puoi
-# registrare segnali su post_save e post_delete in modo generico.
-# In casi reali potresti preferire un meccanismo più selettivo.
+def should_audit_changes():
+    """
+    Determina se il sistema dovrebbe registrare le modifiche nell'audit log
+    """
+    # Non registrare durante le migrazioni
+    if 'migrate' in sys.argv or 'makemigrations' in sys.argv:
+        return False
+    return True
 
 @receiver(post_save)
 def create_or_update_audit_log(sender, instance, created, **kwargs):
     """Registra la creazione o l'aggiornamento di un oggetto."""
-    # Evita di tracciare la creazione di un AuditLog stesso per evitare ricorsioni
+    if not should_audit_changes():
+        return
+
+    # Evita di tracciare la creazione di un AuditLog stesso
     if sender == AuditLog:
         return
 
-    # Se l'oggetto non ha un attributo `__class__.__name__`, ignora.
-    model_name = instance.__class__.__name__
-    obj_id = getattr(instance, 'id', None)  # Tenta di leggere l'ID
-    if not obj_id:
-        return
+    try:
+        model_name = instance.__class__.__name__
+        obj_id = getattr(instance, 'id', None)
+        if not obj_id:
+            return
 
-    action = AuditLog.ACTION_CREATE if created else AuditLog.ACTION_UPDATE
-    # Cerca se c'è un 'current user' associato (es. con un middleware personalizzato),
-    # ma in un progetto base, potremmo lasciarlo a None o usare altri approcci.
-
-    AuditLog.objects.create(
-        user=None,  # Se vuoi assegnare l'utente, devi passarlo da qualche parte.
-        action=action,
-        model_name=model_name,
-        object_id=str(obj_id),
-    )
-
+        action = AuditLog.ACTION_CREATE if created else AuditLog.ACTION_UPDATE
+        
+        AuditLog.objects.create(
+            user=None,
+            action=action,
+            model_name=model_name,
+            object_id=str(obj_id),
+        )
+    except ProgrammingError:
+        # Ignora gli errori se la tabella non esiste ancora
+        pass
 
 @receiver(post_delete)
 def delete_audit_log(sender, instance, **kwargs):
     """Registra la cancellazione di un oggetto."""
+    if not should_audit_changes():
+        return
+
     if sender == AuditLog:
         return
 
-    model_name = instance.__class__.__name__
-    obj_id = getattr(instance, 'id', None)
-    if not obj_id:
-        return
+    try:
+        model_name = instance.__class__.__name__
+        obj_id = getattr(instance, 'id', None)
+        if not obj_id:
+            return
 
-    AuditLog.objects.create(
-        user=None,
-        action=AuditLog.ACTION_DELETE,
-        model_name=model_name,
-        object_id=str(obj_id),
-    )
+        AuditLog.objects.create(
+            user=None,
+            action=AuditLog.ACTION_DELETE,
+            model_name=model_name,
+            object_id=str(obj_id),
+        )
+    except ProgrammingError:
+        # Ignora gli errori se la tabella non esiste ancora
+        pass

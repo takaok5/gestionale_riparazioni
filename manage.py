@@ -14,6 +14,12 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
+
+    # Inizializza Django prima dei comandi migrate/makemigrations
+    if len(sys.argv) >= 2 and sys.argv[1] in ('migrate', 'makemigrations'):
+        import django
+        django.setup()
+
     execute_from_command_line(sys.argv)
 
 if __name__ == '__main__':

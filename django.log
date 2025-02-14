@@ -1,0 +1,63 @@
+INFO 2025-02-14 01:28:47,980 autoreload 70912 78112 Watching for file changes with StatReloader
+INFO 2025-02-14 01:34:31,315 autoreload 70060 18060 Watching for file changes with StatReloader
+INFO 2025-02-14 01:34:38,349 basehttp 70060 82528 "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-02-14 01:34:38,623 basehttp 70060 82528 "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4182
+INFO 2025-02-14 01:34:38,797 basehttp 70060 57976 "GET /static/admin/css/dark_mode.css HTTP/1.1" 200 2804
+INFO 2025-02-14 01:34:38,798 basehttp 70060 82528 "GET /static/admin/css/base.css HTTP/1.1" 200 22092
+INFO 2025-02-14 01:34:38,802 basehttp 70060 57976 "GET /static/admin/css/login.css HTTP/1.1" 200 951
+INFO 2025-02-14 01:34:38,804 basehttp 70060 82528 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 200 2810
+INFO 2025-02-14 01:34:38,806 basehttp 70060 57976 "GET /static/admin/css/responsive.css HTTP/1.1" 200 17972
+INFO 2025-02-14 01:34:38,806 basehttp 70060 82528 "GET /static/admin/js/theme.js HTTP/1.1" 200 1653
+INFO 2025-02-14 01:34:38,874 basehttp 70060 82528 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 200 3063
+WARNING 2025-02-14 01:34:38,964 log 70060 82528 Not Found: /favicon.ico
+WARNING 2025-02-14 01:34:38,965 basehttp 70060 82528 "GET /favicon.ico HTTP/1.1" 404 2688
+INFO 2025-02-14 01:34:57,818 basehttp 70060 82528 - Broken pipe from ('127.0.0.1', 63390)
+INFO 2025-02-14 01:35:00,035 basehttp 70060 57976 "POST /admin/login/?next=/admin/ HTTP/1.1" 302 0
+INFO 2025-02-14 01:35:00,664 basehttp 70060 57976 "GET /admin/ HTTP/1.1" 200 5348
+INFO 2025-02-14 01:35:00,691 basehttp 70060 57976 "GET /static/admin/css/dashboard.css HTTP/1.1" 200 441
+INFO 2025-02-14 01:35:00,750 basehttp 70060 57976 "GET /static/admin/img/icon-addlink.svg HTTP/1.1" 200 331
+INFO 2025-02-14 01:35:00,751 basehttp 70060 76168 "GET /static/admin/img/icon-changelink.svg HTTP/1.1" 200 380
+INFO 2025-02-14 01:35:09,178 basehttp 70060 76168 "GET /admin/auth/group/add/ HTTP/1.1" 200 11975
+INFO 2025-02-14 01:35:09,202 basehttp 70060 76168 "GET /static/admin/css/forms.css HTTP/1.1" 200 8794
+INFO 2025-02-14 01:35:09,208 basehttp 70060 61036 "GET /static/admin/js/jquery.init.js HTTP/1.1" 200 347
+INFO 2025-02-14 01:35:09,208 basehttp 70060 77764 "GET /static/admin/js/core.js HTTP/1.1" 200 6208
+INFO 2025-02-14 01:35:09,209 basehttp 70060 76168 "GET /static/admin/js/admin/RelatedObjectLookups.js HTTP/1.1" 200 9097
+INFO 2025-02-14 01:35:09,213 basehttp 70060 61036 "GET /static/admin/js/SelectBox.js HTTP/1.1" 200 4530
+INFO 2025-02-14 01:35:09,214 basehttp 70060 77764 "GET /static/admin/js/actions.js HTTP/1.1" 200 8076
+INFO 2025-02-14 01:35:09,214 basehttp 70060 76168 "GET /static/admin/js/SelectFilter2.js HTTP/1.1" 200 15502
+INFO 2025-02-14 01:35:09,215 basehttp 70060 82060 "GET /static/admin/js/vendor/jquery/jquery.js HTTP/1.1" 200 285314
+INFO 2025-02-14 01:35:09,219 basehttp 70060 76168 "GET /static/admin/js/prepopulate.js HTTP/1.1" 200 1531
+INFO 2025-02-14 01:35:09,219 basehttp 70060 82060 "GET /static/admin/js/prepopulate_init.js HTTP/1.1" 200 586
+INFO 2025-02-14 01:35:09,219 basehttp 70060 61036 "GET /static/admin/js/urlify.js HTTP/1.1" 200 7887
+INFO 2025-02-14 01:35:09,221 basehttp 70060 77764 "GET /static/admin/js/vendor/xregexp/xregexp.js HTTP/1.1" 200 325171
+INFO 2025-02-14 01:35:09,266 basehttp 70060 77764 "GET /static/admin/css/widgets.css HTTP/1.1" 200 11564
+INFO 2025-02-14 01:35:09,277 basehttp 70060 77764 "GET /static/admin/js/change_form.js HTTP/1.1" 200 606
+INFO 2025-02-14 01:35:09,634 basehttp 70060 57976 "GET /admin/jsi18n/ HTTP/1.1" 200 8182
+INFO 2025-02-14 01:35:09,673 basehttp 70060 57976 "GET /static/admin/img/icon-unknown.svg HTTP/1.1" 200 655
+INFO 2025-02-14 01:35:09,673 basehttp 70060 77764 "GET /static/admin/img/search.svg HTTP/1.1" 200 458
+INFO 2025-02-14 01:35:09,674 basehttp 70060 82060 "GET /static/admin/img/icon-unknown-alt.svg HTTP/1.1" 200 655
+INFO 2025-02-14 01:35:09,674 basehttp 70060 61036 "GET /static/admin/img/selector-icons.svg HTTP/1.1" 200 3291
+ERROR 2025-02-14 01:35:36,993 log 70060 61036 Internal Server Error: /anagrafiche/clienti/
+Traceback (most recent call last):
+  File "C:\gestionale_riparazioni\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\gestionale_riparazioni\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+               ^^^^^^^^^^^^^^^^^
+  File "C:\gestionale_riparazioni\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\gestionale_riparazioni\venv\Lib\site-packages\django\template\response.py", line 90, in rendered_content
+    template = self.resolve_template(self.template_name)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\gestionale_riparazioni\venv\Lib\site-packages\django\template\response.py", line 72, in resolve_template
+    return select_template(template, using=self.using)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\gestionale_riparazioni\venv\Lib\site-packages\django\template\loader.py", line 47, in select_template
+    raise TemplateDoesNotExist(", ".join(template_name_list), chain=chain)
+django.template.exceptions.TemplateDoesNotExist: anagrafiche/cliente_list.html, anagrafiche/cliente_list.html
+ERROR 2025-02-14 01:35:36,995 basehttp 70060 61036 "GET /anagrafiche/clienti/ HTTP/1.1" 500 87585
+INFO 2025-02-14 01:43:29,389 basehttp 70060 77200 "GET /anagrafiche/clienti/ HTTP/1.1" 200 0
+INFO 2025-02-14 01:43:52,403 autoreload 67924 65868 Watching for file changes with StatReloader
+INFO 2025-02-14 01:44:09,234 basehttp 67924 59480 "GET /anagrafiche/clienti/ HTTP/1.1" 200 0

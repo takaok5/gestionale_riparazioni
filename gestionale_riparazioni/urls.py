@@ -9,7 +9,7 @@ def home_view(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    
+    path('anagrafiche/', include('anagrafiche.urls', namespace='anagrafiche')),
     # Definisci la pagina principale /home/
     path('home/', home_view, name='home'),
     

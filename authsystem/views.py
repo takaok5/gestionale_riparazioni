@@ -9,9 +9,18 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.exceptions import ValidationError
 from django import forms
 from django.db import DatabaseError
-from django.http import HttpResponseServerError
+from django.conf import settings
 
 from .models import User, Role
+
+def is_database_ready():
+    """Verifica se il database è pronto e le tabelle esistono"""
+    try:
+        # Verifica se la tabella User esiste facendo una query semplice
+        User.objects.first()
+        return True
+    except DatabaseError:
+        return False
 
 # Form per Role
 class RoleForm(forms.ModelForm):
@@ -20,15 +29,15 @@ class RoleForm(forms.ModelForm):
         fields = ['name', 'description']
 
     def clean_name(self):
-        try:
-            name = self.cleaned_data.get('name')
-            if not name:
-                raise ValidationError('Il nome del ruolo è obbligatorio.')
-            if Role.objects.filter(name=name).exists():
-                raise ValidationError('Questo nome di ruolo esiste già.')
-            return name
-        except DatabaseError:
-            raise ValidationError('Errore di connessione al database. Riprova più tardi.')
+        if not is_database_ready():
+            return self.cleaned_data.get('name')
+            
+        name = self.cleaned_data.get('name')
+        if not name:
+            raise ValidationError('Il nome del ruolo è obbligatorio.')
+        if Role.objects.filter(name=name).exists():
+            raise ValidationError('Questo nome di ruolo esiste già.')
+        return name
 
 class RoleCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = Role
@@ -37,11 +46,9 @@ class RoleCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     success_url = reverse_lazy('role-list')
 
     def test_func(self):
-        try:
-            return self.request.user.role == User.ADMIN
-        except DatabaseError:
-            messages.error(self.request, 'Errore di connessione al database.')
+        if not is_database_ready():
             return False
+        return self.request.user.role == User.ADMIN
 
     def form_invalid(self, form):
         messages.error(self.request, 'Si prega di correggere gli errori nel form.')
@@ -58,6 +65,10 @@ class RoleCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
 
 def login_view(request):
     """Vista di login."""
+    if not is_database_ready():
+        messages.error(request, "Sistema in manutenzione. Riprova più tardi.")
+        return render(request, 'authsystem/login.html', {'form': AuthenticationForm()})
+
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
@@ -67,14 +78,17 @@ def login_view(request):
                 messages.success(request, "Login effettuato con successo!")
                 return redirect('home')
             except DatabaseError:
-                messages.error(request, "Errore di connessione al database. Riprova più tardi.")
-                return render(request, 'authsystem/login.html', {'form': form})
+                messages.error(request, "Errore di connessione. Riprova più tardi.")
     else:
         form = AuthenticationForm()
     return render(request, 'authsystem/login.html', {'form': form})
 
 def logout_view(request):
     """Vista di logout."""
+    if not is_database_ready():
+        messages.error(request, "Sistema in manutenzione. Riprova più tardi.")
+        return redirect('login')
+
     try:
         logout(request)
         messages.info(request, "Logout effettuato correttamente.")
@@ -84,6 +98,10 @@ def logout_view(request):
 
 def register_view(request):
     """Vista di registrazione utente."""
+    if not is_database_ready():
+        messages.error(request, "Sistema in manutenzione. Riprova più tardi.")
+        return render(request, 'authsystem/register.html', {'form': UserCreationForm()})
+
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
         if form.is_valid():
@@ -93,18 +111,21 @@ def register_view(request):
                 return redirect('login')
             except DatabaseError:
                 messages.error(request, "Errore durante la registrazione. Riprova più tardi.")
-                return render(request, 'authsystem/register.html', {'form': form})
     else:
         form = UserCreationForm()
     return render(request, 'authsystem/register.html', {'form': form})
 
 class MyPasswordResetView(PasswordResetView):
-    """
-    Vista di reset password. Usa la form di default (PasswordResetForm).
-    """
+    """Vista di reset password."""
     template_name = 'authsystem/password_reset.html'
     email_template_name = 'authsystem/password_reset_email.html'
     success_url = reverse_lazy('password_reset_done')
+
+    def dispatch(self, request, *args, **kwargs):
+        if not is_database_ready():
+            messages.error(request, "Sistema in manutenzione. Riprova più tardi.")
+            return redirect('login')
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         try:
@@ -114,9 +135,11 @@ class MyPasswordResetView(PasswordResetView):
             return self.form_invalid(form)
 
 def restricted_view(request):
-    """
-    Esempio di vista che richiede ruoli 'admin' o 'commerciale'.
-    """
+    """Vista che richiede ruoli specifici."""
+    if not is_database_ready():
+        messages.error(request, "Sistema in manutenzione. Riprova più tardi.")
+        return redirect('login')
+
     try:
         if not request.user.is_authenticated:
             messages.error(request, "Devi effettuare il login per accedere a questa pagina.")
@@ -128,5 +151,5 @@ def restricted_view(request):
             
         return render(request, 'authsystem/restricted.html')
     except DatabaseError:
-        messages.error(request, "Errore di connessione al database. Riprova più tardi.")
+        messages.error(request, "Errore di connessione. Riprova più tardi.")
         return redirect('login')
