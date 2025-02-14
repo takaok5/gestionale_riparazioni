@@ -147,6 +147,13 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 
+# Password reset email settings
+PASSWORD_RESET_TIMEOUT = 259200  # 3 days in seconds
+EMAIL_SUBJECT_PREFIX = '[Gestionale Riparazioni] '
+PASSWORD_RESET_TIMEOUT_DAYS = 3
+EMAIL_TEMPLATE_NAME = ['authsystem/password_reset_email.html', 'authsystem/password_reset_email.txt']
+PASSWORD_RESET_SUBJECT_TEMPLATE_NAME = 'authsystem/password_reset_subject.txt'
+
 # Security settings
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True

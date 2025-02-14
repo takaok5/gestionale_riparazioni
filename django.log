@@ -61,3 +61,23 @@ ERROR 2025-02-14 01:35:36,995 basehttp 70060 61036 "GET /anagrafiche/clienti/ HT
 INFO 2025-02-14 01:43:29,389 basehttp 70060 77200 "GET /anagrafiche/clienti/ HTTP/1.1" 200 0
 INFO 2025-02-14 01:43:52,403 autoreload 67924 65868 Watching for file changes with StatReloader
 INFO 2025-02-14 01:44:09,234 basehttp 67924 59480 "GET /anagrafiche/clienti/ HTTP/1.1" 200 0
+INFO 2025-02-14 01:45:43,320 basehttp 67924 59480 "GET /anagrafiche/clienti/ HTTP/1.1" 200 0
+INFO 2025-02-14 01:47:48,396 autoreload 78504 79040 Watching for file changes with StatReloader
+INFO 2025-02-14 01:47:53,727 basehttp 78504 77596 "GET /admin/ HTTP/1.1" 200 5348
+INFO 2025-02-14 01:47:59,217 basehttp 78504 77596 "GET /anagrafiche/clienti/ HTTP/1.1" 200 3363
+INFO 2025-02-14 01:48:18,151 basehttp 78504 82176 "GET /admin/ HTTP/1.1" 200 5348
+INFO 2025-02-14 02:10:35,977 autoreload 75376 12100 Watching for file changes with StatReloader
+INFO 2025-02-14 02:10:41,837 basehttp 75376 74896 "GET /admin/ HTTP/1.1" 200 5348
+INFO 2025-02-14 02:11:36,137 basehttp 75376 74896 "GET /admin/auth/group/add/ HTTP/1.1" 200 11975
+INFO 2025-02-14 02:11:36,629 basehttp 75376 74896 "GET /admin/jsi18n/ HTTP/1.1" 200 8182
+WARNING 2025-02-14 02:11:52,664 log 75376 74896 Not Found: /
+WARNING 2025-02-14 02:11:52,665 basehttp 75376 74896 "GET / HTTP/1.1" 404 2637
+INFO 2025-02-14 02:12:03,664 basehttp 75376 74896 "GET /admin/auth/group/add/ HTTP/1.1" 200 11975
+INFO 2025-02-14 02:12:04,577 basehttp 75376 74896 "GET /admin/ HTTP/1.1" 200 5348
+INFO 2025-02-14 02:12:06,334 basehttp 75376 74896 "GET /admin/password_change/ HTTP/1.1" 200 6924
+INFO 2025-02-14 02:12:16,661 basehttp 75376 74896 "GET /admin/ HTTP/1.1" 200 5348
+WARNING 2025-02-14 02:12:19,453 log 75376 74896 Not Found: /
+WARNING 2025-02-14 02:12:19,455 basehttp 75376 74896 "GET / HTTP/1.1" 404 2637
+INFO 2025-02-14 02:33:39,913 autoreload 75376 12100 C:\gestionale_riparazioni\gestionale_riparazioni\urls.py changed, reloading.
+INFO 2025-02-14 02:33:41,249 autoreload 82048 82528 Watching for file changes with StatReloader
+INFO 2025-02-14 02:41:59,278 autoreload 32244 67324 Watching for file changes with StatReloader
