@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TECNICO
+  COMMERCIALE
+}
+
+enum TipoCliente {
+  PRIVATO
+  AZIENDA
+}
+
+enum CategoriaFornitore {
+  RICAMBI
+  SERVIZI
+  ALTRO
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      Role     @default(TECNICO)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  auditLogs AuditLog[]
+}
+
+model Cliente {
+  id             Int         @id @default(autoincrement())
+  codiceCliente  String      @unique
+  tipologia      TipoCliente @default(PRIVATO)
+  nome           String
+  cognome        String?
+  ragioneSociale String?
+  partitaIva     String?
+  codiceFiscale  String?
+  indirizzo      String
+  citta          String
+  cap            String
+  provincia      String
+  telefono       String?
+  email          String?
+  note           String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+model Fornitore {
+  id              Int                @id @default(autoincrement())
+  codiceFornitore String             @unique
+  categoria       CategoriaFornitore @default(ALTRO)
+  nome            String
+  cognome         String?
+  ragioneSociale  String?
+  partitaIva      String?
+  codiceFiscale   String?
+  indirizzo       String
+  citta           String
+  cap             String
+  provincia       String
+  telefono        String?
+  email           String?
+  note            String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  modelName String
+  objectId  String
+  timestamp DateTime @default(now())
+}

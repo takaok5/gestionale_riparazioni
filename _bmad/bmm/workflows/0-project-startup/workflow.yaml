@@ -1,0 +1,176 @@
+name: project-startup
+description: 'Pre-story pipeline to generate all artifacts needed for Story Pipeline v2'
+author: 'BMAD'
+version: '1.0.0'
+
+# =============================================================================
+# ANTI-SKIP RULES
+# =============================================================================
+
+enforcement:
+  always_load_first: 'PIPELINE-RULES.md'
+
+  after_each_task:
+    - update_state_file: true
+    - verify_gate: true
+
+  context_threshold: 50%
+  on_threshold_exceeded:
+    - save_state
+    - notify_user
+    - request_session_restart
+
+# =============================================================================
+# PRINCIPLES
+# =============================================================================
+#
+# 1. BLOCKING GATES: Every step has verifiable gates (file existence, content)
+# 2. LAZY LOADING: Load ONLY artifacts needed for current step
+# 3. MANDATORY ELICITATION: Every section goes through 4-option menu
+# 4. RESUME CAPABILITY: Resume from last completed step
+# 5. ZERO PLACEHOLDERS: No TODO/TBD/PLACEHOLDER in final artifacts
+#
+# =============================================================================
+
+# PREREQUISITES
+# On Windows: requires Git Bash for bash commands in gates (test, grep, find, wc).
+# Gates DO NOT work in native PowerShell or CMD.
+shell_requirement: 'bash (Git Bash on Windows)'
+
+installed_path: '{project-root}/_bmad/bmm/workflows/0-project-startup'
+steps_path: '{installed_path}/steps'
+templates_path: '{installed_path}/templates'
+data_path: '{installed_path}/data'
+
+state_file: '{project-root}/startup-state.yaml'
+
+# =============================================================================
+# MODES
+# =============================================================================
+
+modes:
+  greenfield:
+    description: 'New project from scratch'
+    precondition: 'Empty directory or with only .git'
+  brownfield:
+    description: 'Existing project to document'
+    precondition: 'Directory with code (package.json / requirements.txt / go.mod)'
+
+# =============================================================================
+# CONTEXT LOADING STRATEGY (LAZY)
+# =============================================================================
+
+context_loading:
+  strategy: LAZY
+
+  per_step:
+    step-00: [PIPELINE-RULES.md, workflow.yaml]
+    step-01: [templates/project-brief.tmpl.md]  # GF only; BF uses Opus scan
+    step-02: [docs/project-brief.md (GF) | docs/codebase-analysis.md (BF), templates/prd.tmpl.md]
+    step-03: [docs/prd.md, templates/architecture.tmpl.md, data/tech-preferences.md, docs/codebase-analysis.md (BF only)]
+    step-04: [docs/prd.md, docs/architecture.md, templates/frontend-spec.tmpl.md]
+    step-05: [docs/prd.md, docs/architecture.md, templates/epic-details.tmpl.md]
+    step-06: [ALL]  # Only step that loads everything for cross-validation
+    step-07: [docs/architecture.md, templates/scaffold.tmpl.yaml, templates/claude-md.tmpl.md, ALL_ARTIFACTS]  # For scaffold and sharding
+
+# =============================================================================
+# 8 STEP PIPELINE
+# =============================================================================
+
+steps:
+  - step: 0
+    file: '{steps_path}/step-00-init.md'
+    name: 'Init'
+    gate: gate-state-exists
+    context_load: [PIPELINE-RULES.md, workflow.yaml]
+
+  - step: 1
+    file: '{steps_path}/step-01-discovery.md'
+    name: 'Discovery'
+    gate: gate-discovery-complete
+    context_load: [templates/project-brief.tmpl.md]
+
+  - step: 2
+    file: '{steps_path}/step-02-prd.md'
+    name: 'PRD'
+    gate: gate-prd-complete
+    context_load: [docs/project-brief.md (GF) | docs/codebase-analysis.md (BF), templates/prd.tmpl.md]
+
+  - step: 3
+    file: '{steps_path}/step-03-architecture.md'
+    name: 'Architecture'
+    gate: gate-architecture-complete
+    context_load: [docs/prd.md, templates/architecture.tmpl.md, data/tech-preferences.md, docs/codebase-analysis.md (BF only)]
+
+  - step: 4
+    file: '{steps_path}/step-04-frontend-spec.md'
+    name: 'Frontend Spec'
+    gate: gate-frontend-spec-complete
+    context_load: [docs/prd.md, docs/architecture.md, templates/frontend-spec.tmpl.md]
+    skippable: true
+    skip_condition: 'backend-only project'
+
+  - step: 5
+    file: '{steps_path}/step-05-epic-details.md'
+    name: 'Epic Details'
+    gate: gate-epic-details-complete
+    context_load: [docs/prd.md, docs/architecture.md, templates/epic-details.tmpl.md]
+
+  - step: 6
+    file: '{steps_path}/step-06-validation.md'
+    name: 'Validation'
+    gate: gate-validation-complete
+    context_load: [ALL]
+
+  - step: 7
+    file: '{steps_path}/step-07-scaffold.md'
+    name: 'Scaffold + Shard'
+    gate: gate-scaffold-complete
+    context_load: [docs/architecture.md, templates/scaffold.tmpl.yaml, templates/claude-md.tmpl.md, ALL_ARTIFACTS]
+
+# =============================================================================
+# GATE DEFINITIONS
+# =============================================================================
+
+gates:
+  gate-state-exists:
+    description: 'startup-state.yaml exists with mode set'
+    exit_on_fail: true
+
+  gate-discovery-complete:
+    description: 'GF: docs/project-brief.md with Vision+Goals+Scope | BF: docs/codebase-analysis.md with Stack+Structure+Patterns'
+    exit_on_fail: true
+
+  gate-prd-complete:
+    description: 'docs/prd.md with 3+ FR, 2+ NFR, Epic List, no TODO/TBD'
+    exit_on_fail: true
+
+  gate-architecture-complete:
+    description: 'docs/architecture.md with Tech Stack, Data Models, FR coverage, no TODO/TBD'
+    exit_on_fail: true
+
+  gate-frontend-spec-complete:
+    description: 'docs/frontend-spec.md with Pages+Components+State OR state frontendSpec=skipped'
+    exit_on_fail: true
+
+  gate-epic-details-complete:
+    description: 'docs/epic-details.md with all epics, every story 3+ AC in BDD, no TODO/TBD'
+    exit_on_fail: true
+
+  gate-validation-complete:
+    description: 'docs/validation-report.md with 100% FR coverage, 0 critical issues'
+    exit_on_fail: true
+
+  gate-scaffold-complete:
+    description: 'CLAUDE.md root, shards, docs/epics/, config.yaml, git init, no empty files'
+    exit_on_fail: true
+
+# =============================================================================
+# ELICITATION CONFIG
+# =============================================================================
+
+elicitation:
+  method: AskUserQuestion
+  max_iterations_per_section: 3
+  force_proceed_after_max: true
+  force_proceed_warning: 'Max iterations reached, proceeding with current version'

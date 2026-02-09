@@ -1,0 +1,205 @@
+name: story-pipeline-v2
+description: 'Fraud-proof story pipeline with inline gates, lazy context, and auto-merge'
+author: 'BMAD'
+version: '4.1.0'
+
+# =============================================================================
+# ANTI-SKIP RULES (Claude tends to skip tasks when context bloats)
+# =============================================================================
+
+enforcement:
+  # ALWAYS load this file at the beginning of every step
+  always_load_first: 'PIPELINE-RULES.md'
+
+  # After each task, update state
+  after_each_task:
+    - update_state_file: true
+    - mark_story_task: true
+    - incremental_commit: true
+
+  # If context > 50%, mandatory checkpoint
+  context_threshold: 50%
+  on_threshold_exceeded:
+    - save_state
+    - notify_user
+    - request_session_restart
+
+# =============================================================================
+# ANTI-LIE PRINCIPLES
+# =============================================================================
+#
+# 1. BLOCKING GATES: Every step ends with commands that have exit code != 0 on failure
+# 2. LAZY LOADING: CONTEXT.md loaded only when needed
+# 3. ZERO TRUST: Don't trust declarations, only exit codes
+# 4. ISOLATED WORKTREE: Everything in separate branch, merge only after all gates pass
+#
+# =============================================================================
+
+config_source: '{project-root}/_bmad/bmm/config.yaml'
+output_folder: '{config_source}:output_folder'
+sprint_artifacts: '{config_source}:sprint_artifacts'
+
+# PREREQUISITES
+# On Windows: requires Git Bash for bash commands in gates ($PIPESTATUS, [[ ]], < <()).
+# Gates DO NOT work in native PowerShell or CMD.
+shell_requirement: 'bash (Git Bash on Windows)'
+
+installed_path: '{project-root}/_bmad/bmm/workflows/4-implementation/story-pipeline-v2'
+steps_path: '{installed_path}/steps'
+
+state_file: '{sprint_artifacts}/pipeline-state-{{story_id}}.yaml'
+audit_trail: '{sprint_artifacts}/audit-{{story_id}}-{{date}}.yaml'
+
+# =============================================================================
+# CONTEXT LOADING STRATEGY
+# =============================================================================
+
+context_loading:
+  strategy: LAZY
+
+  # ALWAYS load (absolute minimum)
+  always_load:
+    - '{project-root}/CLAUDE.md'
+    - '{project-root}/_bmad/bmm/config.yaml'
+
+  # Load ON-DEMAND when step requires it
+  lazy_contexts:
+    backend:
+      trigger: 'packages/backend/**'
+      files:
+        - 'packages/backend/CONTEXT.md'
+        - 'packages/backend/prisma/CONTEXT.md'
+    frontend:
+      trigger: 'packages/frontend/**'
+      files:
+        - 'packages/frontend/CONTEXT.md'
+        - 'packages/frontend/src/components/CONTEXT.md'
+    shared:
+      trigger: 'packages/shared/**'
+      files:
+        - 'packages/shared/CONTEXT.md'
+
+# =============================================================================
+# 10 STEP PIPELINE
+# =============================================================================
+
+steps:
+  - step: 1
+    file: '{steps_path}/step-01-init.md'
+    name: 'Init + Worktree'
+    gate: null # Routing only
+    context_load: [always_load]
+
+  - step: 2
+    file: '{steps_path}/step-02-story-brief.md'
+    name: 'Story Brief (Opus)'
+    gate: null # Subagent output
+    context_load: [always_load]
+
+  - step: 3
+    file: '{steps_path}/step-03-create-story.md'
+    name: 'Create Story (Opus)'
+    gate: gate-story-structure
+    context_load: [always_load]
+
+  - step: 4
+    file: '{steps_path}/step-04-validate.md'
+    name: 'Validate Story'
+    gate: gate-story-quality
+    context_load: [always_load]
+
+  - step: 5
+    file: '{steps_path}/step-05-atdd.md'
+    name: 'ATDD (RED)'
+    gate: gate-tests-fail
+    context_load: [backend, frontend] # Lazy load for writing tests
+
+  - step: 6
+    file: '{steps_path}/step-06-plan.md'
+    name: 'Implementation Plan'
+    gate: gate-plan-exists
+    context_load: [backend, frontend]
+
+  - step: 7
+    file: '{steps_path}/step-07-implement.md'
+    name: 'Implement (GREEN)'
+    gate: gate-tests-pass
+    context_load: [backend, frontend, shared]
+
+  - step: 8
+    file: '{steps_path}/step-08-review.md'
+    name: 'Code Review'
+    gate: gate-review-complete
+    context_load: [] # Only diff and tests
+
+  - step: 9
+    file: '{steps_path}/step-09-commit.md'
+    name: 'Final Commit'
+    gate: gate-pre-merge
+    context_load: []
+
+  - step: 10
+    file: '{steps_path}/step-10-merge.md'
+    name: 'Merge to Main'
+    gate: gate-merged
+    context_load: []
+
+# =============================================================================
+# GATE DEFINITIONS (inline in steps, here only reference)
+# =============================================================================
+
+gates:
+  gate-story-structure:
+    description: 'Story file has valid frontmatter and AC'
+    exit_on_fail: true
+
+  gate-story-quality:
+    description: 'Story passes validation, no TODO/TBD'
+    exit_on_fail: true
+
+  gate-tests-fail:
+    description: 'Tests exist and FAIL (RED phase)'
+    exit_on_fail: true
+    critical: true
+
+  gate-plan-exists:
+    description: 'Implementation plan exists with at least 3 tasks'
+    exit_on_fail: true
+
+  gate-tests-pass:
+    description: 'ALL tests pass, lint ok, build ok'
+    exit_on_fail: true
+    critical: true
+
+  gate-review-complete:
+    description: '3+ issues found and resolved, tasks verified'
+    exit_on_fail: true
+
+  gate-pre-merge:
+    description: 'Full re-run, valid commit, no secrets'
+    exit_on_fail: true
+
+  gate-merged:
+    description: 'Merge completed without conflicts'
+    exit_on_fail: true
+
+# =============================================================================
+# CONFLICT RESOLUTION (for multi-agent)
+# =============================================================================
+
+merge_strategy:
+  # When multiple worktrees modify same file
+  conflict_resolution:
+    # 1. Fetch latest main before merge
+    pre_merge: 'git fetch origin main && git rebase origin/main'
+
+    # 2. If conflict, Claude resolves
+    on_conflict: 'claude-resolve'
+
+    # 3. Re-run gate after resolve
+    post_resolve: 're-run-gate-pre-merge'
+
+    # 4. If still fails, abort and notify
+    on_failure: 'abort-notify-user'
+
+standalone: true

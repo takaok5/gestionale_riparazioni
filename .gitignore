@@ -1,5 +1,43 @@
-# Environment variables
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+dist/
+build/
+*.tsbuildinfo
+
+# Environment
 .env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage/
+test-results/
+playwright-report/
+
+# Prisma
+packages/backend/prisma/*.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Archive Django
+_archive_django/
 
 # Python
 __pycache__/

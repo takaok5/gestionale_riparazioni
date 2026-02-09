@@ -1,0 +1,90 @@
+# Scaffold Configuration Template
+#
+# Used by Step 7 to create the project structure.
+# Values are populated from docs/architecture.md.
+
+project_name: '{project_name}'
+mode: '{greenfield|brownfield}'
+
+# Directories to create (greenfield) or verify (brownfield)
+directories:
+  - path: '{dir1}'
+    description: '{description}'
+    claude_md_shard: true
+  - path: '{dir2}'
+    description: '{description}'
+    claude_md_shard: true
+  - path: 'docs'
+    description: 'Project documentation'
+    claude_md_shard: false
+  - path: 'docs/epics'
+    description: 'Sharded epics'
+    claude_md_shard: false
+
+# Config files to create
+config_files:
+  package_json:
+    create: true
+    scripts:
+      dev: '{dev command}'
+      build: '{build command}'
+      test: '{test command}'
+      typecheck: '{typecheck command}'
+      lint: '{lint command}'
+
+  tsconfig:
+    create: '{true if TypeScript}'
+    strict: true
+    target: '{e.g. ES2022}'
+
+  gitignore:
+    create: true
+    entries:
+      - node_modules/
+      - dist/
+      - .env
+      - .env.local
+      - '*.log'
+      - .DS_Store
+
+  prettierrc:
+    create: true
+    semi: true
+    singleQuote: true
+    tabWidth: 2
+    trailingComma: 'all'
+
+  vitest_config:
+    create: '{true if Vitest}'
+    coverage_threshold: '{percentage}'
+
+# Git initialization
+git:
+  init: true
+  initial_commit: 'chore: initial project scaffold'
+  branch: 'main'
+
+# CLAUDE.md generation
+claude_md:
+  root:
+    sections:
+      - stack_overview
+      - commands
+      - project_structure
+      - conventions
+  shards:
+    per_directory: true
+    include_antipatterns: true
+    cross_reference_root: true
+
+# Config.yaml for story-pipeline integration (path: _bmad/bmm/config.yaml)
+story_pipeline_config:
+  output_path: '_bmad/bmm/config.yaml'
+  prd_file: 'docs/prd.md'
+  prd_sharded: true
+  prd_sharded_location: 'docs/epics'
+  architecture_file: 'docs/architecture.md'
+  architecture_sharded: false
+  architecture_sharded_location: 'docs/architecture'
+  output_folder: 'docs/stories'
+  sprint_artifacts: 'docs/sprint-artifacts'
