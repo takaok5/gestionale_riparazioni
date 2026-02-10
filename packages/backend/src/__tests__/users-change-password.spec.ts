@@ -32,33 +32,40 @@ describe("AC-1 - Cambio password con currentPassword corretta", () => {
       .send({ currentPassword: "Password1", newPassword: "NewPass2" });
 
     expect(response.status).toBe(200);
-    expect(response.body.error).toBeUndefined();
+    expect(response.body).toEqual({ success: true });
   });
 
-  it("allows login with NewPass2 after successful password change", async () => {
+  it("allows login with NewPass2 and rejects old Password1", async () => {
     const changeResponse = await request(app)
       .put("/api/users/me/password")
       .set("Authorization", tecnicoAuthHeader())
       .send({ currentPassword: "Password1", newPassword: "NewPass2" });
 
-    const loginResponse = await request(app)
+    const loginWithNewPassword = await request(app)
       .post("/api/auth/login")
       .send({ username: "mario.rossi", password: "NewPass2" });
 
+    const loginWithOldPassword = await request(app)
+      .post("/api/auth/login")
+      .send({ username: "mario.rossi", password: "Password1" });
+
     expect(changeResponse.status).toBe(200);
-    expect(loginResponse.status).toBe(200);
-    expect(loginResponse.body.user.username).toBe("mario.rossi");
+    expect(loginWithNewPassword.status).toBe(200);
+    expect(loginWithNewPassword.body.user.username).toBe("mario.rossi");
+    expect(loginWithOldPassword.status).toBe(401);
+    expect(loginWithOldPassword.body.error.code).toBe("INVALID_CREDENTIALS");
   });
 });
 
 describe("AC-2 - Current password errata", () => {
-  it("returns 400 with exact message Current password is incorrect", async () => {
+  it("returns 400 CURRENT_PASSWORD_INCORRECT with exact message", async () => {
     const response = await request(app)
       .put("/api/users/me/password")
       .set("Authorization", tecnicoAuthHeader())
       .send({ currentPassword: "WrongPass9", newPassword: "NewPass2" });
 
     expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("CURRENT_PASSWORD_INCORRECT");
     expect(response.body.error.message).toBe("Current password is incorrect");
   });
 
@@ -82,7 +89,7 @@ describe("AC-2 - Current password errata", () => {
 });
 
 describe("AC-3 - Nuova password non valida", () => {
-  it("returns 400 VALIDATION_ERROR for newPassword abc", async () => {
+  it("returns 400 VALIDATION_ERROR with payload message for newPassword abc", async () => {
     const response = await request(app)
       .put("/api/users/me/password")
       .set("Authorization", tecnicoAuthHeader())
@@ -90,16 +97,17 @@ describe("AC-3 - Nuova password non valida", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    expect(response.body.error.message).toBe("Payload non valido");
   });
 
-  it("returns validation details for password policy", async () => {
+  it("returns exact validation details for password policy", async () => {
     const response = await request(app)
       .put("/api/users/me/password")
       .set("Authorization", tecnicoAuthHeader())
       .send({ currentPassword: "Password1", newPassword: "abc" });
 
     expect(response.status).toBe(400);
-    expect(response.body.error.details).toMatchObject({
+    expect(response.body.error.details).toEqual({
       field: "newPassword",
       rule: "password_policy",
       min: 8,
