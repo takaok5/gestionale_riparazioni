@@ -1,0 +1,244 @@
+
+> gestionale-riparazioni@0.1.0 test
+> npm run test --workspaces --if-present --run
+
+npm warn Unknown cli config "--run". This will stop working in the next major version of npm.
+
+> @gestionale/backend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend[39m
+
+ [32m✓[39m src/__tests__/users-update-deactivate.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 371[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Admin modifica ruolo utente[2m > [22mreturns 200 and updates role to COMMERCIALE for user id=2 [33m 314[2mms[22m[39m
+ [32m✓[39m src/__tests__/audit-trail.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 374[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Audit CREATE su Cliente[2m > [22mreturns 201 on POST /api/clienti and exposes created id [33m 316[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-create-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 378[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Creazione cliente da utente autenticato[2m > [22mshould return 201 for authenticated COMMERCIALE and generate codiceCliente CLI-000001 [33m 316[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-create.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 400[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Admin crea utente con ruolo specifico[2m > [22mreturns 201 and created user fields for valid ADMIN request [33m 322[2mms[22m[39m
+ [31m❯[39m src/__tests__/clienti-list-search-atdd.spec.ts [2m([22m[2m8 tests[22m[2m | [22m[31m8 failed[39m[2m)[22m[33m 584[2mms[22m[39m
+[31m   [31m×[31m AC-1 - Lista clienti paginata[2m > [22mtests AC-1: should return 200 with data[10] and meta {page:1,limit:10,total:25,totalPages:3}[39m[33m 452[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-1 - Lista clienti paginata[2m > [22mtests AC-1: should return records ordered by id asc on page 1[39m[32m 51[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-2 - Ricerca clienti per nome o codiceCliente[2m > [22mtests AC-2: should return only entries matching Rossi (case-insensitive) on nome/codiceCliente[39m[32m 19[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-2 - Ricerca clienti per nome o codiceCliente[2m > [22mtests AC-2: should exclude non-matching entries from search=Rossi[39m[32m 14[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-3 - Filtro clienti per tipologia[2m > [22mtests AC-3: should return only tipologia=AZIENDA when filter is tipologia=AZIENDA[39m[32m 23[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-3 - Filtro clienti per tipologia[2m > [22mtests AC-3: should not include PRIVATO entries in tipologia=AZIENDA result[39m[32m 13[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-4 - Sad path filtro tipologia invalida[2m > [22mtests AC-4: should return 400 VALIDATION_ERROR for tipologia=INVALID[39m[32m 5[2mms[22m[39m
+[31m     → expected 404 to be 400 // Object.is equality[39m
+[31m   [31m×[31m AC-4 - Sad path filtro tipologia invalida[2m > [22mtests AC-4: should report invalid_enum rule in validation details[39m[32m 5[2mms[22m[39m
+[31m     → expected 404 to be 400 // Object.is equality[39m
+ [32m✓[39m src/__tests__/auth-refresh.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 1128[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Rinnovo con refresh token valido[2m > [22mreturns 200 with new accessToken and refreshToken [33m 716[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Rinnovo con refresh token valido[2m > [22mreturns user payload with id, username, email and role [33m 374[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-change-password.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1172[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Cambio password con currentPassword corretta[2m > [22mreturns 200 on PUT /api/users/me/password with Password1 -> NewPass2 [33m 322[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Current password errata[2m > [22mkeeps old password valid when change fails [33m 802[2mms[22m[39m
+ [32m✓[39m src/__tests__/auth-login.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1809[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login Utente valido[2m > [22mreturns 200 with accessToken and refreshToken when credentials are valid [33m 725[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login Utente valido[2m > [22mreturns user payload with id, username, email, role [33m 373[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Account disabilitato[2m > [22mreturns 401 ACCOUNT_DISABLED for mario.disabilitato [33m 339[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Account disabilitato[2m > [22mreturns no tokens for disabled account [33m 327[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 8 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/clienti-list-search-atdd.spec.ts[2m > [22mAC-1 - Lista clienti paginata[2m > [22mtests AC-1: should return 200 with data[10] and meta {page:1,limit:10,total:25,totalPages:3}
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/clienti-list-search-atdd.spec.ts:[2m71:29[22m[39m
+    [90m 69| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [34mauthHeader[39m([32m"COMMERCIALE"[39m[33m,[39m [34m5001[39m))[33m;[39m
+    [90m 70| [39m
+    [90m 71| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m 72| [39m    [34mexpect[39m([33mArray[39m[33m.[39m[34misArray[39m(response[33m.[39mbody[33m.[39mdata))[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m 73| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mdata)[33m.[39m[34mtoHaveLength[39m([34m10[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/clienti-list-search-atdd.spec.ts[2m > [22mAC-1 - Lista clienti paginata[2m > [22mtests AC-1: should return records ordered by id asc on page 1
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/clienti-list-search-atdd.spec.ts:[2m90:29[22m[39m
+    [90m 88| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [34mauthHeader[39m([32m"COMMERCIALE"[39m[33m,[39m [34m5002[39m))[33m;[39m
+    [90m 89| [39m
+    [90m 90| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m 91| [39m    expect(response.body.data[0].id).toBeLessThan(response.body.data[1…
+    [90m 92| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mmeta[33m.[39mtotalPages)[33m.[39m[34mtoBe[39m([34m2[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/clienti-list-search-atdd.spec.ts[2m > [22mAC-2 - Ricerca clienti per nome o codiceCliente[2m > [22mtests AC-2: should return only entries matching Rossi (case-insensitive) on nome/codiceCliente
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/clienti-list-search-atdd.spec.ts:[2m115:29[22m[39m
+    [90m113| [39m    }[33m>[39m[33m;[39m
+    [90m114| [39m
+    [90m115| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m116| [39m    [34mexpect[39m(rows[33m.[39mlength)[33m.[39m[34mtoBeGreaterThan[39m([34m0[39m)[33m;[39m
+    [90m117| [39m    [34mexpect[39m(
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/clienti-list-search-atdd.spec.ts[2m > [22mAC-2 - Ricerca clienti per nome o codiceCliente[2m > [22mtests AC-2: should exclude non-matching entries from search=Rossi
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/clienti-list-search-atdd.spec.ts:[2m138:29[22m[39m
+    [90m136| [39m    const rows = (response.body.data ?? []) as Array<{ nome?: string }…
+    [90m137| [39m
+    [90m138| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m139| [39m    expect(rows.some((row) => (row.nome ?? "").toLowerCase().includes(…
+    [90m140| [39m    expect(rows.some((row) => (row.nome ?? "").toLowerCase().includes(…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/clienti-list-search-atdd.spec.ts[2m > [22mAC-3 - Filtro clienti per tipologia[2m > [22mtests AC-3: should return only tipologia=AZIENDA when filter is tipologia=AZIENDA
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/clienti-list-search-atdd.spec.ts:[2m160:29[22m[39m
+    [90m158| [39m    const rows = (response.body.data ?? []) as Array<{ tipologia?: str…
+    [90m159| [39m
+    [90m160| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m161| [39m    [34mexpect[39m(rows[33m.[39mlength)[33m.[39m[34mtoBeGreaterThan[39m([34m0[39m)[33m;[39m
+    [90m162| [39m    expect(rows.every((row) => row.tipologia === "AZIENDA")).toBe(true…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/clienti-list-search-atdd.spec.ts[2m > [22mAC-3 - Filtro clienti per tipologia[2m > [22mtests AC-3: should not include PRIVATO entries in tipologia=AZIENDA result
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/clienti-list-search-atdd.spec.ts:[2m178:29[22m[39m
+    [90m176| [39m    const rows = (response.body.data ?? []) as Array<{ tipologia?: str…
+    [90m177| [39m
+    [90m178| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m179| [39m    expect(rows.some((row) => row.tipologia === "PRIVATO")).toBe(false…
+    [90m180| [39m    [34mexpect[39m(rows[33m.[39m[34msome[39m((row) [33m=>[39m row[33m.[39mtipologia [33m===[39m [32m"AZIENDA"[39m))[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/clienti-list-search-atdd.spec.ts[2m > [22mAC-4 - Sad path filtro tipologia invalida[2m > [22mtests AC-4: should return 400 VALIDATION_ERROR for tipologia=INVALID
+[31m[1mAssertionError[22m: expected 404 to be 400 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 400[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/clienti-list-search-atdd.spec.ts:[2m190:29[22m[39m
+    [90m188| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [34mauthHeader[39m([32m"COMMERCIALE"[39m[33m,[39m [34m5007[39m))[33m;[39m
+    [90m189| [39m
+    [90m190| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m400[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m191| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mcode)[33m.[39m[34mtoBe[39m([32m"VALIDATION_ERROR"[39m)[33m;[39m
+    [90m192| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mdetails[33m.[39mfield)[33m.[39m[34mtoBe[39m([32m"tipologia"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/clienti-list-search-atdd.spec.ts[2m > [22mAC-4 - Sad path filtro tipologia invalida[2m > [22mtests AC-4: should report invalid_enum rule in validation details
+[31m[1mAssertionError[22m: expected 404 to be 400 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 400[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/clienti-list-search-atdd.spec.ts:[2m200:29[22m[39m
+    [90m198| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [34mauthHeader[39m([32m"COMMERCIALE"[39m[33m,[39m [34m5008[39m))[33m;[39m
+    [90m199| [39m
+    [90m200| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m400[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m201| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mdetails[33m.[39mfield)[33m.[39m[34mtoBe[39m([32m"tipologia"[39m)[33m;[39m
+    [90m202| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mdetails[33m.[39mrule)[33m.[39m[34mtoBe[39m([32m"invalid_enum"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m7 passed[39m[22m[90m (8)[39m
+[2m      Tests [22m [1m[31m8 failed[39m[22m[2m | [22m[1m[32m63 passed[39m[22m[90m (71)[39m
+[2m   Start at [22m 21:14:29
+[2m   Duration [22m 10.55s[2m (transform 804ms, setup 0ms, collect 59.44s, tests 6.21s, environment 1ms, prepare 6.18s)[22m
+
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error workspace @gestionale/backend@0.1.0
+npm error location C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c vitest run
+
+
+> @gestionale/frontend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/frontend[39m
+
+No test files found, exiting with code 0
+
+[2minclude: [22m[33msrc/**/*.test.ts[2m, [22msrc/**/*.spec.ts[39m
+[2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+
+close timed out after 10000ms
+Tests closed successfully but something prevents Vite server from exiting
+You can try to identify the cause by enabling "hanging-process" reporter. See https://vitest.dev/config/#reporters
+
+> @gestionale/shared@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/shared[39m
+
+No test files found, exiting with code 0
+
+[2minclude: [22m[33msrc/**/*.test.ts[2m, [22msrc/**/*.spec.ts[39m
+[2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+
