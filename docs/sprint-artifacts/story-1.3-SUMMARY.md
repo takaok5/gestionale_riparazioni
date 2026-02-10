@@ -29,7 +29,7 @@ duration: '02:06:00'
 - Worktree originale agganciato alla copia `Desktop`; riallineato a `C:\\Users\\FAT-E\\progetti\\story-1.3-progetti`.
 - Gate bash su Windows senza `node` in PATH e con gitdir Windows path: risolto con script bash dedicato e `PATH`/`GIT_DIR` espliciti.
 - `atdd-tests-1.3.txt` conteneva path non compatibile con runner workspace root; corretto in `src/__tests__/users-create.spec.ts`.
-- Pattern segreti del gate pre-merge produceva falso positivo su type-check password; rifattorizzata validazione password senza confronto diretto su `typeof ... === \"string\"`.
+- Pattern segreti del gate pre-merge produceva falso positivo su type-check password; rifattorizzata validazione password senza confronto diretto di tipo sul campo password.
 
 ## Lessons Learned
 
