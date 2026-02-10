@@ -1,5 +1,5 @@
-import bcrypt from "bcryptjs";
-import { PrismaClient } from "@prisma/client";
+﻿import bcrypt from "bcryptjs";
+import { PrismaClient, type Prisma } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 type Role = "ADMIN" | "TECNICO" | "COMMERCIALE";
@@ -9,6 +9,15 @@ interface CreateUserInput {
   email: unknown;
   password: unknown;
   role: unknown;
+}
+
+interface UpdateUserRoleInput {
+  userId: unknown;
+  role: unknown;
+}
+
+interface DeactivateUserInput {
+  userId: unknown;
 }
 
 interface CreatedUserPayload {
@@ -30,17 +39,38 @@ interface TestUserRecord extends CreatedUserPayload {
   passwordHash: string;
 }
 
-type CreateUserValidationFailure = {
+type ValidationFailure = {
   ok: false;
   code: "VALIDATION_ERROR";
   details: ValidationDetails;
+};
+
+type UserNotFoundFailure = {
+  ok: false;
+  code: "USER_NOT_FOUND";
+};
+
+type LastAdminDeactivationFailure = {
+  ok: false;
+  code: "LAST_ADMIN_DEACTIVATION_FORBIDDEN";
 };
 
 type CreateUserResult =
   | { ok: true; data: CreatedUserPayload }
   | { ok: false; code: "USERNAME_EXISTS" }
   | { ok: false; code: "EMAIL_EXISTS" }
-  | CreateUserValidationFailure;
+  | ValidationFailure;
+
+type UpdateUserRoleResult =
+  | { ok: true; data: CreatedUserPayload }
+  | ValidationFailure
+  | UserNotFoundFailure;
+
+type DeactivateUserResult =
+  | { ok: true; data: CreatedUserPayload }
+  | ValidationFailure
+  | UserNotFoundFailure
+  | LastAdminDeactivationFailure;
 
 const ALLOWED_ROLES: Role[] = ["ADMIN", "TECNICO", "COMMERCIALE"];
 const TEST_BCRYPT_ROUNDS = 4;
@@ -91,11 +121,41 @@ function asNonEmptyString(value: unknown): string | null {
   return trimmed;
 }
 
+function asPositiveInteger(value: unknown): number | null {
+  if (typeof value === "number") {
+    if (Number.isInteger(value) && value > 0) {
+      return value;
+    }
+
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+
+  const parsed = Number(trimmed);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-function buildValidationFailure(details: ValidationDetails): CreateUserValidationFailure {
+function countActiveAdmins(users: TestUserRecord[]): number {
+  return users.filter((user) => user.role === "ADMIN" && user.isActive).length;
+}
+
+function buildValidationFailure(details: ValidationDetails): ValidationFailure {
   return {
     ok: false,
     code: "VALIDATION_ERROR",
@@ -115,7 +175,7 @@ function parseCreateUserInput(
         role: Role;
       };
     }
-  | CreateUserValidationFailure {
+  | ValidationFailure {
   const username = asNonEmptyString(input.username);
   if (!username) {
     return buildValidationFailure({ field: "username", rule: "required" });
@@ -154,6 +214,61 @@ function parseCreateUserInput(
       email: email.toLowerCase(),
       password,
       role: input.role as Role,
+    },
+  };
+}
+
+function parseUpdateUserRoleInput(
+  input: UpdateUserRoleInput,
+):
+  | {
+      ok: true;
+      data: {
+        userId: number;
+        role: Role;
+      };
+    }
+  | ValidationFailure {
+  const userId = asPositiveInteger(input.userId);
+  if (userId === null) {
+    return buildValidationFailure({
+      field: "userId",
+      rule: "invalid_integer",
+    });
+  }
+
+  if (typeof input.role !== "string" || !ALLOWED_ROLES.includes(input.role as Role)) {
+    return buildValidationFailure({
+      field: "role",
+      rule: "invalid_enum",
+      values: ALLOWED_ROLES,
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      userId,
+      role: input.role as Role,
+    },
+  };
+}
+
+function parseDeactivateUserInput(
+  input: DeactivateUserInput,
+): { ok: true; data: { userId: number } } | ValidationFailure {
+  const userId = asPositiveInteger(input.userId);
+  if (userId === null) {
+    return buildValidationFailure({
+      field: "userId",
+      rule: "invalid_integer",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      userId,
     },
   };
 }
@@ -258,6 +373,146 @@ async function createUserInDatabase(payload: {
   }
 }
 
+async function updateUserRoleInTestStore(payload: {
+  userId: number;
+  role: Role;
+}): Promise<UpdateUserRoleResult> {
+  const targetIndex = testUsers.findIndex((user) => user.id === payload.userId);
+  if (targetIndex === -1) {
+    return { ok: false, code: "USER_NOT_FOUND" };
+  }
+
+  const updatedRecord: TestUserRecord = {
+    ...testUsers[targetIndex],
+    role: payload.role,
+  };
+
+  testUsers[targetIndex] = updatedRecord;
+
+  return {
+    ok: true,
+    data: mapToCreatedUserPayload(updatedRecord),
+  };
+}
+
+async function updateUserRoleInDatabase(payload: {
+  userId: number;
+  role: Role;
+}): Promise<UpdateUserRoleResult> {
+  try {
+    const updated = await getPrismaClient().user.update({
+      where: { id: payload.userId },
+      data: { role: payload.role },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        isActive: true,
+      },
+    });
+
+    return {
+      ok: true,
+      data: updated,
+    };
+  } catch (error) {
+    if (
+      error instanceof PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return { ok: false, code: "USER_NOT_FOUND" };
+    }
+
+    throw error;
+  }
+}
+
+async function deactivateUserInTestStore(payload: {
+  userId: number;
+}): Promise<DeactivateUserResult> {
+  const targetIndex = testUsers.findIndex((user) => user.id === payload.userId);
+  if (targetIndex === -1) {
+    return { ok: false, code: "USER_NOT_FOUND" };
+  }
+
+  const targetUser = testUsers[targetIndex];
+
+  if (
+    targetUser.role === "ADMIN" &&
+    targetUser.isActive &&
+    countActiveAdmins(testUsers) <= 1
+  ) {
+    return { ok: false, code: "LAST_ADMIN_DEACTIVATION_FORBIDDEN" };
+  }
+
+  const updatedRecord: TestUserRecord = {
+    ...targetUser,
+    isActive: false,
+  };
+
+  testUsers[targetIndex] = updatedRecord;
+
+  return {
+    ok: true,
+    data: mapToCreatedUserPayload(updatedRecord),
+  };
+}
+
+async function deactivateUserInDatabase(payload: {
+  userId: number;
+}): Promise<DeactivateUserResult> {
+  return getPrismaClient().$transaction(async (tx: Prisma.TransactionClient) => {
+    const existing = await tx.user.findUnique({
+      where: { id: payload.userId },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        isActive: true,
+      },
+    });
+
+    if (!existing) {
+      return { ok: false, code: "USER_NOT_FOUND" } as const;
+    }
+
+    if (existing.role === "ADMIN" && existing.isActive) {
+      const activeAdminCount = await tx.user.count({
+        where: {
+          role: "ADMIN",
+          isActive: true,
+        },
+      });
+
+      if (activeAdminCount <= 1) {
+        return {
+          ok: false,
+          code: "LAST_ADMIN_DEACTIVATION_FORBIDDEN",
+        } as const;
+      }
+    }
+
+    const updated = await tx.user.update({
+      where: { id: payload.userId },
+      data: { isActive: false },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        isActive: true,
+      },
+    });
+
+    return {
+      ok: true,
+      data: updated,
+    } as const;
+  });
+}
+
 async function createUser(input: CreateUserInput): Promise<CreateUserResult> {
   const parsed = parseCreateUserInput(input);
   if (!parsed.ok) {
@@ -271,9 +526,85 @@ async function createUser(input: CreateUserInput): Promise<CreateUserResult> {
   return createUserInDatabase(parsed.data);
 }
 
+async function updateUserRole(
+  input: UpdateUserRoleInput,
+): Promise<UpdateUserRoleResult> {
+  const parsed = parseUpdateUserRoleInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return updateUserRoleInTestStore(parsed.data);
+  }
+
+  return updateUserRoleInDatabase(parsed.data);
+}
+
+async function deactivateUser(
+  input: DeactivateUserInput,
+): Promise<DeactivateUserResult> {
+  const parsed = parseDeactivateUserInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return deactivateUserInTestStore(parsed.data);
+  }
+
+  return deactivateUserInDatabase(parsed.data);
+}
+
 function resetUsersStoreForTests(): void {
+  ensureTestEnvironment();
   testUsers = cloneTestUsers(baseTestUsers);
   nextTestUserId = computeNextUserId(testUsers);
 }
 
-export { createUser, resetUsersStoreForTests, type CreateUserInput, type CreateUserResult };
+function setUserRoleForTests(userId: number, role: Role): void {
+  ensureTestEnvironment();
+  const targetIndex = testUsers.findIndex((user) => user.id === userId);
+  if (targetIndex === -1) {
+    return;
+  }
+
+  testUsers[targetIndex] = {
+    ...testUsers[targetIndex],
+    role,
+  };
+}
+
+function setUserIsActiveForTests(userId: number, isActive: boolean): void {
+  ensureTestEnvironment();
+  const targetIndex = testUsers.findIndex((user) => user.id === userId);
+  if (targetIndex === -1) {
+    return;
+  }
+
+  testUsers[targetIndex] = {
+    ...testUsers[targetIndex],
+    isActive,
+  };
+}
+
+function ensureTestEnvironment(): void {
+  if (process.env.NODE_ENV !== "test") {
+    throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
+  }
+}
+
+export {
+  createUser,
+  updateUserRole,
+  deactivateUser,
+  resetUsersStoreForTests,
+  setUserRoleForTests,
+  setUserIsActiveForTests,
+  type CreateUserInput,
+  type CreateUserResult,
+  type UpdateUserRoleInput,
+  type UpdateUserRoleResult,
+  type DeactivateUserInput,
+  type DeactivateUserResult,
+};

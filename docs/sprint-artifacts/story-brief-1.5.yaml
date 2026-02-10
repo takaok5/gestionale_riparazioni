@@ -1,0 +1,24 @@
+﻿target_modules:
+  - packages/backend/src/routes/users.ts
+  - packages/backend/src/services/users-service.ts
+  - packages/backend/prisma/schema.prisma
+  - packages/backend/src/middleware/auth.ts
+  - packages/shared/src/types/index.ts
+patterns_to_follow:
+  - "packages/backend/src/routes/users.ts:12 - router handlers with try/catch and standardized error mapping"
+  - "packages/backend/src/services/users-service.ts:106 - validation-first service methods with explicit error details"
+  - "packages/backend/src/middleware/auth.ts:106 - authorize(...roles) middleware for role enforcement"
+  - "packages/backend/src/lib/errors.ts:11 - buildErrorResponse for consistent API error envelope"
+  - "packages/backend/src/services/auth-service.ts:182 - active-user guard pattern before authentication success"
+dependencies:
+  - "packages/backend/src/routes/users.ts depends on packages/backend/src/services/users-service.ts and packages/backend/src/middleware/auth.ts"
+  - "packages/backend/src/services/users-service.ts depends on @prisma/client and packages/shared/src/types/index.ts"
+  - "packages/backend/src/middleware/auth.ts depends on jsonwebtoken and packages/shared/src/types/index.ts"
+risks:
+  - "In-memory test mode in users-service may not include active ADMIN users, making last-admin constraints flaky in tests if not seeded consistently."
+  - "Role/deactivation endpoints may return inconsistent error payloads if they bypass buildErrorResponse conventions."
+  - "Concurrent updates on admin accounts can create race conditions for last-admin checks without transactional safeguards."
+existing_tests:
+  - packages/backend/src/__tests__/users-create.spec.ts
+  - packages/backend/src/__tests__/auth-login.spec.ts
+  - packages/backend/src/__tests__/auth-refresh.spec.ts

@@ -1,0 +1,46 @@
+
+> gestionale-riparazioni@0.1.0 test
+> npm run test --workspaces --if-present --run
+
+npm warn Unknown cli config "--run". This will stop working in the next major version of npm.
+
+> @gestionale/backend@0.1.0 test
+> vitest run
+
+"vitest" non Š riconosciuto come comando interno o esterno,
+ un programma eseguibile o un file batch.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\FAT-E\progetti\story-1.5\packages\backend
+npm error workspace @gestionale/backend@0.1.0
+npm error location C:\Users\FAT-E\progetti\story-1.5\packages\backend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c vitest run
+
+
+> @gestionale/frontend@0.1.0 test
+> vitest run
+
+"vitest" non Š riconosciuto come comando interno o esterno,
+ un programma eseguibile o un file batch.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\FAT-E\progetti\story-1.5\packages\frontend
+npm error workspace @gestionale/frontend@0.1.0
+npm error location C:\Users\FAT-E\progetti\story-1.5\packages\frontend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c vitest run
+
+
+> @gestionale/shared@0.1.0 test
+> vitest run
+
+"vitest" non Š riconosciuto come comando interno o esterno,
+ un programma eseguibile o un file batch.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\FAT-E\progetti\story-1.5\packages\shared
+npm error workspace @gestionale/shared@0.1.0
+npm error location C:\Users\FAT-E\progetti\story-1.5\packages\shared
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c vitest run

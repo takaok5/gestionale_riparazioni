@@ -1,18 +1,26 @@
-import { Router, type Response } from "express";
+﻿import { Router, type Response } from "express";
 import { buildErrorResponse } from "../lib/errors.js";
 import { authenticate, authorize } from "../middleware/auth.js";
 import {
   createUser,
+  deactivateUser,
+  updateUserRole,
   type CreateUserInput,
   type CreateUserResult,
+  type DeactivateUserInput,
+  type DeactivateUserResult,
+  type UpdateUserRoleInput,
+  type UpdateUserRoleResult,
 } from "../services/users-service.js";
 
 const usersRouter = Router();
 
-function respondCreateUserFailure(
-  res: Response,
-  result: Exclude<CreateUserResult, { ok: true; data: unknown }>,
-): void {
+type CreateUserFailure = Exclude<CreateUserResult, { ok: true; data: unknown }>;
+type UserMutationFailure =
+  | Exclude<UpdateUserRoleResult, { ok: true; data: unknown }>
+  | Exclude<DeactivateUserResult, { ok: true; data: unknown }>;
+
+function respondCreateUserFailure(res: Response, result: CreateUserFailure): void {
   if (result.code === "USERNAME_EXISTS") {
     res
       .status(409)
@@ -29,6 +37,46 @@ function respondCreateUserFailure(
     .status(400)
     .json(
       buildErrorResponse("VALIDATION_ERROR", "Payload non valido", result.details),
+    );
+}
+
+function respondUserMutationFailure(
+  res: Response,
+  result: UserMutationFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse("VALIDATION_ERROR", "Payload non valido", result.details),
+      );
+    return;
+  }
+
+  if (result.code === "USER_NOT_FOUND") {
+    res.status(404).json(buildErrorResponse("USER_NOT_FOUND", "Utente non trovato"));
+    return;
+  }
+
+  if (result.code === "LAST_ADMIN_DEACTIVATION_FORBIDDEN") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "LAST_ADMIN_DEACTIVATION_FORBIDDEN",
+          "Cannot deactivate the last admin",
+        ),
+      );
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "USERS_SERVICE_UNAVAILABLE",
+        "Servizio utenti non disponibile",
+      ),
     );
 }
 
@@ -69,5 +117,67 @@ usersRouter.post("/", authenticate, authorize("ADMIN"), async (req, res) => {
 
   res.status(201).json(result.data);
 });
+
+usersRouter.put("/:id", authenticate, authorize("ADMIN"), async (req, res) => {
+  const payload: UpdateUserRoleInput = {
+    userId: req.params.id,
+    role: req.body?.role,
+  };
+
+  let result: UpdateUserRoleResult;
+  try {
+    result = await updateUserRole(payload);
+  } catch {
+    res
+      .status(500)
+      .json(
+        buildErrorResponse(
+          "USERS_SERVICE_UNAVAILABLE",
+          "Servizio utenti non disponibile",
+        ),
+      );
+    return;
+  }
+
+  if (!result.ok) {
+    respondUserMutationFailure(res, result);
+    return;
+  }
+
+  res.status(200).json(result.data);
+});
+
+usersRouter.patch(
+  "/:id/deactivate",
+  authenticate,
+  authorize("ADMIN"),
+  async (req, res) => {
+    const payload: DeactivateUserInput = {
+      userId: req.params.id,
+    };
+
+    let result: DeactivateUserResult;
+    try {
+      result = await deactivateUser(payload);
+    } catch {
+      res
+        .status(500)
+        .json(
+          buildErrorResponse(
+            "USERS_SERVICE_UNAVAILABLE",
+            "Servizio utenti non disponibile",
+          ),
+        );
+      return;
+    }
+
+    if (!result.ok) {
+      respondUserMutationFailure(res, result);
+      return;
+    }
+
+    res.status(200).json(result.data);
+  },
+);
 
 export { usersRouter };

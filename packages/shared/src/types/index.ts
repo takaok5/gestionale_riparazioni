@@ -37,6 +37,21 @@ export interface LoginResponse {
 
 export type RefreshResponse = LoginResponse;
 
+export interface UpdateUserRoleRequest {
+  role: Role;
+}
+
+export interface ManagedUserResponse {
+  id: number;
+  username: string;
+  email: string;
+  role: Role;
+  isActive: boolean;
+}
+
+export type UpdateUserRoleResponse = ManagedUserResponse;
+export type DeactivateUserResponse = ManagedUserResponse;
+
 export interface Cliente {
   id: number;
   codiceCliente: string;
