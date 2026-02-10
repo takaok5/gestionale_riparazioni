@@ -1,0 +1,45 @@
+﻿story_id: "2.2"
+story_title: "Lista e Ricerca Clienti"
+acceptance_criteria:
+  - id: "AC-1"
+    given: "Given 25 clienti esistenti"
+    when: "When viene invocato GET /api/clienti?page=1&limit=10"
+    then: "Then risposta 200 con data da 10 clienti e meta { page: 1, limit: 10, total: 25, totalPages: 3 }"
+  - id: "AC-2"
+    given: "Given clienti con 'Rossi' nel nome"
+    when: "When viene invocato GET /api/clienti?search=Rossi"
+    then: "Then vengono restituiti solo clienti che matchano Rossi su nome o codiceCliente"
+  - id: "AC-3"
+    given: "Given clienti con tipologia PRIVATO e AZIENDA"
+    when: "When viene invocato GET /api/clienti?tipologia=AZIENDA"
+    then: "Then vengono restituiti solo clienti con tipologia AZIENDA"
+target_modules:
+  - "packages/backend/src/routes/clienti.ts"
+  - "packages/backend/src/services/anagrafiche-service.ts"
+  - "packages/backend/src/__tests__/audit-trail.spec.ts"
+  - "packages/backend/src/__tests__/clienti-create-atdd.spec.ts"
+patterns_to_follow:
+  - "Route GET con parsing query + delega service: packages/backend/src/routes/audit-log.ts:37"
+  - "Validazione query e default paginazione: packages/backend/src/services/anagrafiche-service.ts:632"
+  - "Pattern paginazione DB con count + findMany: packages/backend/src/services/anagrafiche-service.ts:1012"
+  - "Pattern assert paginazione nei test: packages/backend/src/__tests__/audit-trail.spec.ts:131"
+dependencies:
+  - target: "packages/backend/src/routes/clienti.ts"
+    used_by:
+      - "packages/backend/src/index.ts"
+  - target: "packages/backend/src/services/anagrafiche-service.ts"
+    used_by:
+      - "packages/backend/src/routes/clienti.ts"
+      - "packages/backend/src/routes/audit-log.ts"
+      - "packages/backend/src/routes/fornitori.ts"
+      - "packages/backend/src/__tests__/audit-trail.spec.ts"
+      - "packages/backend/src/__tests__/clienti-create-atdd.spec.ts"
+risks:
+  - "Rischio mismatch payload: la story richiede { data, meta } mentre endpoint simili espongono { results, pagination }."
+  - "Ricerca su nome/codiceCliente richiede matching case-insensitive: implementazione inefficiente puo degradare performance."
+  - "Parsing/validazione page-limit su endpoint clienti non allineato puo produrre total/totalPages incoerenti."
+  - "Per test di paginazione serve ordinamento deterministico dei record clienti per evitare flakiness."
+  - "Nessun modulo frontend esistente per lista/ricerca clienti: eventuale UI richiede componenti nuovi."
+existing_tests:
+  - "packages/backend/src/__tests__/audit-trail.spec.ts"
+  - "packages/backend/src/__tests__/clienti-create-atdd.spec.ts"
