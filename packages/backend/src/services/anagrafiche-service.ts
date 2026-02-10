@@ -84,6 +84,13 @@ interface ListClientiInput {
   tipologia: unknown;
 }
 
+interface ListFornitoriInput {
+  page: unknown;
+  limit: unknown;
+  search: unknown;
+  categoria: unknown;
+}
+
 interface GetClienteByIdInput {
   clienteId: unknown;
 }
@@ -163,6 +170,23 @@ interface ClienteListPayload {
   };
 }
 
+interface FornitoreListItem {
+  id: number;
+  codiceFornitore: string;
+  nome: string;
+  categoria: CategoriaFornitore;
+}
+
+interface FornitoreListPayload {
+  data: FornitoreListItem[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 interface FornitoreCreatePayload {
   id: number;
   codiceFornitore: string;
@@ -206,6 +230,11 @@ type ListAuditLogsResult =
 
 type ListClientiResult =
   | { ok: true; data: ClienteListPayload }
+  | ValidationFailure
+  | ServiceUnavailableFailure;
+
+type ListFornitoriResult =
+  | { ok: true; data: FornitoreListPayload }
   | ValidationFailure
   | ServiceUnavailableFailure;
 
@@ -275,6 +304,13 @@ interface ParsedListClientiInput {
   limit: number;
   search?: string;
   tipologia?: TipologiaCliente;
+}
+
+interface ParsedListFornitoriInput {
+  page: number;
+  limit: number;
+  search?: string;
+  categoria?: CategoriaFornitore;
 }
 
 interface ParsedGetClienteByIdInput {
@@ -1054,6 +1090,98 @@ function normalizeTipologiaFilter(
   }
 
   return null;
+}
+
+function normalizeCategoriaFornitoreFilter(
+  value: unknown,
+): CategoriaFornitore | null | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toUpperCase();
+  if (!normalized) {
+    return null;
+  }
+
+  if (
+    normalized === "RICAMBI" ||
+    normalized === "SERVIZI" ||
+    normalized === "ALTRO"
+  ) {
+    return normalized;
+  }
+
+  return null;
+}
+
+function parseListFornitoriInput(
+  input: ListFornitoriInput,
+):
+  | { ok: true; data: ParsedListFornitoriInput }
+  | ValidationFailure {
+  let page = 1;
+  if (input.page !== undefined) {
+    const parsedPage = asPositiveInteger(input.page);
+    if (parsedPage === null) {
+      return buildValidationFailure({
+        field: "page",
+        rule: "invalid_integer",
+      });
+    }
+    page = parsedPage;
+  }
+
+  let limit = TEST_PAGE_SIZE;
+  if (input.limit !== undefined) {
+    const parsedLimit = asPositiveInteger(input.limit);
+    if (parsedLimit === null) {
+      return buildValidationFailure({
+        field: "limit",
+        rule: "invalid_integer",
+      });
+    }
+    if (parsedLimit > MAX_LIST_LIMIT) {
+      return buildValidationFailure({
+        field: "limit",
+        rule: "too_large",
+      });
+    }
+    limit = parsedLimit;
+  }
+
+  let search: string | undefined;
+  if (input.search !== undefined && input.search !== null) {
+    if (typeof input.search !== "string" || !input.search.trim()) {
+      return buildValidationFailure({
+        field: "search",
+        rule: "invalid_string",
+      });
+    }
+    search = input.search.trim();
+  }
+
+  const categoria = normalizeCategoriaFornitoreFilter(input.categoria);
+  if (categoria === null) {
+    return buildValidationFailure({
+      field: "categoria",
+      rule: "invalid_enum",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      page,
+      limit,
+      search,
+      categoria,
+    },
+  };
 }
 
 function parseListClientiInput(
@@ -2240,6 +2368,51 @@ async function listClientiInTestStore(
   };
 }
 
+async function listFornitoriInTestStore(
+  payload: ParsedListFornitoriInput,
+): Promise<ListFornitoriResult> {
+  const searchValue = payload.search?.toLowerCase();
+
+  const filtered = testFornitori
+    .filter((row) => {
+      if (payload.categoria && row.categoria !== payload.categoria) {
+        return false;
+      }
+
+      if (!searchValue) {
+        return true;
+      }
+
+      return (
+        row.nome.toLowerCase().includes(searchValue) ||
+        row.codiceFornitore.toLowerCase().includes(searchValue)
+      );
+    })
+    .sort((left, right) => left.id - right.id);
+
+  const total = filtered.length;
+  const offset = (payload.page - 1) * payload.limit;
+  const data = filtered.slice(offset, offset + payload.limit).map((row) => ({
+    id: row.id,
+    codiceFornitore: row.codiceFornitore,
+    nome: row.nome,
+    categoria: row.categoria,
+  }));
+
+  return {
+    ok: true,
+    data: {
+      data,
+      meta: {
+        page: payload.page,
+        limit: payload.limit,
+        total,
+        totalPages: total === 0 ? 0 : Math.ceil(total / payload.limit),
+      },
+    },
+  };
+}
+
 async function listClientiInDatabase(
   payload: ParsedListClientiInput,
 ): Promise<ListClientiResult> {
@@ -2294,6 +2467,80 @@ async function listClientiInDatabase(
           codiceCliente: row.codiceCliente,
           nome: row.nome,
           tipologia: row.tipologia as TipologiaCliente,
+        })),
+        meta: {
+          page: payload.page,
+          limit: payload.limit,
+          total,
+          totalPages: total === 0 ? 0 : Math.ceil(total / payload.limit),
+        },
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function listFornitoriInDatabase(
+  payload: ParsedListFornitoriInput,
+): Promise<ListFornitoriResult> {
+  try {
+    const where: Prisma.FornitoreWhereInput = {};
+
+    if (payload.categoria) {
+      where.categoria = payload.categoria;
+    }
+
+    if (payload.search) {
+      where.OR = [
+        {
+          nome: {
+            contains: payload.search,
+            mode: "insensitive",
+          },
+        },
+        {
+          codiceFornitore: {
+            contains: payload.search,
+            mode: "insensitive",
+          },
+        },
+      ];
+    }
+
+    const skip = (payload.page - 1) * payload.limit;
+    const [total, rows] = await Promise.all([
+      getPrismaClient().fornitore.count({ where }),
+      getPrismaClient().fornitore.findMany({
+        where,
+        orderBy: {
+          id: "asc",
+        },
+        skip,
+        take: payload.limit,
+        select: {
+          id: true,
+          codiceFornitore: true,
+          nome: true,
+          categoria: true,
+        },
+      }),
+    ]);
+
+    return {
+      ok: true,
+      data: {
+        data: rows.map((row) => ({
+          id: row.id,
+          codiceFornitore: row.codiceFornitore,
+          nome: row.nome,
+          categoria:
+            row.categoria === "RICAMBI" || row.categoria === "SERVIZI"
+              ? row.categoria
+              : "ALTRO",
         })),
         meta: {
           page: payload.page,
@@ -2384,6 +2631,21 @@ async function listClienti(
   return listClientiInDatabase(parsed.data);
 }
 
+async function listFornitori(
+  input: ListFornitoriInput,
+): Promise<ListFornitoriResult> {
+  const parsed = parseListFornitoriInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return listFornitoriInTestStore(parsed.data);
+  }
+
+  return listFornitoriInDatabase(parsed.data);
+}
+
 async function getClienteById(
   input: GetClienteByIdInput,
 ): Promise<GetClienteByIdResult> {
@@ -2456,6 +2718,7 @@ export {
   updateFornitore,
   listAuditLogs,
   listClienti,
+  listFornitori,
   listClienteRiparazioni,
   resetAnagraficheStoreForTests,
   type CreateClienteInput,
@@ -2472,6 +2735,8 @@ export {
   type ListAuditLogsResult,
   type ListClientiInput,
   type ListClientiResult,
+  type ListFornitoriInput,
+  type ListFornitoriResult,
   type ListClienteRiparazioniInput,
   type ListClienteRiparazioniResult,
 };

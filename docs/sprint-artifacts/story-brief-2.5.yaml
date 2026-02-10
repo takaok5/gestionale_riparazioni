@@ -1,0 +1,33 @@
+target_modules:
+  - packages/backend/src/routes/fornitori.ts
+  - packages/backend/src/services/anagrafiche-service.ts
+
+patterns_to_follow:
+  - description: "Route lista con query page/limit/search, invocazione service e risposta 200 con data/meta."
+    file: packages/backend/src/routes/clienti.ts:172
+  - description: "Validazione input lista con page/limit/search e limite massimo (errori VALIDATION_ERROR coerenti)."
+    file: packages/backend/src/services/anagrafiche-service.ts:1060
+  - description: "Implementazione test-store con filtro opzionale, ricerca case-insensitive su due campi, sort per id e meta.totalPages."
+    file: packages/backend/src/services/anagrafiche-service.ts:2198
+  - description: "Implementazione database con Prisma where + OR su campi ricercabili e paginazione skip/take."
+    file: packages/backend/src/services/anagrafiche-service.ts:2243
+  - description: "ATDD di lista/ricerca con verifiche su meta paginazione e semantica search."
+    file: packages/backend/src/__tests__/clienti-list-search-atdd.spec.ts:57
+
+dependencies:
+  - packages/backend/src/index.ts
+  - packages/backend/src/lib/errors.ts
+  - packages/backend/src/middleware/auth.ts
+  - packages/backend/prisma/schema.prisma
+  - packages/shared/src/types/index.ts
+
+risks:
+  - "Nessuna list/search fornitori esistente: vanno mantenuti allineati path test-store e DB per evitare divergenze tra test e runtime."
+  - "Filtro categoria: parsing/enum non coerente puo' produrre 500 invece di 400 VALIDATION_ERROR."
+  - "Ricerca AC-3 richiede match su nome o codiceFornitore; implementazione parziale su un solo campo fallirebbe i criteri."
+  - "Meta paginazione deve restare coerente (totalPages=0 quando total=0) per compatibilita' con pattern esistenti."
+
+existing_tests:
+  - packages/backend/src/__tests__/clienti-list-search-atdd.spec.ts
+  - packages/backend/src/__tests__/fornitori-create-atdd.spec.ts
+  - packages/backend/src/__tests__/audit-trail.spec.ts

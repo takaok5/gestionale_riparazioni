@@ -5,6 +5,9 @@ import {
   createFornitore,
   type CreateFornitoreInput,
   type CreateFornitoreResult,
+  listFornitori,
+  type ListFornitoriInput,
+  type ListFornitoriResult,
   updateFornitore,
   type UpdateFornitoreInput,
   type UpdateFornitoreResult,
@@ -19,6 +22,11 @@ type CreateFornitoreFailure = Exclude<
 
 type UpdateFornitoreFailure = Exclude<
   UpdateFornitoreResult,
+  { ok: true; data: unknown }
+>;
+
+type ListFornitoriFailure = Exclude<
+  ListFornitoriResult,
   { ok: true; data: unknown }
 >;
 
@@ -87,6 +95,55 @@ function respondUpdateFornitoreFailure(
       ),
     );
 }
+
+function respondListFornitoriFailure(
+  res: Response,
+  result: ListFornitoriFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Parametri query non validi",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "ANAGRAFICHE_SERVICE_UNAVAILABLE",
+        "Servizio anagrafiche non disponibile",
+      ),
+    );
+}
+
+fornitoriRouter.get(
+  "/",
+  authenticate,
+  authorize("ADMIN"),
+  async (req, res) => {
+    const payload: ListFornitoriInput = {
+      page: req.query.page,
+      limit: req.query.limit,
+      search: req.query.search,
+      categoria: req.query.categoria,
+    };
+
+    const result = await listFornitori(payload);
+    if (!result.ok) {
+      respondListFornitoriFailure(res, result);
+      return;
+    }
+
+    res.status(200).json(result.data);
+  },
+);
 
 fornitoriRouter.post(
   "/",
