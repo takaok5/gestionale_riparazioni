@@ -1,0 +1,33 @@
+﻿story_id: '2.1'
+story_title: 'Creazione Cliente'
+target_modules:
+  - 'packages/backend/src/routes/clienti.ts'
+  - 'packages/backend/src/services/anagrafiche-service.ts'
+  - 'packages/shared/src/validators/index.ts'
+  - 'packages/backend/prisma/schema.prisma'
+  - 'packages/backend/src/lib/errors.ts'
+patterns_to_follow:
+  - file: 'packages/backend/src/routes/clienti.ts:30'
+    pattern: 'Route handler con auth, validazione payload, chiamata service e risposta 201.'
+  - file: 'packages/backend/src/routes/clienti.ts:18'
+    pattern: 'Costruzione errore validazione con buildErrorResponse.'
+  - file: 'packages/backend/src/routes/users.ts:35'
+    pattern: 'Gestione conflitto duplicati con status 409 e codice errore specifico.'
+  - file: 'packages/backend/src/services/anagrafiche-service.ts:611'
+    pattern: 'Creazione record + audit log nel service.'
+  - file: 'packages/shared/src/validators/index.ts:4'
+    pattern: 'Validatori condivisi per codice fiscale/partita IVA/CAP/provincia.'
+dependencies:
+  - 'packages/backend/src/index.ts -> packages/backend/src/routes/clienti.ts'
+  - 'packages/backend/src/routes/clienti.ts -> packages/backend/src/services/anagrafiche-service.ts'
+  - 'packages/backend/src/routes/fornitori.ts -> packages/backend/src/services/anagrafiche-service.ts'
+  - 'packages/backend/src/routes/audit-log.ts -> packages/backend/src/services/anagrafiche-service.ts'
+  - 'packages/backend/src/__tests__/audit-trail.spec.ts -> packages/backend/src/services/anagrafiche-service.ts'
+risks:
+  - 'La route POST /api/clienti oggi richiede codiceCliente e non lo auto-genera: rischio mismatch con AC1.'
+  - 'CreateClienteInput non include partitaIva/codiceFiscale/telefono/email: rischio regressioni di validazione.'
+  - 'Cliente.email nel Prisma schema non e univoca: rischio impossibilita di garantire 409 su duplicati.'
+  - 'I validatori shared esistono ma non risultano integrati nel flusso backend: rischio incoerenza regole.'
+  - 'POST /api/clienti sembra limitata ad ADMIN mentre AC richiede utente autenticato: rischio mismatch autorizzazione.'
+existing_tests:
+  - 'packages/backend/src/__tests__/audit-trail.spec.ts'

@@ -1,6 +1,6 @@
 import { Router, type Response } from "express";
 import { buildErrorResponse } from "../lib/errors.js";
-import { authenticate, authorize } from "../middleware/auth.js";
+import { authenticate } from "../middleware/auth.js";
 import {
   createCliente,
   type CreateClienteInput,
@@ -18,7 +18,14 @@ function respondCreateClienteFailure(
   if (result.code === "VALIDATION_ERROR") {
     res
       .status(400)
-      .json(buildErrorResponse("VALIDATION_ERROR", "Payload non valido", result.details));
+      .json(buildErrorResponse("VALIDATION_ERROR", result.message ?? "Payload non valido", result.details));
+    return;
+  }
+
+  if (result.code === "EMAIL_ALREADY_EXISTS") {
+    res
+      .status(409)
+      .json(buildErrorResponse("EMAIL_ALREADY_EXISTS", "Email gia esistente"));
     return;
   }
 
@@ -27,7 +34,7 @@ function respondCreateClienteFailure(
     .json(buildErrorResponse("ANAGRAFICHE_SERVICE_UNAVAILABLE", "Servizio anagrafiche non disponibile"));
 }
 
-clientiRouter.post("/", authenticate, authorize("ADMIN"), async (req, res) => {
+clientiRouter.post("/", authenticate, async (req, res) => {
   const payload: CreateClienteInput = {
     actorUserId: req.user?.userId,
     nome: req.body?.nome,
@@ -38,7 +45,10 @@ clientiRouter.post("/", authenticate, authorize("ADMIN"), async (req, res) => {
     citta: req.body?.citta,
     cap: req.body?.cap,
     provincia: req.body?.provincia,
-    codiceCliente: req.body?.codiceCliente,
+    telefono: req.body?.telefono,
+    email: req.body?.email,
+    partitaIva: req.body?.partitaIva,
+    codiceFiscale: req.body?.codiceFiscale,
   };
 
   const result = await createCliente(payload);

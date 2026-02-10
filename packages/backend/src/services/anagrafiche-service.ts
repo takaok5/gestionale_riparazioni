@@ -10,6 +10,12 @@ type ValidationFailure = {
   ok: false;
   code: "VALIDATION_ERROR";
   details: ValidationDetails;
+  message?: string;
+};
+
+type DuplicateEmailFailure = {
+  ok: false;
+  code: "EMAIL_ALREADY_EXISTS";
 };
 
 type NotFoundFailure = {
@@ -34,7 +40,10 @@ interface CreateClienteInput {
   citta: unknown;
   cap: unknown;
   provincia: unknown;
-  codiceCliente: unknown;
+  telefono: unknown;
+  email: unknown;
+  partitaIva: unknown;
+  codiceFiscale: unknown;
 }
 
 interface UpdateFornitoreInput {
@@ -74,8 +83,19 @@ interface AuditLogListPayload {
 }
 
 type CreateClienteResult =
-  | { ok: true; data: { id: number } }
+  | {
+      ok: true;
+      data: {
+        id: number;
+        codiceCliente: string;
+        nome: string;
+        tipologia: TipologiaCliente;
+        email: string | null;
+        partitaIva: string | null;
+      };
+    }
   | ValidationFailure
+  | DuplicateEmailFailure
   | ServiceUnavailableFailure;
 
 type UpdateFornitoreResult =
@@ -99,7 +119,10 @@ interface ParsedCreateClienteInput {
   citta: string;
   cap: string;
   provincia: string;
-  codiceCliente: string;
+  telefono: string | null;
+  email: string | null;
+  partitaIva: string | null;
+  codiceFiscale: string | null;
 }
 
 interface ParsedUpdateFornitoreInput {
@@ -126,6 +149,10 @@ interface TestClienteRecord {
   cap: string;
   provincia: string;
   codiceCliente: string;
+  telefono: string | null;
+  email: string | null;
+  partitaIva: string | null;
+  codiceFiscale: string | null;
 }
 
 interface TestFornitoreRecord {
@@ -135,6 +162,17 @@ interface TestFornitoreRecord {
 }
 
 const TEST_PAGE_SIZE = 10;
+const MAX_CODICE_CLIENTE_GENERATION_ATTEMPTS = 3;
+const VALID_PROVINCE_CODES = new Set([
+  "AG", "AL", "AN", "AO", "AR", "AP", "AT", "AV", "BA", "BT", "BL", "BN", "BG", "BI",
+  "BO", "BZ", "BS", "BR", "CA", "CL", "CB", "CI", "CE", "CT", "CZ", "CH", "CO", "CS",
+  "CR", "KR", "CN", "EN", "FM", "FE", "FI", "FG", "FC", "FR", "GE", "GO", "GR", "IM",
+  "IS", "AQ", "SP", "LT", "LE", "LC", "LI", "LO", "LU", "MC", "MN", "MS", "MT", "ME",
+  "MI", "MO", "MB", "NA", "NO", "NU", "OR", "OT", "PD", "PA", "PR", "PV", "PG", "PU",
+  "PE", "PC", "PI", "PT", "PN", "PZ", "PO", "RG", "RA", "RC", "RE", "RI", "RN", "RM",
+  "RO", "SA", "SS", "SV", "SI", "SR", "SO", "TA", "TE", "TR", "TO", "TP", "TN", "TV",
+  "TS", "UD", "VA", "VE", "VB", "VC", "VR", "VV", "VI", "VT", "SU",
+]);
 
 const baseTestClienti: TestClienteRecord[] = [
   {
@@ -147,7 +185,11 @@ const baseTestClienti: TestClienteRecord[] = [
     citta: "Milano",
     cap: "20100",
     provincia: "MI",
-    codiceCliente: "CL0000000",
+    codiceCliente: "CLI-000000",
+    telefono: "0212345678",
+    email: "cliente.base@test.local",
+    partitaIva: "12345678901",
+    codiceFiscale: null,
   },
 ];
 
@@ -193,6 +235,7 @@ let testFornitori = cloneTestFornitori(baseTestFornitori);
 let testAuditLogs = cloneAuditLogs(baseTestAuditLogs);
 
 let nextTestClienteId = computeNextId(testClienti.map((item) => item.id));
+let nextTestClienteCodeSequence = computeNextClienteCodeSequence(testClienti);
 let nextTestAuditLogId = computeNextId(testAuditLogs.map((item) => item.id));
 
 let prismaClient: PrismaClient | null = null;
@@ -220,6 +263,32 @@ function cloneAuditLogs(source: AuditLogListItem[]): AuditLogListItem[] {
 function computeNextId(ids: number[]): number {
   const maxId = ids.reduce((acc, current) => Math.max(acc, current), 0);
   return maxId + 1;
+}
+
+function extractClienteCodeSequence(codiceCliente: string): number {
+  const match = codiceCliente.match(/(\d+)$/);
+  if (!match) {
+    return 0;
+  }
+
+  const parsed = Number(match[1]);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    return 0;
+  }
+
+  return parsed;
+}
+
+function formatClienteCode(sequence: number): string {
+  return `CLI-${String(sequence).padStart(6, "0")}`;
+}
+
+function computeNextClienteCodeSequence(records: TestClienteRecord[]): number {
+  const maxSequence = records.reduce(
+    (acc, current) => Math.max(acc, extractClienteCodeSequence(current.codiceCliente)),
+    0,
+  );
+  return maxSequence + 1;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -251,11 +320,22 @@ function getPrismaClient(): PrismaClient {
   return prismaClient;
 }
 
-function buildValidationFailure(details: ValidationDetails): ValidationFailure {
+function buildValidationFailure(
+  details: ValidationDetails,
+  message?: string,
+): ValidationFailure {
   return {
     ok: false,
     code: "VALIDATION_ERROR",
     details,
+    message,
+  };
+}
+
+function buildDuplicateEmailFailure(): DuplicateEmailFailure {
+  return {
+    ok: false,
+    code: "EMAIL_ALREADY_EXISTS",
   };
 }
 
@@ -355,6 +435,23 @@ function normalizeTipologia(value: unknown): TipologiaCliente | null {
   return null;
 }
 
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function isValidPartitaIvaFormat(value: string): boolean {
+  return /^\d{11}$/.test(value);
+}
+
+function isValidCodiceFiscaleFormat(value: string): boolean {
+  return /^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$/i.test(value);
+}
+
+function isValidProvinciaCode(value: string): boolean {
+  const normalized = value.toUpperCase();
+  return VALID_PROVINCE_CODES.has(normalized);
+}
+
 function parseCreateClienteInput(
   input: CreateClienteInput,
 ):
@@ -401,18 +498,10 @@ function parseCreateClienteInput(
   }
 
   const provincia = asRequiredString(input.provincia);
-  if (!provincia || provincia.length !== 2) {
+  if (!provincia || !isValidProvinciaCode(provincia.toUpperCase())) {
     return buildValidationFailure({
       field: "provincia",
       rule: "invalid_provincia",
-    });
-  }
-
-  const codiceCliente = asRequiredString(input.codiceCliente);
-  if (!codiceCliente) {
-    return buildValidationFailure({
-      field: "codiceCliente",
-      rule: "required",
     });
   }
 
@@ -422,6 +511,33 @@ function parseCreateClienteInput(
       field: "tipologia",
       rule: "invalid_enum",
     });
+  }
+
+  const email = asOptionalString(input.email);
+  if (email && !isValidEmail(email)) {
+    return buildValidationFailure({
+      field: "email",
+      rule: "invalid_email",
+    });
+  }
+
+  const partitaIva = asOptionalString(input.partitaIva);
+  if (partitaIva && !isValidPartitaIvaFormat(partitaIva)) {
+    return buildValidationFailure({
+      field: "partitaIva",
+      rule: "invalid_partita_iva_format",
+    });
+  }
+
+  const codiceFiscale = asOptionalString(input.codiceFiscale);
+  if (codiceFiscale && !isValidCodiceFiscaleFormat(codiceFiscale)) {
+    return buildValidationFailure(
+      {
+        field: "codiceFiscale",
+        rule: "invalid_fiscal_code_format",
+      },
+      "Invalid fiscal code format",
+    );
   }
 
   return {
@@ -436,7 +552,10 @@ function parseCreateClienteInput(
       citta,
       cap,
       provincia: provincia.toUpperCase(),
-      codiceCliente,
+      telefono: asOptionalString(input.telefono),
+      email: email ? email.toLowerCase() : null,
+      partitaIva,
+      codiceFiscale,
     },
   };
 }
@@ -577,6 +696,18 @@ function appendTestAuditLog(payload: {
 async function createClienteInTestStore(
   payload: ParsedCreateClienteInput,
 ): Promise<CreateClienteResult> {
+  if (
+    payload.email &&
+    testClienti.some(
+      (item) => item.email?.toLowerCase() === payload.email?.toLowerCase(),
+    )
+  ) {
+    return buildDuplicateEmailFailure();
+  }
+
+  const codiceCliente = formatClienteCode(nextTestClienteCodeSequence);
+  nextTestClienteCodeSequence += 1;
+
   const created: TestClienteRecord = {
     id: nextTestClienteId,
     nome: payload.nome,
@@ -587,7 +718,11 @@ async function createClienteInTestStore(
     citta: payload.citta,
     cap: payload.cap,
     provincia: payload.provincia,
-    codiceCliente: payload.codiceCliente,
+    codiceCliente,
+    telefono: payload.telefono,
+    email: payload.email,
+    partitaIva: payload.partitaIva,
+    codiceFiscale: payload.codiceFiscale,
   };
 
   nextTestClienteId += 1;
@@ -604,6 +739,11 @@ async function createClienteInTestStore(
     ok: true,
     data: {
       id: created.id,
+      codiceCliente: created.codiceCliente,
+      nome: created.nome,
+      tipologia: created.tipologia,
+      email: created.email,
+      partitaIva: created.partitaIva,
     },
   };
 }
@@ -611,61 +751,104 @@ async function createClienteInTestStore(
 async function createClienteInDatabase(
   payload: ParsedCreateClienteInput,
 ): Promise<CreateClienteResult> {
-  try {
-    const created = await getPrismaClient().$transaction(
-      async (tx: Prisma.TransactionClient) => {
-        const cliente = await tx.cliente.create({
-          data: {
-            nome: payload.nome,
-            cognome: payload.cognome,
-            ragioneSociale: payload.ragioneSociale,
-            tipologia: payload.tipologia,
-            indirizzo: payload.indirizzo,
-            citta: payload.citta,
-            cap: payload.cap,
-            provincia: payload.provincia,
-            codiceCliente: payload.codiceCliente,
-          },
-          select: {
-            id: true,
-          },
+  for (let attempt = 1; attempt <= MAX_CODICE_CLIENTE_GENERATION_ATTEMPTS; attempt += 1) {
+    try {
+      const created = await getPrismaClient().$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          const latestCliente = await tx.cliente.findFirst({
+            orderBy: { id: "desc" },
+            select: { codiceCliente: true },
+          });
+          const codiceCliente = formatClienteCode(
+            extractClienteCodeSequence(latestCliente?.codiceCliente ?? "") + 1,
+          );
+
+          const cliente = await tx.cliente.create({
+            data: {
+              nome: payload.nome,
+              cognome: payload.cognome,
+              ragioneSociale: payload.ragioneSociale,
+              tipologia: payload.tipologia,
+              indirizzo: payload.indirizzo,
+              citta: payload.citta,
+              cap: payload.cap,
+              provincia: payload.provincia,
+              codiceCliente,
+              telefono: payload.telefono,
+              email: payload.email,
+              partitaIva: payload.partitaIva,
+              codiceFiscale: payload.codiceFiscale,
+            },
+            select: {
+              id: true,
+              codiceCliente: true,
+              nome: true,
+              tipologia: true,
+              email: true,
+              partitaIva: true,
+            },
+          });
+
+          await tx.auditLog.create({
+            data: {
+              userId: payload.actorUserId,
+              action: "CREATE",
+              modelName: "Cliente",
+              objectId: String(cliente.id),
+            },
+          });
+
+          return cliente;
+        },
+      );
+
+      return {
+        ok: true,
+        data: {
+          id: created.id,
+          codiceCliente: created.codiceCliente,
+          nome: created.nome,
+          tipologia: created.tipologia,
+          email: created.email,
+          partitaIva: created.partitaIva,
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        const targets = Array.isArray(error.meta?.target)
+          ? error.meta.target.map((item) => String(item).toLowerCase())
+          : [];
+        if (targets.some((target) => target.includes("email"))) {
+          return buildDuplicateEmailFailure();
+        }
+
+        if (
+          targets.some((target) => target.includes("codicecliente")) &&
+          attempt < MAX_CODICE_CLIENTE_GENERATION_ATTEMPTS
+        ) {
+          continue;
+        }
+
+        return buildValidationFailure({
+          field: "codiceCliente",
+          rule: "unique",
         });
+      }
 
-        await tx.auditLog.create({
-          data: {
-            userId: payload.actorUserId,
-            action: "CREATE",
-            modelName: "Cliente",
-            objectId: String(cliente.id),
-          },
-        });
-
-        return cliente;
-      },
-    );
-
-    return {
-      ok: true,
-      data: {
-        id: created.id,
-      },
-    };
-  } catch (error) {
-    if (
-      error instanceof PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      return buildValidationFailure({
-        field: "codiceCliente",
-        rule: "unique",
-      });
+      return {
+        ok: false,
+        code: "SERVICE_UNAVAILABLE",
+      };
     }
-
-    return {
-      ok: false,
-      code: "SERVICE_UNAVAILABLE",
-    };
   }
+
+  return buildValidationFailure({
+    field: "codiceCliente",
+    rule: "unique",
+  });
 }
 
 async function updateFornitoreInTestStore(
@@ -944,6 +1127,7 @@ function resetAnagraficheStoreForTests(): void {
   testFornitori = cloneTestFornitori(baseTestFornitori);
   testAuditLogs = cloneAuditLogs(baseTestAuditLogs);
   nextTestClienteId = computeNextId(testClienti.map((item) => item.id));
+  nextTestClienteCodeSequence = computeNextClienteCodeSequence(testClienti);
   nextTestAuditLogId = computeNextId(testAuditLogs.map((item) => item.id));
 }
 
