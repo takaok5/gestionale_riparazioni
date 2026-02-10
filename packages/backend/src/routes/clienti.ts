@@ -3,13 +3,17 @@ import { buildErrorResponse } from "../lib/errors.js";
 import { authenticate } from "../middleware/auth.js";
 import {
   createCliente,
+  listClienti,
   type CreateClienteInput,
   type CreateClienteResult,
+  type ListClientiInput,
+  type ListClientiResult,
 } from "../services/anagrafiche-service.js";
 
 const clientiRouter = Router();
 
 type CreateClienteFailure = Exclude<CreateClienteResult, { ok: true; data: unknown }>;
+type ListClientiFailure = Exclude<ListClientiResult, { ok: true; data: unknown }>;
 
 function respondCreateClienteFailure(
   res: Response,
@@ -33,6 +37,45 @@ function respondCreateClienteFailure(
     .status(500)
     .json(buildErrorResponse("ANAGRAFICHE_SERVICE_UNAVAILABLE", "Servizio anagrafiche non disponibile"));
 }
+
+function respondListClientiFailure(
+  res: Response,
+  result: ListClientiFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Parametri query non validi",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  res
+    .status(500)
+    .json(buildErrorResponse("ANAGRAFICHE_SERVICE_UNAVAILABLE", "Servizio anagrafiche non disponibile"));
+}
+
+clientiRouter.get("/", authenticate, async (req, res) => {
+  const payload: ListClientiInput = {
+    page: req.query.page,
+    limit: req.query.limit,
+    search: req.query.search,
+    tipologia: req.query.tipologia,
+  };
+
+  const result = await listClienti(payload);
+  if (!result.ok) {
+    respondListClientiFailure(res, result);
+    return;
+  }
+
+  res.status(200).json(result.data);
+});
 
 clientiRouter.post("/", authenticate, async (req, res) => {
   const payload: CreateClienteInput = {

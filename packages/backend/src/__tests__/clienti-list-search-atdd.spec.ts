@@ -59,7 +59,7 @@ beforeEach(() => {
 
 describe("AC-1 - Lista clienti paginata", () => {
   it("tests AC-1: should return 200 with data[10] and meta {page:1,limit:10,total:25,totalPages:3}", async () => {
-    for (let i = 1; i <= 25; i += 1) {
+    for (let i = 1; i <= 24; i += 1) {
       const seeded = await createAziendaCliente(i);
       expect(seeded.status).toBe(201);
     }

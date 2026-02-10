@@ -58,6 +58,13 @@ interface ListAuditLogsInput {
   page: unknown;
 }
 
+interface ListClientiInput {
+  page: unknown;
+  limit: unknown;
+  search: unknown;
+  tipologia: unknown;
+}
+
 interface AuditLogDettagli {
   old: Record<string, unknown>;
   new: Record<string, unknown>;
@@ -79,6 +86,23 @@ interface AuditLogListPayload {
     page: number;
     pageSize: number;
     total: number;
+  };
+}
+
+interface ClienteListItem {
+  id: number;
+  codiceCliente: string;
+  nome: string;
+  tipologia: TipologiaCliente;
+}
+
+interface ClienteListPayload {
+  data: ClienteListItem[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
   };
 }
 
@@ -109,6 +133,11 @@ type ListAuditLogsResult =
   | ValidationFailure
   | ServiceUnavailableFailure;
 
+type ListClientiResult =
+  | { ok: true; data: ClienteListPayload }
+  | ValidationFailure
+  | ServiceUnavailableFailure;
+
 interface ParsedCreateClienteInput {
   actorUserId: number;
   nome: string;
@@ -136,6 +165,13 @@ interface ParsedListAuditLogsInput {
   modelName?: string;
   page: number;
   pageSize: number;
+}
+
+interface ParsedListClientiInput {
+  page: number;
+  limit: number;
+  search?: string;
+  tipologia?: TipologiaCliente;
 }
 
 interface TestClienteRecord {
@@ -667,6 +703,88 @@ function parseListAuditLogsInput(
   };
 }
 
+function normalizeTipologiaFilter(
+  value: unknown,
+): TipologiaCliente | null | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toUpperCase();
+  if (!normalized) {
+    return undefined;
+  }
+
+  if (normalized === "PRIVATO" || normalized === "AZIENDA") {
+    return normalized;
+  }
+
+  return null;
+}
+
+function parseListClientiInput(
+  input: ListClientiInput,
+):
+  | { ok: true; data: ParsedListClientiInput }
+  | ValidationFailure {
+  let page = 1;
+  if (input.page !== undefined) {
+    const parsedPage = asPositiveInteger(input.page);
+    if (parsedPage === null) {
+      return buildValidationFailure({
+        field: "page",
+        rule: "invalid_integer",
+      });
+    }
+    page = parsedPage;
+  }
+
+  let limit = TEST_PAGE_SIZE;
+  if (input.limit !== undefined) {
+    const parsedLimit = asPositiveInteger(input.limit);
+    if (parsedLimit === null) {
+      return buildValidationFailure({
+        field: "limit",
+        rule: "invalid_integer",
+      });
+    }
+    limit = parsedLimit;
+  }
+
+  let search: string | undefined;
+  if (input.search !== undefined && input.search !== null) {
+    if (typeof input.search !== "string" || !input.search.trim()) {
+      return buildValidationFailure({
+        field: "search",
+        rule: "invalid_string",
+      });
+    }
+    search = input.search.trim();
+  }
+
+  const tipologia = normalizeTipologiaFilter(input.tipologia);
+  if (tipologia === null) {
+    return buildValidationFailure({
+      field: "tipologia",
+      rule: "invalid_enum",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      page,
+      limit,
+      search,
+      tipologia,
+    },
+  };
+}
+
 function appendTestAuditLog(payload: {
   userId: number | null;
   action: "CREATE" | "UPDATE" | "DELETE";
@@ -1078,6 +1196,122 @@ async function listAuditLogsInDatabase(
   }
 }
 
+async function listClientiInTestStore(
+  payload: ParsedListClientiInput,
+): Promise<ListClientiResult> {
+  const searchValue = payload.search?.toLowerCase();
+
+  const filtered = testClienti
+    .filter((row) => {
+      if (payload.tipologia && row.tipologia !== payload.tipologia) {
+        return false;
+      }
+
+      if (!searchValue) {
+        return true;
+      }
+
+      return (
+        row.nome.toLowerCase().includes(searchValue) ||
+        row.codiceCliente.toLowerCase().includes(searchValue)
+      );
+    })
+    .sort((left, right) => left.id - right.id);
+
+  const total = filtered.length;
+  const offset = (payload.page - 1) * payload.limit;
+  const data = filtered.slice(offset, offset + payload.limit).map((row) => ({
+    id: row.id,
+    codiceCliente: row.codiceCliente,
+    nome: row.nome,
+    tipologia: row.tipologia,
+  }));
+
+  return {
+    ok: true,
+    data: {
+      data,
+      meta: {
+        page: payload.page,
+        limit: payload.limit,
+        total,
+        totalPages: total === 0 ? 0 : Math.ceil(total / payload.limit),
+      },
+    },
+  };
+}
+
+async function listClientiInDatabase(
+  payload: ParsedListClientiInput,
+): Promise<ListClientiResult> {
+  try {
+    const where: Prisma.ClienteWhereInput = {};
+
+    if (payload.tipologia) {
+      where.tipologia = payload.tipologia;
+    }
+
+    if (payload.search) {
+      where.OR = [
+        {
+          nome: {
+            contains: payload.search,
+            mode: "insensitive",
+          },
+        },
+        {
+          codiceCliente: {
+            contains: payload.search,
+            mode: "insensitive",
+          },
+        },
+      ];
+    }
+
+    const skip = (payload.page - 1) * payload.limit;
+    const [total, rows] = await Promise.all([
+      getPrismaClient().cliente.count({ where }),
+      getPrismaClient().cliente.findMany({
+        where,
+        orderBy: {
+          id: "asc",
+        },
+        skip,
+        take: payload.limit,
+        select: {
+          id: true,
+          codiceCliente: true,
+          nome: true,
+          tipologia: true,
+        },
+      }),
+    ]);
+
+    return {
+      ok: true,
+      data: {
+        data: rows.map((row) => ({
+          id: row.id,
+          codiceCliente: row.codiceCliente,
+          nome: row.nome,
+          tipologia: row.tipologia as TipologiaCliente,
+        })),
+        meta: {
+          page: payload.page,
+          limit: payload.limit,
+          total,
+          totalPages: total === 0 ? 0 : Math.ceil(total / payload.limit),
+        },
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
 async function createCliente(input: CreateClienteInput): Promise<CreateClienteResult> {
   const parsed = parseCreateClienteInput(input);
   if (!parsed.ok) {
@@ -1121,6 +1355,21 @@ async function listAuditLogs(
   return listAuditLogsInDatabase(parsed.data);
 }
 
+async function listClienti(
+  input: ListClientiInput,
+): Promise<ListClientiResult> {
+  const parsed = parseListClientiInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return listClientiInTestStore(parsed.data);
+  }
+
+  return listClientiInDatabase(parsed.data);
+}
+
 function resetAnagraficheStoreForTests(): void {
   ensureTestEnvironment();
   testClienti = cloneTestClienti(baseTestClienti);
@@ -1141,6 +1390,7 @@ export {
   createCliente,
   updateFornitore,
   listAuditLogs,
+  listClienti,
   resetAnagraficheStoreForTests,
   type CreateClienteInput,
   type CreateClienteResult,
@@ -1148,4 +1398,6 @@ export {
   type UpdateFornitoreResult,
   type ListAuditLogsInput,
   type ListAuditLogsResult,
+  type ListClientiInput,
+  type ListClientiResult,
 };
