@@ -1,0 +1,42 @@
+pipeline: project-startup
+version: 1.0.0
+mode: brownfield
+project_name: "gestionale_riparazioni"
+created: "2026-02-09T00:00:00Z"
+updated: "2026-02-09T00:07:00Z"
+currentStep: completed
+completedSteps:
+  - step: 0
+    completed: "2026-02-09T00:00:00Z"
+  - step: 1
+    completed: "2026-02-09T00:01:00Z"
+    artifact: docs/codebase-analysis.md
+  - step: 2
+    completed: "2026-02-09T00:02:00Z"
+    artifact: docs/prd.md
+  - step: 3
+    completed: "2026-02-09T00:03:00Z"
+    artifact: docs/architecture.md
+  - step: 4
+    completed: "2026-02-09T00:04:00Z"
+    artifact: docs/frontend-spec.md
+  - step: 5
+    completed: "2026-02-09T00:05:00Z"
+    artifact: docs/epic-details.md
+  - step: 6
+    completed: "2026-02-09T00:06:00Z"
+    artifact: docs/validation-report.md
+  - step: 7
+    completed: "2026-02-09T00:07:00Z"
+    artifact: CLAUDE.md + config.yaml
+artifacts:
+  projectBrief: null
+  codebaseAnalysis: docs/codebase-analysis.md
+  prd: docs/prd.md
+  architecture: docs/architecture.md
+  frontendSpec: docs/frontend-spec.md
+  epicDetails: docs/epic-details.md
+  validationReport: docs/validation-report.md
+  claudeMdRoot: CLAUDE.md
+  configYaml: _bmad/bmm/config.yaml
+frontendSpecStatus: completed
