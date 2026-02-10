@@ -1,0 +1,83 @@
+story_id: "1.1"
+story_title: "Login Utente"
+
+acceptance_criteria:
+  - id: "AC-1"
+    given: "a user with username 'mario.rossi' and password 'Password1' exists"
+    when: "I POST /api/auth/login with those credentials"
+    then: "I receive 200 with accessToken (JWT 15min), refreshToken (7d), and user { id, username, email, role }"
+    related_files:
+      - "packages/backend/src/index.ts"
+      - "packages/backend/src/routes/health.ts"
+      - "packages/backend/src/middleware/auth.ts"
+      - "packages/backend/prisma/schema.prisma"
+      - "packages/shared/src/types/index.ts"
+  - id: "AC-2"
+    given: "no user with username 'utente.inesistente' exists"
+    when: "I POST /api/auth/login"
+    then: "I receive 401 with error code 'INVALID_CREDENTIALS'"
+    related_files:
+      - "packages/backend/src/index.ts"
+      - "packages/backend/src/routes/health.ts"
+      - "packages/backend/prisma/schema.prisma"
+  - id: "AC-3"
+    given: "a user with isActive=false"
+    when: "I POST /api/auth/login"
+    then: "I receive 401 with error code 'ACCOUNT_DISABLED'"
+    related_files:
+      - "packages/backend/prisma/schema.prisma"
+  - id: "AC-4"
+    given: "5 failed login attempts from same IP in 1 minute"
+    when: "I attempt a 6th login"
+    then: "I receive 429 with retryAfter header"
+    related_files:
+      - "packages/backend/src/index.ts"
+      - "packages/backend/src/routes/health.ts"
+
+target_modules:
+  - "packages/backend/src/index.ts"
+  - "packages/backend/src/routes/health.ts"
+  - "packages/backend/src/middleware/auth.ts"
+  - "packages/backend/prisma/schema.prisma"
+  - "packages/shared/src/types/index.ts"
+
+patterns_to_follow:
+  - file: "packages/backend/src/index.ts:1"
+    pattern: "Express app setup + middleware registration; register routers via app.use"
+  - file: "packages/backend/src/index.ts:13"
+    pattern: "Route mounting pattern: app.use('/api/health', healthRouter)"
+  - file: "packages/backend/src/routes/health.ts:1"
+    pattern: "Router creation via Router() and route handlers"
+  - file: "packages/backend/src/routes/health.ts:5"
+    pattern: "Handler shape: (req, res) => res.json(...)"
+  - file: "packages/backend/src/middleware/auth.ts:17"
+    pattern: "JWT authenticate middleware structure"
+  - file: "packages/backend/src/middleware/auth.ts:40"
+    pattern: "Role-based authorize middleware structure"
+  - file: "packages/backend/prisma/schema.prisma:27"
+    pattern: "User model fields (username/email/password/role)"
+  - file: "packages/shared/src/types/index.ts:22"
+    pattern: "Shared User interface shape"
+
+dependencies:
+  - module: "packages/backend/src/routes/health.ts"
+    used_by:
+      - "packages/backend/src/index.ts"
+  - module: "packages/backend/src/middleware/auth.ts"
+    used_by: []
+    note: "No imports found in current repo"
+  - module: "packages/backend/prisma/schema.prisma"
+    used_by: []
+    note: "No Prisma client usage found in current repo"
+  - module: "packages/shared/src/types/index.ts"
+    used_by: []
+    note: "No imports found in current repo"
+
+existing_tests: []
+
+risks:
+  - "No existing auth routes or services; login endpoint must be created from scratch."
+  - "User model lacks isActive field required by AC-3."
+  - "No rate limiting middleware exists; AC-4 needs new rate-limiter with IP tracking."
+  - "No refresh token storage/rotation mechanism exists; AC-1 requires access/refresh token issuance."
+  - "No tests exist in packages; coverage gap for auth flows."

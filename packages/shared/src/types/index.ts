@@ -24,8 +24,15 @@ export interface User {
   username: string;
   email: string;
   role: Role;
+  isActive?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: Pick<User, "id" | "username" | "email" | "role">;
 }
 
 export interface Cliente {

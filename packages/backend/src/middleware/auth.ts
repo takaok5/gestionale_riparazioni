@@ -6,6 +6,11 @@ interface JwtPayload {
   role: string;
 }
 
+interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
 declare global {
   namespace Express {
     interface Request {
@@ -22,17 +27,23 @@ function authenticate(req: Request, res: Response, next: NextFunction): void {
   }
 
   const token = authHeader.slice(7);
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    res.status(500).json({ error: "JWT_SECRET non configurato" });
-    return;
-  }
 
   try {
+    const secret = resolveJwtSecret();
     const payload = jwt.verify(token, secret) as JwtPayload;
     req.user = payload;
     next();
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "JWT_SECRET_MISSING") {
+      res.status(500).json({
+        error: {
+          code: "JWT_SECRET_MISSING",
+          message: "JWT_SECRET non configurato",
+        },
+      });
+      return;
+    }
+
     res.status(401).json({ error: "Token non valido" });
   }
 }
@@ -51,4 +62,25 @@ function authorize(...roles: string[]) {
   };
 }
 
-export { authenticate, authorize };
+function resolveJwtSecret(): string {
+  if (process.env.JWT_SECRET) {
+    return process.env.JWT_SECRET;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return "test-jwt-secret";
+  }
+
+  throw new Error("JWT_SECRET_MISSING");
+}
+
+function issueAuthTokens(payload: JwtPayload): AuthTokens {
+  const secret = resolveJwtSecret();
+
+  return {
+    accessToken: jwt.sign(payload, secret, { expiresIn: "15m" }),
+    refreshToken: jwt.sign(payload, secret, { expiresIn: "7d" }),
+  };
+}
+
+export { authenticate, authorize, issueAuthTokens, type JwtPayload, type AuthTokens };
