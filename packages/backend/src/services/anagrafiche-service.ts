@@ -65,6 +65,21 @@ interface ListClientiInput {
   tipologia: unknown;
 }
 
+interface GetClienteByIdInput {
+  clienteId: unknown;
+}
+
+interface UpdateClienteInput {
+  actorUserId: unknown;
+  clienteId: unknown;
+  telefono: unknown;
+  email: unknown;
+}
+
+interface ListClienteRiparazioniInput {
+  clienteId: unknown;
+}
+
 interface AuditLogDettagli {
   old: Record<string, unknown>;
   new: Record<string, unknown>;
@@ -94,6 +109,29 @@ interface ClienteListItem {
   codiceCliente: string;
   nome: string;
   tipologia: TipologiaCliente;
+}
+
+interface ClienteDetailPayload {
+  id: number;
+  codiceCliente: string;
+  nome: string;
+  cognome: string | null;
+  ragioneSociale: string | null;
+  tipologia: TipologiaCliente;
+  telefono: string | null;
+  email: string | null;
+  indirizzo: string;
+  cap: string;
+  citta: string;
+  provincia: string;
+}
+
+interface ClienteRiparazioneItem {
+  id: number;
+  codiceRiparazione: string;
+  stato: string;
+  dataRicezione: string;
+  tipoDispositivo: string;
 }
 
 interface ClienteListPayload {
@@ -138,6 +176,25 @@ type ListClientiResult =
   | ValidationFailure
   | ServiceUnavailableFailure;
 
+type GetClienteByIdResult =
+  | { ok: true; data: { data: ClienteDetailPayload } }
+  | ValidationFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
+type UpdateClienteResult =
+  | { ok: true; data: { data: ClienteDetailPayload } }
+  | ValidationFailure
+  | DuplicateEmailFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
+type ListClienteRiparazioniResult =
+  | { ok: true; data: { data: ClienteRiparazioneItem[] } }
+  | ValidationFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
 interface ParsedCreateClienteInput {
   actorUserId: number;
   nome: string;
@@ -174,6 +231,21 @@ interface ParsedListClientiInput {
   tipologia?: TipologiaCliente;
 }
 
+interface ParsedGetClienteByIdInput {
+  clienteId: number;
+}
+
+interface ParsedUpdateClienteInput {
+  actorUserId: number;
+  clienteId: number;
+  telefono?: string | null;
+  email?: string | null;
+}
+
+interface ParsedListClienteRiparazioniInput {
+  clienteId: number;
+}
+
 interface TestClienteRecord {
   id: number;
   nome: string;
@@ -195,6 +267,15 @@ interface TestFornitoreRecord {
   id: number;
   ragioneSociale: string | null;
   telefono: string | null;
+}
+
+interface TestRiparazioneRecord {
+  id: number;
+  clienteId: number;
+  codiceRiparazione: string;
+  stato: string;
+  dataRicezione: string;
+  tipoDispositivo: string;
 }
 
 const TEST_PAGE_SIZE = 10;
@@ -238,6 +319,33 @@ const baseTestFornitori: TestFornitoreRecord[] = [
   },
 ];
 
+const baseTestRiparazioni: TestRiparazioneRecord[] = [
+  {
+    id: 501,
+    clienteId: 5,
+    codiceRiparazione: "RIP-000501",
+    stato: "IN_LAVORAZIONE",
+    dataRicezione: "2026-02-10T09:00:00.000Z",
+    tipoDispositivo: "SMARTPHONE",
+  },
+  {
+    id: 502,
+    clienteId: 5,
+    codiceRiparazione: "RIP-000502",
+    stato: "IN_ATTESA_RICAMBI",
+    dataRicezione: "2026-02-09T09:00:00.000Z",
+    tipoDispositivo: "TABLET",
+  },
+  {
+    id: 503,
+    clienteId: 5,
+    codiceRiparazione: "RIP-000503",
+    stato: "COMPLETATA",
+    dataRicezione: "2026-02-08T09:00:00.000Z",
+    tipoDispositivo: "NOTEBOOK",
+  },
+];
+
 const baseTestAuditLogs: AuditLogListItem[] = [
   {
     id: 1,
@@ -269,6 +377,7 @@ const baseTestAuditLogs: AuditLogListItem[] = [
 
 let testClienti = cloneTestClienti(baseTestClienti);
 let testFornitori = cloneTestFornitori(baseTestFornitori);
+let testRiparazioni = cloneTestRiparazioni(baseTestRiparazioni);
 let testAuditLogs = cloneAuditLogs(baseTestAuditLogs);
 
 let nextTestClienteId = computeNextId(testClienti.map((item) => item.id));
@@ -282,6 +391,12 @@ function cloneTestClienti(source: TestClienteRecord[]): TestClienteRecord[] {
 }
 
 function cloneTestFornitori(source: TestFornitoreRecord[]): TestFornitoreRecord[] {
+  return source.map((item) => ({ ...item }));
+}
+
+function cloneTestRiparazioni(
+  source: TestRiparazioneRecord[],
+): TestRiparazioneRecord[] {
   return source.map((item) => ({ ...item }));
 }
 
@@ -792,6 +907,149 @@ function parseListClientiInput(
   };
 }
 
+function parseGetClienteByIdInput(
+  input: GetClienteByIdInput,
+):
+  | { ok: true; data: ParsedGetClienteByIdInput }
+  | ValidationFailure {
+  const clienteId = asPositiveInteger(input.clienteId);
+  if (clienteId === null) {
+    return buildValidationFailure({
+      field: "clienteId",
+      rule: "invalid_integer",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      clienteId,
+    },
+  };
+}
+
+function parseUpdateClienteInput(
+  input: UpdateClienteInput,
+):
+  | { ok: true; data: ParsedUpdateClienteInput }
+  | ValidationFailure {
+  const actorUserId = asPositiveInteger(input.actorUserId);
+  if (actorUserId === null) {
+    return buildValidationFailure({
+      field: "actorUserId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const clienteId = asPositiveInteger(input.clienteId);
+  if (clienteId === null) {
+    return buildValidationFailure({
+      field: "clienteId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const parsedTelefono = asNullableString(input.telefono);
+  if (!parsedTelefono.ok) {
+    return {
+      ...parsedTelefono,
+      details: {
+        field: "telefono",
+        rule: parsedTelefono.details.rule,
+      },
+    };
+  }
+
+  const parsedEmail = asNullableString(input.email);
+  if (!parsedEmail.ok) {
+    return {
+      ...parsedEmail,
+      details: {
+        field: "email",
+        rule: parsedEmail.details.rule,
+      },
+    };
+  }
+
+  if (
+    parsedEmail.value !== undefined &&
+    parsedEmail.value !== null &&
+    !isValidEmail(parsedEmail.value)
+  ) {
+    return buildValidationFailure({
+      field: "email",
+      rule: "invalid_email",
+    });
+  }
+
+  const data: ParsedUpdateClienteInput = {
+    actorUserId,
+    clienteId,
+  };
+
+  if (parsedTelefono.value !== undefined) {
+    data.telefono = parsedTelefono.value;
+  }
+
+  if (parsedEmail.value !== undefined) {
+    data.email = parsedEmail.value === null ? null : parsedEmail.value.toLowerCase();
+  }
+
+  if (data.telefono === undefined && data.email === undefined) {
+    return buildValidationFailure({
+      field: "payload",
+      rule: "at_least_one_field_required",
+    });
+  }
+
+  return {
+    ok: true,
+    data,
+  };
+}
+
+function parseListClienteRiparazioniInput(
+  input: ListClienteRiparazioniInput,
+):
+  | { ok: true; data: ParsedListClienteRiparazioniInput }
+  | ValidationFailure {
+  const clienteId = asPositiveInteger(input.clienteId);
+  if (clienteId === null) {
+    return buildValidationFailure({
+      field: "clienteId",
+      rule: "invalid_integer",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      clienteId,
+    },
+  };
+}
+
+function asStoredTipologia(value: unknown): TipologiaCliente {
+  return value === "AZIENDA" ? "AZIENDA" : "PRIVATO";
+}
+
+function mapTestClienteToDetail(record: TestClienteRecord): ClienteDetailPayload {
+  return {
+    id: record.id,
+    codiceCliente: record.codiceCliente,
+    nome: record.nome,
+    cognome: record.cognome,
+    ragioneSociale: record.ragioneSociale,
+    tipologia: record.tipologia,
+    telefono: record.telefono,
+    email: record.email,
+    indirizzo: record.indirizzo,
+    cap: record.cap,
+    citta: record.citta,
+    provincia: record.provincia,
+  };
+}
+
 function appendTestAuditLog(payload: {
   userId: number | null;
   action: "CREATE" | "UPDATE" | "DELETE";
@@ -1108,6 +1366,356 @@ async function updateFornitoreInDatabase(
   }
 }
 
+async function getClienteByIdInTestStore(
+  payload: ParsedGetClienteByIdInput,
+): Promise<GetClienteByIdResult> {
+  const target = testClienti.find((record) => record.id === payload.clienteId);
+  if (!target) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      data: mapTestClienteToDetail(target),
+    },
+  };
+}
+
+async function getClienteByIdInDatabase(
+  payload: ParsedGetClienteByIdInput,
+): Promise<GetClienteByIdResult> {
+  try {
+    const row = await getPrismaClient().cliente.findUnique({
+      where: { id: payload.clienteId },
+      select: {
+        id: true,
+        codiceCliente: true,
+        nome: true,
+        cognome: true,
+        ragioneSociale: true,
+        tipologia: true,
+        telefono: true,
+        email: true,
+        indirizzo: true,
+        cap: true,
+        citta: true,
+        provincia: true,
+      },
+    });
+
+    if (!row) {
+      return {
+        ok: false,
+        code: "NOT_FOUND",
+      };
+    }
+
+    return {
+      ok: true,
+      data: {
+        data: {
+          id: row.id,
+          codiceCliente: row.codiceCliente,
+          nome: row.nome,
+          cognome: row.cognome,
+          ragioneSociale: row.ragioneSociale,
+          tipologia: asStoredTipologia(row.tipologia),
+          telefono: row.telefono,
+          email: row.email,
+          indirizzo: row.indirizzo,
+          cap: row.cap,
+          citta: row.citta,
+          provincia: row.provincia,
+        },
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function updateClienteInTestStore(
+  payload: ParsedUpdateClienteInput,
+): Promise<UpdateClienteResult> {
+  const targetIndex = testClienti.findIndex(
+    (record) => record.id === payload.clienteId,
+  );
+  if (targetIndex === -1) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  if (
+    payload.email !== undefined &&
+    payload.email !== null &&
+    testClienti.some(
+      (item) =>
+        item.id !== payload.clienteId &&
+        item.email?.toLowerCase() === payload.email?.toLowerCase(),
+    )
+  ) {
+    return buildDuplicateEmailFailure();
+  }
+
+  const current = testClienti[targetIndex];
+  const oldSnapshot = {
+    telefono: current.telefono,
+    email: current.email,
+  };
+
+  const updated: TestClienteRecord = {
+    ...current,
+    telefono:
+      payload.telefono !== undefined ? payload.telefono : current.telefono,
+    email: payload.email !== undefined ? payload.email : current.email,
+  };
+
+  testClienti[targetIndex] = updated;
+
+  appendTestAuditLog({
+    userId: payload.actorUserId,
+    action: "UPDATE",
+    modelName: "Cliente",
+    objectId: String(updated.id),
+    dettagli: {
+      old: oldSnapshot,
+      new: {
+        telefono: updated.telefono,
+        email: updated.email,
+      },
+    },
+  });
+
+  return {
+    ok: true,
+    data: {
+      data: mapTestClienteToDetail(updated),
+    },
+  };
+}
+
+async function updateClienteInDatabase(
+  payload: ParsedUpdateClienteInput,
+): Promise<UpdateClienteResult> {
+  try {
+    const result = await getPrismaClient().$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const existing = await tx.cliente.findUnique({
+          where: { id: payload.clienteId },
+          select: {
+            id: true,
+            codiceCliente: true,
+            nome: true,
+            cognome: true,
+            ragioneSociale: true,
+            tipologia: true,
+            telefono: true,
+            email: true,
+            indirizzo: true,
+            cap: true,
+            citta: true,
+            provincia: true,
+          },
+        });
+
+        if (!existing) {
+          return { ok: false, code: "NOT_FOUND" } as const;
+        }
+
+        const data: {
+          telefono?: string | null;
+          email?: string | null;
+        } = {};
+        if (payload.telefono !== undefined) {
+          data.telefono = payload.telefono;
+        }
+        if (payload.email !== undefined) {
+          data.email = payload.email;
+        }
+
+        const updated = await tx.cliente.update({
+          where: { id: payload.clienteId },
+          data,
+          select: {
+            id: true,
+            codiceCliente: true,
+            nome: true,
+            cognome: true,
+            ragioneSociale: true,
+            tipologia: true,
+            telefono: true,
+            email: true,
+            indirizzo: true,
+            cap: true,
+            citta: true,
+            provincia: true,
+          },
+        });
+
+        await tx.auditLog.create({
+          data: {
+            userId: payload.actorUserId,
+            action: "UPDATE",
+            modelName: "Cliente",
+            objectId: String(payload.clienteId),
+            dettagli: {
+              old: {
+                telefono: existing.telefono,
+                email: existing.email,
+              },
+              new: {
+                telefono: updated.telefono,
+                email: updated.email,
+              },
+            },
+          },
+        });
+
+        return {
+          ok: true,
+          data: {
+            data: {
+              id: updated.id,
+              codiceCliente: updated.codiceCliente,
+              nome: updated.nome,
+              cognome: updated.cognome,
+              ragioneSociale: updated.ragioneSociale,
+              tipologia: asStoredTipologia(updated.tipologia),
+              telefono: updated.telefono,
+              email: updated.email,
+              indirizzo: updated.indirizzo,
+              cap: updated.cap,
+              citta: updated.citta,
+              provincia: updated.provincia,
+            },
+          },
+        } as const;
+      },
+    );
+
+    return result;
+  } catch (error) {
+    if (
+      error instanceof PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const targets = Array.isArray(error.meta?.target)
+        ? error.meta.target.map((item) => String(item).toLowerCase())
+        : [];
+      if (targets.some((target) => target.includes("email"))) {
+        return buildDuplicateEmailFailure();
+      }
+    }
+
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function listClienteRiparazioniInTestStore(
+  payload: ParsedListClienteRiparazioniInput,
+): Promise<ListClienteRiparazioniResult> {
+  const exists = testClienti.some((record) => record.id === payload.clienteId);
+  if (!exists) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  const rows = testRiparazioni
+    .filter((row) => row.clienteId === payload.clienteId)
+    .sort((left, right) => left.id - right.id)
+    .map((row) => ({
+      id: row.id,
+      codiceRiparazione: row.codiceRiparazione,
+      stato: row.stato,
+      dataRicezione: row.dataRicezione,
+      tipoDispositivo: row.tipoDispositivo,
+    }));
+
+  return {
+    ok: true,
+    data: {
+      data: rows,
+    },
+  };
+}
+
+async function listClienteRiparazioniInDatabase(
+  payload: ParsedListClienteRiparazioniInput,
+): Promise<ListClienteRiparazioniResult> {
+  try {
+    const existing = await getPrismaClient().cliente.findUnique({
+      where: { id: payload.clienteId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return {
+        ok: false,
+        code: "NOT_FOUND",
+      };
+    }
+
+    const rows = await getPrismaClient().riparazione.findMany({
+      where: { clienteId: payload.clienteId },
+      orderBy: [
+        { dataRicezione: "desc" },
+        { id: "asc" },
+      ],
+      select: {
+        id: true,
+        codiceRiparazione: true,
+        stato: true,
+        dataRicezione: true,
+        tipoDispositivo: true,
+      },
+    });
+
+    return {
+      ok: true,
+      data: {
+        data: rows.map((row) => ({
+          id: row.id,
+          codiceRiparazione: row.codiceRiparazione,
+          stato: row.stato,
+          dataRicezione: row.dataRicezione.toISOString(),
+          tipoDispositivo: row.tipoDispositivo,
+        })),
+      },
+    };
+  } catch (error) {
+    if (
+      error instanceof PrismaClientKnownRequestError &&
+      error.code === "P2021"
+    ) {
+      return {
+        ok: true,
+        data: {
+          data: [],
+        },
+      };
+    }
+
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
 async function listAuditLogsInTestStore(
   payload: ParsedListAuditLogsInput,
 ): Promise<ListAuditLogsResult> {
@@ -1377,10 +1985,56 @@ async function listClienti(
   return listClientiInDatabase(parsed.data);
 }
 
+async function getClienteById(
+  input: GetClienteByIdInput,
+): Promise<GetClienteByIdResult> {
+  const parsed = parseGetClienteByIdInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return getClienteByIdInTestStore(parsed.data);
+  }
+
+  return getClienteByIdInDatabase(parsed.data);
+}
+
+async function updateCliente(
+  input: UpdateClienteInput,
+): Promise<UpdateClienteResult> {
+  const parsed = parseUpdateClienteInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return updateClienteInTestStore(parsed.data);
+  }
+
+  return updateClienteInDatabase(parsed.data);
+}
+
+async function listClienteRiparazioni(
+  input: ListClienteRiparazioniInput,
+): Promise<ListClienteRiparazioniResult> {
+  const parsed = parseListClienteRiparazioniInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return listClienteRiparazioniInTestStore(parsed.data);
+  }
+
+  return listClienteRiparazioniInDatabase(parsed.data);
+}
+
 function resetAnagraficheStoreForTests(): void {
   ensureTestEnvironment();
   testClienti = cloneTestClienti(baseTestClienti);
   testFornitori = cloneTestFornitori(baseTestFornitori);
+  testRiparazioni = cloneTestRiparazioni(baseTestRiparazioni);
   testAuditLogs = cloneAuditLogs(baseTestAuditLogs);
   nextTestClienteId = computeNextId(testClienti.map((item) => item.id));
   nextTestClienteCodeSequence = computeNextClienteCodeSequence(testClienti);
@@ -1395,16 +2049,25 @@ function ensureTestEnvironment(): void {
 
 export {
   createCliente,
+  getClienteById,
+  updateCliente,
   updateFornitore,
   listAuditLogs,
   listClienti,
+  listClienteRiparazioni,
   resetAnagraficheStoreForTests,
   type CreateClienteInput,
   type CreateClienteResult,
+  type GetClienteByIdInput,
+  type GetClienteByIdResult,
+  type UpdateClienteInput,
+  type UpdateClienteResult,
   type UpdateFornitoreInput,
   type UpdateFornitoreResult,
   type ListAuditLogsInput,
   type ListAuditLogsResult,
   type ListClientiInput,
   type ListClientiResult,
+  type ListClienteRiparazioniInput,
+  type ListClienteRiparazioniResult,
 };

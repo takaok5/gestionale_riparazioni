@@ -55,6 +55,8 @@ model Cliente {
   note           String?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+
+  riparazioni    Riparazione[]
 }
 
 model Fornitore {
@@ -86,4 +88,18 @@ model AuditLog {
   objectId  String
   timestamp DateTime @default(now())
   dettagli  Json?
+}
+
+model Riparazione {
+  id               Int      @id @default(autoincrement())
+  clienteId        Int
+  cliente          Cliente  @relation(fields: [clienteId], references: [id])
+  codiceRiparazione String  @unique
+  stato            String
+  dataRicezione    DateTime
+  tipoDispositivo  String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([clienteId])
 }

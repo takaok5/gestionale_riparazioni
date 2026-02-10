@@ -40,6 +40,24 @@ const fornitoreUpdatePayload = {
   telefono: "0299988877",
 };
 
+async function createAziendaCliente(index: number) {
+  return request(app)
+    .post("/api/clienti")
+    .set("Authorization", adminAuthHeader())
+    .send({
+      nome: `Cliente Audit ${index}`,
+      ragioneSociale: `Audit Cliente ${index} SRL`,
+      tipologia: "AZIENDA",
+      partitaIva: String(10000000000 + index),
+      telefono: `33390000${String(index).padStart(2, "0")}`,
+      email: `audit-cliente-${index}@test.it`,
+      indirizzo: `Via Audit ${index}`,
+      cap: "20100",
+      citta: "Milano",
+      provincia: "MI",
+    });
+}
+
 beforeEach(() => {
   resetUsersStoreForTests();
   resetAnagraficheStoreForTests();
@@ -125,6 +143,59 @@ describe("AC-2 - Audit UPDATE su Fornitore", () => {
     expect(row?.dettagli?.new?.ragioneSociale).toBe("Ricambi Nord Srl");
     expect(row?.dettagli?.old?.telefono).toBe("0211122233");
     expect(row?.dettagli?.new?.telefono).toBe("0299988877");
+  });
+});
+
+describe("Story 2.3 - Audit UPDATE su Cliente", () => {
+  it("returns 200 on PUT /api/clienti/5", async () => {
+    for (let i = 1; i <= 4; i += 1) {
+      const created = await createAziendaCliente(i);
+      expect(created.status).toBe(201);
+    }
+
+    const response = await request(app)
+      .put("/api/clienti/5")
+      .set("Authorization", adminAuthHeader())
+      .send({ telefono: "3339876543", email: "newemail@test.it" });
+
+    expect(response.status).toBe(200);
+    expect(response.body?.data?.id).toBe(5);
+    expect(response.body?.data?.telefono).toBe("3339876543");
+    expect(response.body?.data?.email).toBe("newemail@test.it");
+  });
+
+  it("writes UPDATE audit with old/new details for cliente id=5", async () => {
+    for (let i = 1; i <= 4; i += 1) {
+      const created = await createAziendaCliente(i);
+      expect(created.status).toBe(201);
+    }
+
+    await request(app)
+      .put("/api/clienti/5")
+      .set("Authorization", adminAuthHeader())
+      .send({ telefono: "3339876543", email: "newemail@test.it" });
+
+    const auditResponse = await request(app)
+      .get("/api/audit-log?modelName=Cliente&page=1")
+      .set("Authorization", adminAuthHeader());
+
+    const rows = (auditResponse.body.results ?? []) as Array<{
+      action?: string;
+      objectId?: string;
+      dettagli?: {
+        old?: { telefono?: string | null; email?: string | null };
+        new?: { telefono?: string | null; email?: string | null };
+      };
+    }>;
+    const row = rows.find((item) => item.objectId === "5" && item.action === "UPDATE");
+
+    expect(auditResponse.status).toBe(200);
+    expect(row?.action).toBe("UPDATE");
+    expect(row?.objectId).toBe("5");
+    expect(row?.dettagli?.old?.telefono).toBe("3339000004");
+    expect(row?.dettagli?.old?.email).toBe("audit-cliente-4@test.it");
+    expect(row?.dettagli?.new?.telefono).toBe("3339876543");
+    expect(row?.dettagli?.new?.email).toBe("newemail@test.it");
   });
 });
 

@@ -1,0 +1,47 @@
+story_id: '2.3'
+story_title: 'Dettaglio e Modifica Cliente'
+acceptance_criteria:
+  - "Given cliente id=5 exists When I GET /api/clienti/5 Then I receive 200 with full cliente data including all fields"
+  - "Given cliente id=999 does not exist When I GET /api/clienti/999 Then I receive 404 with error CLIENTE_NOT_FOUND"
+  - "Given cliente id=5 exists When I PUT /api/clienti/5 with { telefono: \"3339876543\", email: \"newemail@test.it\" } Then cliente is updated and I receive 200 with updated data"
+  - "Given cliente id=5 has 3 riparazioni When I GET /api/clienti/5/riparazioni Then I receive array of 3 riparazioni with fields { id, codiceRiparazione, stato, dataRicezione, tipoDispositivo }"
+target_modules:
+  - path: 'packages/backend/src/routes/clienti.ts'
+    reason: 'Route cliente esistenti; da estendere con detail/update/riparazioni.'
+  - path: 'packages/backend/src/services/anagrafiche-service.ts'
+    reason: 'Service anagrafiche con create/list cliente; da estendere con get/update/riparazioni.'
+  - path: 'packages/backend/prisma/schema.prisma'
+    reason: 'Model Cliente presente; possibili relazioni mancanti per riparazioni.'
+  - path: 'anagrafiche/models.py'
+    reason: 'Secondo stack con model Cliente; verificare coerenza cross-stack.'
+patterns_to_follow:
+  - file: 'packages/backend/src/routes/fornitori.ts:17'
+    pattern: 'Mappatura errori dominio->HTTP (NOT_FOUND -> 404 con codice errore dominio).'
+  - file: 'packages/backend/src/services/anagrafiche-service.ts:730'
+    pattern: 'Validazione input query con parsing tipizzato.'
+  - file: 'packages/backend/src/services/anagrafiche-service.ts:1251'
+    pattern: 'Costruzione query paginata con where/skip/take/orderBy + count/findMany.'
+dependencies:
+  - from: 'packages/backend/src/index.ts:7'
+    to: 'packages/backend/src/routes/clienti.ts'
+    type: 'import router'
+  - from: 'packages/backend/src/index.ts:21'
+    to: 'packages/backend/src/routes/clienti.ts'
+    type: 'router mount'
+  - from: 'packages/backend/src/routes/clienti.ts:4'
+    to: 'packages/backend/src/services/anagrafiche-service.ts'
+    type: 'service import'
+  - from: 'packages/backend/src/routes/fornitori.ts:4'
+    to: 'packages/backend/src/services/anagrafiche-service.ts'
+    type: 'service import'
+  - from: 'packages/backend/src/routes/audit-log.ts:4'
+    to: 'packages/backend/src/services/anagrafiche-service.ts'
+    type: 'service import'
+risks:
+  - 'Endpoint GET/PUT /api/clienti/:id non presenti in clienti.ts: rischio regressioni routing e contract API.'
+  - 'AC su /api/clienti/:id/riparazioni richiede modelli/relazioni che potrebbero non essere presenti nello schema attuale.'
+  - 'Presenza di stack Node + Django: rischio divergenza se la modifica viene applicata in uno solo.'
+existing_tests:
+  - 'packages/backend/src/__tests__/clienti-create-atdd.spec.ts'
+  - 'packages/backend/src/__tests__/clienti-list-search-atdd.spec.ts'
+  - 'packages/backend/src/__tests__/audit-trail.spec.ts'
