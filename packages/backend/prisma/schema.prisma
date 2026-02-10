@@ -85,4 +85,5 @@ model AuditLog {
   modelName String
   objectId  String
   timestamp DateTime @default(now())
+  dettagli  Json?
 }

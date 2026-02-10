@@ -1,0 +1,65 @@
+story_id: "1.7"
+story_title: "Audit Trail Automatico"
+acceptance_criteria:
+  - id: "AC-1"
+    text: "Given I create a Cliente via POST /api/clienti Then an AuditLog entry is created with { userId: myId, action: \"CREATE\", modelName: \"Cliente\", objectId: newId, timestamp }"
+  - id: "AC-2"
+    text: "Given I update Fornitore id=5 Then an AuditLog is created with action \"UPDATE\" and dettagli containing { old: {...}, new: {...} }"
+  - id: "AC-3"
+    text: "Given I am Admin When I GET /api/audit-log?modelName=Cliente&page=1 Then I receive only AuditLog entries for model \"Cliente\", paginated"
+  - id: "AC-4"
+    text: "Given I am Tecnico When I GET /api/audit-log Then I receive 403"
+
+ac_to_codebase_findings:
+  AC-1:
+    - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/views.py:137 (ClienteCreateView handles Cliente creation via Django CreateView)"
+    - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/models.py:37 (Cliente model definition)"
+    - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/authsystem/models.py:87 (post_save signal currently creates AuditLog entries)"
+  AC-2:
+    - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/views.py:217 (FornitoreUpdateView handles Fornitore updates via Django UpdateView)"
+    - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/models.py:50 (Fornitore model definition)"
+    - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/authsystem/models.py:87 (post_save signal currently creates AuditLog entries)"
+  AC-3:
+    - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/authsystem/models.py:49 (AuditLog model exists, but no API/list view found)"
+    - "no existing files found for /api/audit-log endpoint (views/urls/serializers)"
+  AC-4:
+    - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/views.py:84 (PermissionMixin enforces Admin-only write, Tecnico read-only pattern)"
+    - "no existing files found for /api/audit-log permission/403 handling"
+
+target_modules:
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/authsystem/models.py"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/models.py"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/views.py"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/urls.py"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/gestionale_riparazioni/urls.py"
+
+patterns_to_follow:
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/authsystem/models.py:87 - Use Django signals (post_save/post_delete) to create AuditLog entries and guard with should_audit_changes()"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/views.py:62 - BaseCreateUpdateMixin.form_valid returns JSON for AJAX requests and wraps DB work in transaction.atomic"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/views.py:84 - PermissionMixin role gating (Admin full access, Tecnico read-only)"
+
+dependencies:
+  - module: "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/authsystem/models.py"
+    used_by:
+      - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/views.py"
+      - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/tests.py"
+  - module: "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/models.py"
+    used_by:
+      - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/views.py"
+      - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/tests.py"
+  - module: "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/views.py"
+    used_by:
+      - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/urls.py"
+  - module: "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/urls.py"
+    used_by:
+      - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/gestionale_riparazioni/urls.py"
+
+risks:
+  - "AuditLog signal currently stores user=None and lacks old/new details; meeting AC-1/AC-2 requires capturing request user and previous state reliably."
+  - "No existing /api/audit-log endpoint or permission checks found; adding new views/urls may require API vs template decisions and consistency with current Django app structure."
+  - "Global post_save signal runs for all models; adding richer payloads could introduce performance overhead or sensitive data logging if not filtered."
+  - "Existing CRUD flows are HTML + AJAX responses, not REST; aligning with /api/* requirements may need new API layer or refactor."
+
+existing_tests:
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/anagrafiche/tests.py"
+  - "no existing files found for audit-log API endpoint tests"

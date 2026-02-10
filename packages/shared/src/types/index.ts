@@ -104,8 +104,21 @@ export interface Fornitore {
 export interface AuditLog {
   id: number;
   userId: number | null;
-  action: string;
+  action: "CREATE" | "UPDATE" | "DELETE";
   modelName: string;
   objectId: string;
   timestamp: string;
+  dettagli?: {
+    old: Record<string, unknown>;
+    new: Record<string, unknown>;
+  };
+}
+
+export interface AuditLogListResponse {
+  results: AuditLog[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+  };
 }
