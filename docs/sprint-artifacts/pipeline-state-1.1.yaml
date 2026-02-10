@@ -1,5 +1,5 @@
 story_id: '1.1'
-status: 'in_progress'
+status: 'completed'
 currentStep: 10
 completedSteps:
   - 1
@@ -11,7 +11,8 @@ completedSteps:
   - 7
   - 8
   - 9
-lastTaskCompleted: 'commit'
-worktree: true
+  - 10
+lastTaskCompleted: 'merge-completed'
+worktree: false
 started_at: '2026-02-10T01:39:18.8624120+01:00'
-timestamp: '2026-02-10T07:22:53.8667270+01:00'
+timestamp: '2026-02-10T07:25:26.2079399+01:00'
