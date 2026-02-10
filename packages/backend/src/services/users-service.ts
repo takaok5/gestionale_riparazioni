@@ -1,6 +1,10 @@
 ﻿import bcrypt from "bcryptjs";
 import { PrismaClient, type Prisma } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import {
+  resetAuthUsersForTests,
+  setAuthUserPasswordHashForTests,
+} from "./auth-service.js";
 
 type Role = "ADMIN" | "TECNICO" | "COMMERCIALE";
 
@@ -18,6 +22,12 @@ interface UpdateUserRoleInput {
 
 interface DeactivateUserInput {
   userId: unknown;
+}
+
+interface ChangeOwnPasswordInput {
+  userId: unknown;
+  currentPassword: unknown;
+  newPassword: unknown;
 }
 
 interface CreatedUserPayload {
@@ -55,6 +65,11 @@ type LastAdminDeactivationFailure = {
   code: "LAST_ADMIN_DEACTIVATION_FORBIDDEN";
 };
 
+type CurrentPasswordIncorrectFailure = {
+  ok: false;
+  code: "CURRENT_PASSWORD_INCORRECT";
+};
+
 type CreateUserResult =
   | { ok: true; data: CreatedUserPayload }
   | { ok: false; code: "USERNAME_EXISTS" }
@@ -71,6 +86,12 @@ type DeactivateUserResult =
   | ValidationFailure
   | UserNotFoundFailure
   | LastAdminDeactivationFailure;
+
+type ChangeOwnPasswordResult =
+  | { ok: true }
+  | ValidationFailure
+  | UserNotFoundFailure
+  | CurrentPasswordIncorrectFailure;
 
 const ALLOWED_ROLES: Role[] = ["ADMIN", "TECNICO", "COMMERCIALE"];
 const TEST_BCRYPT_ROUNDS = 4;
@@ -269,6 +290,59 @@ function parseDeactivateUserInput(
     ok: true,
     data: {
       userId,
+    },
+  };
+}
+
+function matchesPasswordPolicy(value: string): boolean {
+  return value.length >= 8 && /[A-Z]/.test(value) && /\d/.test(value);
+}
+
+function parseChangeOwnPasswordInput(
+  input: ChangeOwnPasswordInput,
+):
+  | {
+      ok: true;
+      data: {
+        userId: number;
+        currentPassword: string;
+        newPassword: string;
+      };
+    }
+  | ValidationFailure {
+  const userId = asPositiveInteger(input.userId);
+  if (userId === null) {
+    return buildValidationFailure({
+      field: "userId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const currentPassword = asNonEmptyString(input.currentPassword);
+  if (!currentPassword) {
+    return buildValidationFailure({
+      field: "currentPassword",
+      rule: "required",
+    });
+  }
+
+  const newPassword = asNonEmptyString(input.newPassword);
+  if (!newPassword || !matchesPasswordPolicy(newPassword)) {
+    return buildValidationFailure({
+      field: "newPassword",
+      rule: "password_policy",
+      min: 8,
+      requiresUppercase: true,
+      requiresNumber: true,
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      userId,
+      currentPassword,
+      newPassword,
     },
   };
 }
@@ -513,6 +587,79 @@ async function deactivateUserInDatabase(payload: {
   });
 }
 
+async function changeOwnPasswordInTestStore(payload: {
+  userId: number;
+  currentPassword: string;
+  newPassword: string;
+}): Promise<ChangeOwnPasswordResult> {
+  const targetIndex = testUsers.findIndex((user) => user.id === payload.userId);
+  if (targetIndex === -1) {
+    return { ok: false, code: "USER_NOT_FOUND" };
+  }
+
+  const targetUser = testUsers[targetIndex];
+  const isCurrentPasswordValid = await bcrypt.compare(
+    payload.currentPassword,
+    targetUser.passwordHash,
+  );
+  if (!isCurrentPasswordValid) {
+    return { ok: false, code: "CURRENT_PASSWORD_INCORRECT" };
+  }
+
+  const nextPasswordHash = await bcrypt.hash(
+    payload.newPassword,
+    TEST_BCRYPT_ROUNDS,
+  );
+  testUsers[targetIndex] = {
+    ...targetUser,
+    passwordHash: nextPasswordHash,
+  };
+  setAuthUserPasswordHashForTests(payload.userId, nextPasswordHash);
+
+  return { ok: true };
+}
+
+async function changeOwnPasswordInDatabase(payload: {
+  userId: number;
+  currentPassword: string;
+  newPassword: string;
+}): Promise<ChangeOwnPasswordResult> {
+  return getPrismaClient().$transaction(async (tx: Prisma.TransactionClient) => {
+    const existing = await tx.user.findUnique({
+      where: { id: payload.userId },
+      select: {
+        id: true,
+        password: true,
+      },
+    });
+
+    if (!existing) {
+      return { ok: false, code: "USER_NOT_FOUND" } as const;
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(
+      payload.currentPassword,
+      existing.password,
+    );
+    if (!isCurrentPasswordValid) {
+      return { ok: false, code: "CURRENT_PASSWORD_INCORRECT" } as const;
+    }
+
+    const nextPasswordHash = await bcrypt.hash(
+      payload.newPassword,
+      PROD_BCRYPT_ROUNDS,
+    );
+    await tx.user.update({
+      where: { id: payload.userId },
+      data: {
+        password: nextPasswordHash,
+      },
+    });
+
+    return { ok: true } as const;
+  });
+}
+
 async function createUser(input: CreateUserInput): Promise<CreateUserResult> {
   const parsed = parseCreateUserInput(input);
   if (!parsed.ok) {
@@ -556,10 +703,26 @@ async function deactivateUser(
   return deactivateUserInDatabase(parsed.data);
 }
 
+async function changeOwnPassword(
+  input: ChangeOwnPasswordInput,
+): Promise<ChangeOwnPasswordResult> {
+  const parsed = parseChangeOwnPasswordInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return changeOwnPasswordInTestStore(parsed.data);
+  }
+
+  return changeOwnPasswordInDatabase(parsed.data);
+}
+
 function resetUsersStoreForTests(): void {
   ensureTestEnvironment();
   testUsers = cloneTestUsers(baseTestUsers);
   nextTestUserId = computeNextUserId(testUsers);
+  resetAuthUsersForTests();
 }
 
 function setUserRoleForTests(userId: number, role: Role): void {
@@ -598,6 +761,7 @@ export {
   createUser,
   updateUserRole,
   deactivateUser,
+  changeOwnPassword,
   resetUsersStoreForTests,
   setUserRoleForTests,
   setUserIsActiveForTests,
@@ -607,4 +771,6 @@ export {
   type UpdateUserRoleResult,
   type DeactivateUserInput,
   type DeactivateUserResult,
+  type ChangeOwnPasswordInput,
+  type ChangeOwnPasswordResult,
 };

@@ -50,7 +50,7 @@ type RefreshSessionResult =
 
 let prismaClient: PrismaClient | null = null;
 
-const seededUsers: AuthUserRecord[] = [
+const baseSeededUsers: AuthUserRecord[] = [
   {
     id: 1,
     username: "mario.rossi",
@@ -68,6 +68,7 @@ const seededUsers: AuthUserRecord[] = [
     passwordHash: bcrypt.hashSync("Password1", 12),
   },
 ];
+let seededUsers = cloneAuthUsers(baseSeededUsers);
 
 interface DbUserRecord {
   id: number;
@@ -159,6 +160,37 @@ function buildAuthSuccessPayload(user: AuthUserRecord): AuthSuccessPayload {
   };
 }
 
+function cloneAuthUsers(source: AuthUserRecord[]): AuthUserRecord[] {
+  return source.map((user) => ({ ...user }));
+}
+
+function ensureTestEnvironment(): void {
+  if (process.env.NODE_ENV !== "test") {
+    throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
+  }
+}
+
+function resetAuthUsersForTests(): void {
+  ensureTestEnvironment();
+  seededUsers = cloneAuthUsers(baseSeededUsers);
+}
+
+function setAuthUserPasswordHashForTests(
+  userId: number,
+  passwordHash: string,
+): void {
+  ensureTestEnvironment();
+  const targetIndex = seededUsers.findIndex((record) => record.id === userId);
+  if (targetIndex === -1) {
+    return;
+  }
+
+  seededUsers[targetIndex] = {
+    ...seededUsers[targetIndex],
+    passwordHash,
+  };
+}
+
 async function loginWithCredentials(
   credentials: LoginCredentials,
 ): Promise<LoginResult> {
@@ -229,6 +261,8 @@ async function refreshSession(refreshToken: string): Promise<RefreshSessionResul
 export {
   loginWithCredentials,
   refreshSession,
+  resetAuthUsersForTests,
+  setAuthUserPasswordHashForTests,
   type AuthFailureCode,
   type LoginFailureCode,
   type LoginResult,

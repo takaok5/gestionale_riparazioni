@@ -52,6 +52,15 @@ export interface ManagedUserResponse {
 export type UpdateUserRoleResponse = ManagedUserResponse;
 export type DeactivateUserResponse = ManagedUserResponse;
 
+export interface ChangeOwnPasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangeOwnPasswordResponse {
+  success: true;
+}
+
 export interface Cliente {
   id: number;
   codiceCliente: string;

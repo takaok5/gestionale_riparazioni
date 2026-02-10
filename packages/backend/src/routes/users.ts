@@ -2,9 +2,12 @@
 import { buildErrorResponse } from "../lib/errors.js";
 import { authenticate, authorize } from "../middleware/auth.js";
 import {
+  changeOwnPassword,
   createUser,
   deactivateUser,
   updateUserRole,
+  type ChangeOwnPasswordInput,
+  type ChangeOwnPasswordResult,
   type CreateUserInput,
   type CreateUserResult,
   type DeactivateUserInput,
@@ -19,6 +22,7 @@ type CreateUserFailure = Exclude<CreateUserResult, { ok: true; data: unknown }>;
 type UserMutationFailure =
   | Exclude<UpdateUserRoleResult, { ok: true; data: unknown }>
   | Exclude<DeactivateUserResult, { ok: true; data: unknown }>;
+type ChangeOwnPasswordFailure = Exclude<ChangeOwnPasswordResult, { ok: true }>;
 
 function respondCreateUserFailure(res: Response, result: CreateUserFailure): void {
   if (result.code === "USERNAME_EXISTS") {
@@ -80,6 +84,46 @@ function respondUserMutationFailure(
     );
 }
 
+function respondChangeOwnPasswordFailure(
+  res: Response,
+  result: ChangeOwnPasswordFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse("VALIDATION_ERROR", "Payload non valido", result.details),
+      );
+    return;
+  }
+
+  if (result.code === "USER_NOT_FOUND") {
+    res.status(404).json(buildErrorResponse("USER_NOT_FOUND", "Utente non trovato"));
+    return;
+  }
+
+  if (result.code === "CURRENT_PASSWORD_INCORRECT") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "CURRENT_PASSWORD_INCORRECT",
+          "Current password is incorrect",
+        ),
+      );
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "USERS_SERVICE_UNAVAILABLE",
+        "Servizio utenti non disponibile",
+      ),
+    );
+}
+
 usersRouter.post("/", authenticate, authorize("ADMIN"), async (req, res) => {
   const payload: CreateUserInput = {
     username: req.body?.username,
@@ -116,6 +160,36 @@ usersRouter.post("/", authenticate, authorize("ADMIN"), async (req, res) => {
   }
 
   res.status(201).json(result.data);
+});
+
+usersRouter.put("/me/password", authenticate, async (req, res) => {
+  const payload: ChangeOwnPasswordInput = {
+    userId: req.user?.userId,
+    currentPassword: req.body?.currentPassword,
+    newPassword: req.body?.newPassword,
+  };
+
+  let result: ChangeOwnPasswordResult;
+  try {
+    result = await changeOwnPassword(payload);
+  } catch {
+    res
+      .status(500)
+      .json(
+        buildErrorResponse(
+          "USERS_SERVICE_UNAVAILABLE",
+          "Servizio utenti non disponibile",
+        ),
+      );
+    return;
+  }
+
+  if (!result.ok) {
+    respondChangeOwnPasswordFailure(res, result);
+    return;
+  }
+
+  res.status(200).json({ success: true });
 });
 
 usersRouter.put("/:id", authenticate, authorize("ADMIN"), async (req, res) => {
