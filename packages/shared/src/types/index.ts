@@ -35,6 +35,8 @@ export interface LoginResponse {
   user: Pick<User, "id" | "username" | "email" | "role">;
 }
 
+export type RefreshResponse = LoginResponse;
+
 export interface Cliente {
   id: number;
   codiceCliente: string;

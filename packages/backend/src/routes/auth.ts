@@ -1,9 +1,11 @@
-import { Router } from "express";
+import { Router, type Response } from "express";
 import { buildErrorResponse } from "../lib/errors.js";
 import {
   loginWithCredentials,
-  type LoginFailureCode,
+  refreshSession,
+  type AuthFailureCode,
   type LoginResult,
+  type RefreshSessionResult,
 } from "../services/auth-service.js";
 import {
   clearFailedAttempts,
@@ -22,12 +24,32 @@ function resolveClientIp(forwardedFor: string | undefined, fallbackIp: string): 
   return clientIp.trim() || fallbackIp;
 }
 
-function getErrorMessage(code: LoginFailureCode): string {
+function getErrorMessage(code: AuthFailureCode): string {
   if (code === "ACCOUNT_DISABLED") {
     return "Account disabilitato";
   }
 
+  if (code === "INVALID_REFRESH_TOKEN") {
+    return "Refresh token non valido";
+  }
+
   return "Credenziali non valide";
+}
+
+function respondAuthServiceError(res: Response, error: unknown): void {
+  if (error instanceof Error && error.message === "JWT_SECRET_MISSING") {
+    res.status(500).json(
+      buildErrorResponse("JWT_SECRET_MISSING", "JWT_SECRET non configurato"),
+    );
+    return;
+  }
+
+  res.status(500).json(
+    buildErrorResponse(
+      "AUTH_SERVICE_UNAVAILABLE",
+      "Servizio autenticazione non disponibile",
+    ),
+  );
 }
 
 authRouter.post("/login", async (req, res) => {
@@ -53,25 +75,38 @@ authRouter.post("/login", async (req, res) => {
   let result: LoginResult;
   try {
     result = await loginWithCredentials(credentials);
-  } catch {
-    res.status(500).json(
-      buildErrorResponse(
-        "AUTH_SERVICE_UNAVAILABLE",
-        "Servizio autenticazione non disponibile",
-      ),
-    );
+  } catch (error) {
+    respondAuthServiceError(res, error);
     return;
   }
 
   if (!result.ok) {
     registerFailedAttempt(ip);
-    res
-      .status(401)
-      .json(buildErrorResponse(result.code, getErrorMessage(result.code)));
+    res.status(401).json(buildErrorResponse(result.code, getErrorMessage(result.code)));
     return;
   }
 
   clearFailedAttempts(ip);
+  res.status(200).json(result.data);
+});
+
+authRouter.post("/refresh", async (req, res) => {
+  const refreshToken =
+    typeof req.body?.refreshToken === "string" ? req.body.refreshToken : "";
+
+  let result: RefreshSessionResult;
+  try {
+    result = await refreshSession(refreshToken);
+  } catch (error) {
+    respondAuthServiceError(res, error);
+    return;
+  }
+
+  if (!result.ok) {
+    res.status(401).json(buildErrorResponse(result.code, getErrorMessage(result.code)));
+    return;
+  }
+
   res.status(200).json(result.data);
 });
 

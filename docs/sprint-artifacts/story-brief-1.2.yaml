@@ -1,0 +1,85 @@
+story_id: "1.2"
+story_title: "Rinnovo Sessione con Refresh Token"
+
+acceptance_criteria:
+  - id: "AC-1"
+    given: "ho ottenuto un refreshToken valido dal login di Story 1.1"
+    when: "invio POST /api/auth/refresh con body { \"refreshToken\": \"<token>\" }"
+    then: "ricevo 200 con nuovo accessToken (JWT 15min), nuovo refreshToken (7d) e user { id, username, email, role }"
+    related_files:
+      - "packages/backend/src/routes/auth.ts"
+      - "packages/backend/src/services/auth-service.ts"
+      - "packages/backend/src/middleware/auth.ts"
+      - "packages/backend/src/lib/errors.ts"
+      - "packages/shared/src/types/index.ts"
+  - id: "AC-2"
+    given: "il body non contiene refreshToken oppure il token non e' un JWT valido"
+    when: "invio POST /api/auth/refresh"
+    then: "ricevo 401 con error code INVALID_REFRESH_TOKEN e nessun token in risposta"
+    related_files:
+      - "packages/backend/src/routes/auth.ts"
+      - "packages/backend/src/middleware/auth.ts"
+      - "packages/backend/src/lib/errors.ts"
+  - id: "AC-3"
+    given: "il refreshToken e' scaduto oppure la firma e' invalida"
+    when: "invio POST /api/auth/refresh"
+    then: "ricevo 401 con error code INVALID_REFRESH_TOKEN e nessun token in risposta"
+    related_files:
+      - "packages/backend/src/routes/auth.ts"
+      - "packages/backend/src/services/auth-service.ts"
+      - "packages/backend/src/middleware/auth.ts"
+      - "packages/backend/src/lib/errors.ts"
+  - id: "AC-4"
+    given: "il refreshToken appartiene a un utente che risulta isActive=false"
+    when: "invio POST /api/auth/refresh"
+    then: "ricevo 401 con error code ACCOUNT_DISABLED e nessun token in risposta"
+    related_files:
+      - "packages/backend/src/routes/auth.ts"
+      - "packages/backend/src/services/auth-service.ts"
+      - "packages/backend/src/middleware/auth.ts"
+      - "packages/backend/src/lib/errors.ts"
+
+target_modules:
+  - "packages/backend/src/routes/auth.ts"
+  - "packages/backend/src/services/auth-service.ts"
+  - "packages/backend/src/middleware/auth.ts"
+  - "packages/backend/src/lib/errors.ts"
+  - "packages/shared/src/types/index.ts"
+
+patterns_to_follow:
+  - file: "packages/backend/src/routes/auth.ts:33"
+    pattern: "Route handler with early returns and status+json using buildErrorResponse"
+  - file: "packages/backend/src/lib/errors.ts:11"
+    pattern: "buildErrorResponse payload shape { error: { code, message, details? } }"
+  - file: "packages/backend/src/middleware/auth.ts:22"
+    pattern: "JWT verification via resolveJwtSecret + jwt.verify with 401 on invalid token"
+  - file: "packages/backend/src/middleware/auth.ts:77"
+    pattern: "issueAuthTokens signs accessToken 15m and refreshToken 7d"
+  - file: "packages/backend/src/services/auth-service.ts:34"
+    pattern: "Service result union { ok: true; data } | { ok: false; code }"
+
+dependencies:
+  - module: "packages/backend/src/routes/auth.ts"
+    used_by:
+      - "packages/backend/src/index.ts"
+  - module: "packages/backend/src/services/auth-service.ts"
+    used_by:
+      - "packages/backend/src/routes/auth.ts"
+  - module: "packages/backend/src/middleware/auth.ts"
+    used_by:
+      - "packages/backend/src/services/auth-service.ts"
+  - module: "packages/backend/src/lib/errors.ts"
+    used_by:
+      - "packages/backend/src/routes/auth.ts"
+  - module: "packages/shared/src/types/index.ts"
+    used_by: []
+    note: "No imports found in current repo"
+
+existing_tests:
+  - "packages/backend/src/__tests__/auth-login.spec.ts"
+
+risks:
+  - "No refresh endpoint exists in packages/backend/src/routes/auth.ts; adding one must preserve login flow error mapping and avoid leaking tokens on failure."
+  - "Refresh token validation will need jwt.verify with resolveJwtSecret; missing JWT_SECRET should be handled consistently with existing middleware behavior."
+  - "No refresh-specific tests exist; AC-2/3/4 require new test coverage for invalid, expired, and disabled-account cases."
+  - "Refresh tokens are stateless JWTs issued in packages/backend/src/middleware/auth.ts; without storage/rotation, stolen tokens remain valid until expiry."

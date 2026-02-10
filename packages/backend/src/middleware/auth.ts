@@ -4,12 +4,22 @@ import jwt from "jsonwebtoken";
 interface JwtPayload {
   userId: number;
   role: string;
+  tokenType: "access" | "refresh";
+}
+
+interface TokenSubject {
+  userId: number;
+  role: string;
 }
 
 interface AuthTokens {
   accessToken: string;
   refreshToken: string;
 }
+
+type VerifyTokenResult =
+  | { ok: true; payload: JwtPayload }
+  | { ok: false; code: "INVALID_TOKEN" | "JWT_SECRET_MISSING" };
 
 declare global {
   namespace Express {
@@ -27,14 +37,9 @@ function authenticate(req: Request, res: Response, next: NextFunction): void {
   }
 
   const token = authHeader.slice(7);
-
-  try {
-    const secret = resolveJwtSecret();
-    const payload = jwt.verify(token, secret) as JwtPayload;
-    req.user = payload;
-    next();
-  } catch (error) {
-    if (error instanceof Error && error.message === "JWT_SECRET_MISSING") {
+  const verification = verifyAuthToken(token);
+  if (!verification.ok) {
+    if (verification.code === "JWT_SECRET_MISSING") {
       res.status(500).json({
         error: {
           code: "JWT_SECRET_MISSING",
@@ -45,6 +50,55 @@ function authenticate(req: Request, res: Response, next: NextFunction): void {
     }
 
     res.status(401).json({ error: "Token non valido" });
+    return;
+  }
+
+  req.user = verification.payload;
+  if (req.user.tokenType !== "access") {
+    res.status(401).json({ error: "Token non valido" });
+    return;
+  }
+
+  next();
+}
+
+function isJwtPayload(value: unknown): value is JwtPayload {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const payload = value as { userId?: unknown; role?: unknown };
+  return (
+    typeof payload.userId === "number" &&
+    Number.isInteger(payload.userId) &&
+    typeof payload.role === "string" &&
+    payload.role.length > 0 &&
+    (payload as { tokenType?: unknown }).tokenType !== undefined &&
+    ((payload as { tokenType?: unknown }).tokenType === "access" ||
+      (payload as { tokenType?: unknown }).tokenType === "refresh")
+  );
+}
+
+function verifyAuthToken(token: string): VerifyTokenResult {
+  const trimmed = token.trim();
+  if (!trimmed) {
+    return { ok: false, code: "INVALID_TOKEN" };
+  }
+
+  try {
+    const secret = resolveJwtSecret();
+    const decoded = jwt.verify(trimmed, secret);
+    if (!isJwtPayload(decoded)) {
+      return { ok: false, code: "INVALID_TOKEN" };
+    }
+
+    return { ok: true, payload: decoded };
+  } catch (error) {
+    if (error instanceof Error && error.message === "JWT_SECRET_MISSING") {
+      return { ok: false, code: "JWT_SECRET_MISSING" };
+    }
+
+    return { ok: false, code: "INVALID_TOKEN" };
   }
 }
 
@@ -74,13 +128,23 @@ function resolveJwtSecret(): string {
   throw new Error("JWT_SECRET_MISSING");
 }
 
-function issueAuthTokens(payload: JwtPayload): AuthTokens {
+function issueAuthTokens(payload: TokenSubject): AuthTokens {
   const secret = resolveJwtSecret();
+  const accessPayload: JwtPayload = { ...payload, tokenType: "access" };
+  const refreshPayload: JwtPayload = { ...payload, tokenType: "refresh" };
 
   return {
-    accessToken: jwt.sign(payload, secret, { expiresIn: "15m" }),
-    refreshToken: jwt.sign(payload, secret, { expiresIn: "7d" }),
+    accessToken: jwt.sign(accessPayload, secret, { expiresIn: "15m" }),
+    refreshToken: jwt.sign(refreshPayload, secret, { expiresIn: "7d" }),
   };
 }
 
-export { authenticate, authorize, issueAuthTokens, type JwtPayload, type AuthTokens };
+export {
+  authenticate,
+  authorize,
+  issueAuthTokens,
+  verifyAuthToken,
+  type JwtPayload,
+  type AuthTokens,
+  type VerifyTokenResult,
+};
