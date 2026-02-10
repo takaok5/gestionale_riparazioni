@@ -97,6 +97,8 @@
 
 ### Sidebar Navigation (per ruolo)
 
+_Scope: area gestionale interna (staff). Portale cliente e vetrina pubblica hanno navigazioni dedicate._
+
 **Tutti i ruoli:**
 - Dashboard (Home icon)
 - --- separator ---
@@ -126,17 +128,37 @@
 
 ## Pages / Views
 
-### Public
+_Route partition consigliata: vetrina su dominio root, area staff su `/app/*`, area cliente su `/portale/*`._
+
+### Public (Marketing + Access)
 
 | Route | Page | FR | PRD Flow |
 |-------|------|-----|----------|
-| /login | Login | FR-001 | Flow 3 |
+| / | HomePage | FR-016 | Flow 8 |
+| /servizi | ServiziPage | FR-016 | Flow 8 |
+| /contatti | ContattiPage | FR-016 | Flow 8 |
+| /faq | FaqPage | FR-016 | Flow 8 |
+| /richiedi-preventivo | RichiestaPreventivoPage | FR-016 | Flow 8 |
+| /login | Login (Staff) | FR-001 | Flow 3 |
+| /portale/login | PortalLogin | FR-015 | Flow 7 |
+
+### Portal Cliente (Authenticated)
+
+| Route | Page | FR | PRD Flow |
+|-------|------|-----|----------|
+| /portale | PortalDashboard | FR-015 | Flow 7 |
+| /portale/ordini | PortalOrdiniList | FR-015 | Flow 7 |
+| /portale/ordini/:id | PortalOrdineDetail | FR-015 | Flow 7 |
+| /portale/riparazioni | PortalRiparazioniList | FR-015 | Flow 7 |
+| /portale/riparazioni/:id | PortalRiparazioneDetail | FR-015 | Flow 7 |
+| /portale/preventivi/:id | PortalPreventivoDetail | FR-015 | Flow 7 |
+| /portale/fatture | PortalFattureList | FR-015 | Flow 7 |
 
 ### Authenticated (All Roles)
 
 | Route | Page | FR | PRD Flow |
 |-------|------|-----|----------|
-| / | Dashboard | FR-009 | Flow 5 |
+| /app | Dashboard | FR-009 | Flow 5 |
 | /riparazioni | RiparazioniList | FR-004 | Flow 1 |
 | /riparazioni/nuova | RiparazioneForm | FR-004 | Flow 1 step 3-6 |
 | /riparazioni/:id | RiparazioneDetail | FR-004 | Flow 1 step 8-20 |
@@ -175,8 +197,30 @@
 #### Login
 - Form: username/email + password + submit
 - Error display sotto i campi
-- Redirect a / dopo successo
+- Redirect a /app dopo successo
 - Link "Primo accesso? Contatta l'admin"
+
+#### HomePage / ServiziPage (pubbliche)
+- Hero con CTA principali: "Richiedi preventivo" e "Accedi al portale cliente"
+- Sezione servizi con card (titolo, descrizione breve, prezzo indicativo, tempo medio)
+- Blocchi trust (recensioni, FAQ, contatti, orari)
+- Footer con privacy/cookie policy e contatti rapidi
+
+#### RichiestaPreventivoPage (pubblica)
+- Form guidato: dati contatto, dispositivo, problema, preferenza appuntamento
+- Checkbox consenso privacy obbligatoria + anti-spam
+- Submit -> stato "Richiesta inviata" con ticketId e conferma email
+
+#### PortalDashboard
+- Card riepilogo: ordini aperti, riparazioni attive, preventivi in attesa, fatture aperte
+- Widget "Ultimi aggiornamenti" con timeline eventi cliente
+- CTA rapide: apri ordine, apri riparazione, scarica ultimo documento
+
+#### PortalRiparazioneDetail / PortalOrdineDetail
+- Vista read-only per dati tecnici/commerciali non modificabili dal cliente
+- Timeline stato con timestamp, note sintetiche e prossima azione prevista
+- Download documenti collegati (preventivo, fattura, ricevuta)
+- Azione contestuale su preventivo: approva/rifiuta (se in attesa)
 
 #### Dashboard
 - **Admin:** 4 card (riparazioni per stato, carico tecnici, alert magazzino, ultimi pagamenti) + lista riparazioni recenti
@@ -272,12 +316,22 @@ App
         Redirect: /login se non autenticato, / se ruolo non autorizzato
 ```
 
+### Component Additions (FR-015, FR-016)
+- `PublicLayout`: header pubblico, nav servizi, footer legale
+- `ServiceCard`: card servizio con CTA e metadati (prezzo/tempo)
+- `LeadForm`: form richiesta preventivo/appuntamento con validazioni anti-spam
+- `PortalAuthProvider`: stato autenticazione cliente separato da auth staff
+- `PortalLayout`: shell area cliente con menu ridotto (dashboard, ordini, riparazioni, fatture)
+- `PortalProtectedRoute`: guard per sessione cliente
+
 ## State Management
 
 ### Auth State (React Context)
 - **AuthContext:** accessToken, refreshToken, user (id, username, email, role), isAuthenticated
 - **AuthProvider:** gestisce login, logout, refresh automatico, persistenza token (localStorage)
 - **useAuth hook:** accesso a context + helper (login, logout, hasRole)
+- **PortalAuthContext:** portalAccessToken, portalRefreshToken, cliente, isPortalAuthenticated
+- **PortalAuthProvider:** login/logout cliente, refresh token dedicato, storage separato da staff
 
 ### Server State (Custom Hooks)
 - **useApi:** fetch wrapper con JWT auto-inject, refresh on 401, error handling
@@ -364,6 +418,22 @@ Da RiparazioneDetail → Tab Preventivi → "Nuovo Preventivo":
   - Ordinamento per colonna (click header DataTable)
   - Paginazione (prev/next + numeri pagina)
 - Filtri persistono in URL search params (condivisibili, back/forward funziona)
+
+### 5. Richiesta Preventivo Pubblica
+Da `/richiedi-preventivo`:
+1. Utente compila dati contatto + dispositivo + problema
+2. Conferma consenso privacy
+3. Submit -> POST `/api/public/richieste`
+4. Successo -> pagina conferma con codice ticket
+5. Errore validazione -> messaggi inline per campo
+
+### 6. Approvazione Preventivo da Portale Cliente
+Da `PortalPreventivoDetail`:
+1. Cliente apre preventivo in stato IN_ATTESA_APPROVAZIONE
+2. Visualizza voci + totale + PDF allegato
+3. Click "Approva" o "Rifiuta" -> ConfirmDialog
+4. Conferma -> POST `/api/portal/preventivi/:id/risposta`
+5. Successo -> aggiornamento badge stato + toast + refresh dashboard
 
 ---
 

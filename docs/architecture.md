@@ -7,7 +7,7 @@
 - **Runtime:** Node.js (ES2022 target, ESNext modules)
 
 ### Framework
-- **Backend:** Express ^4.21.0 — maturo, vasto ecosistema middleware (FR-001–FR-014)
+- **Backend:** Express ^4.21.0 — maturo, vasto ecosistema middleware (FR-001–FR-016)
 - **Frontend:** React ^18.3.0 + Vite ^6.1.0 — performance (NFR-001: FCP <1.5s), component-based SPA
 
 ### Database
@@ -21,6 +21,7 @@
 
 ### Auth & Security
 - **JWT:** jsonwebtoken ^9.0.2 — access token (15min) + refresh token (7d) (FR-001, NFR-002)
+- **Portal JWT:** token separati per area cliente (FR-015) con cookie/storage indipendente dallo staff
 - **Password:** bcryptjs ^2.4.3 — salt rounds 12 (NFR-002)
 - **Headers:** Helmet ^8.0.0 — CSP, HSTS, X-Frame-Options
 - **CORS:** cors ^2.8.5 — origin limitato a frontend
@@ -161,6 +162,14 @@ gestionale_riparazioni/
 └── package.json                        # Root workspace
 ```
 
+### Extension Modules (FR-015, FR-016)
+
+- **Backend route groups added:** `/api/portal/auth/*`, `/api/portal/*`, `/api/public/*`
+- **Backend services added:** `portal-auth.service.ts`, `portal.service.ts`, `public.service.ts`
+- **Frontend route groups added:** `/portale/*` (area cliente), `/(public)` (vetrina servizi)
+- **Frontend contexts added:** `PortalAuthContext` separato da `AuthContext` staff
+- **Security boundary:** token/sessione staff e token/sessione cliente separati
+
 ## Data Models
 
 ### Enum Definitions
@@ -179,6 +188,9 @@ TipoMovimento: CARICO | SCARICO | RESO | RETTIFICA
 StatoOrdine: BOZZA | EMESSO | CONFERMATO | SPEDITO | RICEVUTO | ANNULLATO
 TipoNotifica: EMAIL | SMS
 StatoNotifica: INVIATA | FALLITA
+StatoPortaleCliente: INVITATO | ATTIVO | BLOCCATO
+StatoOrdineCliente: IN_ATTESA | IN_LAVORAZIONE | PRONTO | CONSEGNATO | ANNULLATO
+TipoRichiestaPubblica: PREVENTIVO | APPUNTAMENTO | INFO
 ```
 
 ### Entity: User (FR-001)
@@ -476,6 +488,77 @@ StatoNotifica: INVIATA | FALLITA
 **Constraints:** Append-only. Retention 2 anni.
 **Indexes:** (modelName, objectId) composite, timestamp
 
+### Entity: ClientePortalAccount (FR-015)
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| id | Int | PK, autoincrement | Identificativo |
+| clienteId | Int | FK → Cliente, unique, not null | Cliente associato |
+| emailLogin | String | unique, not null | Email di accesso portale |
+| passwordHash | String | not null | Password hash bcrypt |
+| stato | StatoPortaleCliente | not null, default INVITATO | Stato account |
+| ultimoLoginAt | DateTime | nullable | Ultimo accesso riuscito |
+| resetTokenHash | String | nullable | Token reset password hashato |
+| createdAt | DateTime | not null, auto | Creazione |
+| updatedAt | DateTime | not null, auto | Aggiornamento |
+
+**Relations:** belongsTo Cliente
+**Indexes:** emailLogin (unique), clienteId (unique), stato
+
+### Entity: OrdineCliente (FR-015)
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| id | Int | PK, autoincrement | Identificativo |
+| codiceOrdine | String | unique, not null | Formato ORD-YYYYMMDD-NNNN |
+| clienteId | Int | FK → Cliente, not null | Cliente proprietario |
+| riparazioneId | Int | FK → Riparazione, nullable | Riparazione collegata (se presente) |
+| totale | Decimal(10,2) | not null | Totale ordine |
+| stato | StatoOrdineCliente | not null, default IN_ATTESA | Stato tracking |
+| noteCliente | String | nullable | Note lato portale |
+| createdAt | DateTime | not null, auto | Creazione |
+| updatedAt | DateTime | not null, auto | Aggiornamento |
+
+**Relations:** belongsTo Cliente, belongsTo Riparazione (optional), hasMany Fattura (logical)
+**Indexes:** codiceOrdine (unique), clienteId, stato, createdAt
+
+### Entity: ServizioVetrina (FR-016)
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| id | Int | PK, autoincrement | Identificativo |
+| slug | String | unique, not null | URL-friendly key |
+| titolo | String | not null | Nome servizio |
+| descrizioneBreve | String | not null | Riassunto card |
+| descrizioneCompleta | String | not null | Contenuto pagina servizio |
+| prezzoDa | Decimal(10,2) | nullable | Prezzo indicativo "a partire da" |
+| durataMediaOre | Int | nullable | SLA indicativo |
+| attivo | Boolean | not null, default true | Visibilità pubblica |
+| ordineVisualizzazione | Int | not null, default 0 | Sort ordine |
+| updatedAt | DateTime | not null, auto | Ultimo update |
+
+**Indexes:** slug (unique), (attivo, ordineVisualizzazione) composite
+
+### Entity: RichiestaPubblica (FR-016)
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| id | Int | PK, autoincrement | Identificativo |
+| tipo | TipoRichiestaPubblica | not null | PREVENTIVO / APPUNTAMENTO / INFO |
+| nome | String | not null | Nome contatto |
+| email | String | not null | Email contatto |
+| telefono | String | nullable | Telefono contatto |
+| dispositivo | String | nullable | Dispositivo coinvolto |
+| problema | String | not null | Descrizione richiesta |
+| consensoPrivacy | Boolean | not null | Consenso registrato |
+| ipHash | String | nullable | Fingerprint anti-spam |
+| stato | String | not null, default NUOVA | Pipeline lead |
+| assegnatoA | Int | FK → User, nullable | Commerciale assegnato |
+| createdAt | DateTime | not null, auto | Creazione |
+
+**Relations:** belongsTo User (assegnatoA, optional)
+**Indexes:** stato, createdAt, email
+
 ## API Specification
 
 ### Auth (FR-001)
@@ -691,6 +774,74 @@ StatoNotifica: INVIATA | FALLITA
 - **Query:** `?page=1&limit=50&userId=&modelName=&action=&dataFrom=&dataTo=`
 - **FR Reference:** FR-014
 
+### Portale Cliente (FR-015)
+
+#### `POST /api/portal/auth/login`
+- **Description:** Login cliente su area riservata
+- **Auth:** Public
+- **Request Body:** `{ "email": "string", "password": "string" }`
+- **Response 200:** `{ "data": { "accessToken": "string", "refreshToken": "string", "cliente": { "id", "nome", "email" } } }`
+- **Error Codes:** 401 Invalid credentials, 423 Account locked
+- **FR Reference:** FR-015
+
+#### `POST /api/portal/auth/refresh` | `POST /api/portal/auth/logout`
+- **Auth:** Public (`refresh`) / Bearer(PORTAL_CLIENTE) (`logout`)
+- **FR Reference:** FR-015
+
+#### `GET /api/portal/me`
+- **Auth:** Bearer(PORTAL_CLIENTE)
+- **Response 200:** `{ "data": { "cliente": { ... }, "stats": { "ordiniAperti": 2, "riparazioniAttive": 1, "preventiviInAttesa": 1 } } }`
+- **FR Reference:** FR-015
+
+#### `GET /api/portal/ordini` | `GET /api/portal/ordini/:id`
+- **Auth:** Bearer(PORTAL_CLIENTE)
+- **Query:** `?stato=&page=&limit=`
+- **Response 200:** solo ordini associati al cliente autenticato
+- **FR Reference:** FR-015
+
+#### `GET /api/portal/riparazioni` | `GET /api/portal/riparazioni/:id`
+- **Auth:** Bearer(PORTAL_CLIENTE)
+- **Query:** `?stato=&page=&limit=`
+- **Response 200:** include timeline stati e documenti disponibili
+- **FR Reference:** FR-015
+
+#### `POST /api/portal/preventivi/:id/risposta`
+- **Auth:** Bearer(PORTAL_CLIENTE)
+- **Request Body:** `{ "approvato": true|false }`
+- **Response 200:** aggiorna preventivo + stato riparazione correlata
+- **FR Reference:** FR-015
+
+#### `GET /api/portal/documenti/:tipo/:id/pdf`
+- **Auth:** Bearer(PORTAL_CLIENTE)
+- **Response:** application/pdf
+- **FR Reference:** FR-015
+
+### Vetrina Pubblica e Lead (FR-016)
+
+#### `GET /api/public/services`
+- **Description:** Lista servizi pubblici visibili in vetrina
+- **Auth:** Public
+- **Query:** `?categoria=&search=`
+- **Response 200:** `{ "data": [{ "slug", "titolo", "descrizioneBreve", "prezzoDa", "durataMediaOre" }] }`
+- **FR Reference:** FR-016
+
+#### `GET /api/public/pages/:slug` | `GET /api/public/faq`
+- **Auth:** Public
+- **FR Reference:** FR-016
+
+#### `POST /api/public/richieste`
+- **Description:** Inserimento richiesta preventivo/appuntamento da sito pubblico
+- **Auth:** Public
+- **Request Body:** `{ "tipo", "nome", "email", "telefono", "dispositivo", "problema", "consensoPrivacy", "captchaToken" }`
+- **Response 201:** `{ "data": { "ticketId": "LEAD-20260210-0001", "stato": "NUOVA" } }`
+- **Error Codes:** 400 Validation, 429 Too many requests
+- **FR Reference:** FR-016
+
+#### `GET /api/richieste` | `PATCH /api/richieste/:id/stato` | `PATCH /api/richieste/:id/assegna`
+- **Auth:** Bearer(ADMIN, COMMERCIALE)
+- **Description:** Backoffice lead management da richieste pubbliche
+- **FR Reference:** FR-016
+
 ### Health
 
 #### `GET /api/health`
@@ -769,8 +920,14 @@ App
     └── ProtectedRoute (guard ruolo)
 ```
 
+### Component Additions (FR-015, FR-016)
+- **Public area components:** `PublicLayout`, `HomePage`, `ServiziPage`, `ContattiPage`, `RichiestaPreventivoForm`
+- **Portal cliente components:** `PortalAuthProvider`, `PortalLayout`, `PortalDashboard`, `PortalOrdiniList`, `PortalRiparazioniList`, `PortalPreventivoDecisionDialog`
+- **Route guards:** `ProtectedRoute` (staff) separato da `PortalProtectedRoute` (cliente)
+
 ### State Management
 - **Auth state:** React Context (AuthProvider) — JWT tokens + user info
+- **Portal auth state:** Context dedicato (PortalAuthProvider) — token cliente + profilo cliente
 - **Server state:** Custom hooks (useApi) con fetch wrapper — loading/error/data
 - **UI state:** useState locale per form, dialog, filtri
 - **Pattern:** No Redux (overkill). Context per auth, hooks per API.
@@ -785,7 +942,7 @@ App
 | Integration (backend) | Vitest + Supertest | API endpoints, middleware, DB | ≥ 80% |
 | Unit (frontend) | Vitest | Hooks, utils, pure components | ≥ 60% |
 | Integration (frontend) | Vitest + Testing Library | Pages, forms, interactions | ≥ 60% |
-| E2E | Playwright | Login, crea riparazione, preventivo, fattura | Critical paths |
+| E2E | Playwright | Login staff, login cliente portale, crea riparazione, approvazione preventivo cliente, richiesta pubblica | Critical paths |
 
 ### Naming Convention
 - Test files: `{name}.test.ts` co-located with tested file
@@ -848,6 +1005,8 @@ App
 | FR-012 | services/pdf.service.ts, routes/riparazioni.ts (etichetta, ricevuta) | Trigger da UI riparazioni | Puppeteer / pdfkit |
 | FR-013 | services/stripe.service.ts, routes/pagamenti.ts, webhooks/stripe | Trigger da UI fatture | Stripe Checkout |
 | FR-014 | middleware/audit.ts, routes/audit-log.ts | pages/audit-log/ | Schema AuditLog esistente |
+| FR-015 | routes/portal-auth.ts, routes/portal-clienti.ts, services/portal-auth.service.ts, services/portal.service.ts | pages/portale/, contexts/PortalAuthContext.tsx | Auth cliente separata da staff |
+| FR-016 | routes/public.ts, routes/richieste.ts, services/public.service.ts | pages/public/, components/public/ | SEO + lead capture + anti-spam |
 
 ---
 

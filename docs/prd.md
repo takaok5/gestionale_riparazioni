@@ -204,6 +204,36 @@ Il sistema è progettato per uso interno da parte di un team composto da 3 ruoli
   - Retention policy: 2 anni
 - **Notes:** Schema Prisma `AuditLog` già definito.
 
+### FR-015: Portale Cliente (Ordini e Riparazioni)
+- **Priority:** Must Have
+- **Description:** Area riservata cliente per consultare lo stato di ordini e riparazioni, scaricare documenti e rispondere ai preventivi senza passare da operatore interno.
+- **User Story:** As a Cliente, I want to access a personal portal with my orders and repairs, so that I can monitor progress autonomously.
+- **Sub-features:**
+  - Accesso portale cliente con credenziali dedicate (email + password) o link sicuro di primo accesso
+  - Dashboard cliente con riepilogo: ordini aperti, riparazioni in corso, preventivi in attesa, fatture da pagare
+  - Lista ordini cliente con stato, data, importo e dettaglio documenti collegati
+  - Lista riparazioni cliente con timeline stati e dettaglio dispositivo
+  - Download PDF (preventivo, fattura, ricevuta) dal portale
+  - Azioni self-service: approvazione/rifiuto preventivo, accesso link pagamento
+  - Storico completo consultabile solo per dati del cliente autenticato
+- **Vincoli:** Separazione completa tra area interna e area cliente; il cliente vede solo i propri record; nessun accesso a moduli amministrativi.
+- **Notes:** Preferibile token/sessione separati dall'auth staff per ridurre superficie d'attacco.
+
+### FR-016: Vetrina Pubblica Servizi e Richieste
+- **Priority:** Must Have
+- **Description:** Sito pubblico (no login) per presentare servizi, tempi medi, contatti e raccogliere richieste preventivo/appuntamento da nuovi clienti.
+- **User Story:** As a visitatore, I want to view available services and request a quote online, so that I can contact the repair center quickly.
+- **Sub-features:**
+  - Pagine pubbliche: home, servizi, chi siamo, contatti, FAQ
+  - Sezione servizi con categorie, prezzi indicativi "a partire da", tempi medi
+  - Form richiesta preventivo/appuntamento con dati cliente, dispositivo e problema
+  - Consenso privacy e anti-spam (rate limiting + captcha/honeypot)
+  - Creazione automatica lead/richiesta nel gestionale per lavorazione commerciale
+  - CTA verso login portale cliente per utenti gia registrati
+  - Contenuti ottimizzati SEO (meta tag, heading, sitemap, dati strutturati base)
+- **Vincoli:** Nessuna informazione sensibile in area pubblica; moderazione contenuti e policy cookie/privacy obbligatorie.
+- **Notes:** Contenuti gestibili via configurazione o mini-CMS in fase successiva.
+
 ## Non-Functional Requirements
 
 ### NFR-001: Performance
@@ -405,6 +435,35 @@ Il sistema è progettato per uso interno da parte di un team composto da 3 ruoli
 
 **Error cases:** P.IVA duplicata → errore. Giacenza insufficiente → blocco + suggerimento ordine.
 
+### Flow 7: Portale Cliente (Consultazione Ordini e Riparazioni)
+
+```
+1. Cliente: Apre /portale/login e inserisce email/password
+2. Sistema: Valida credenziali portale e mostra dashboard cliente
+3. Cliente: Visualizza riepilogo ordini, riparazioni, preventivi in attesa, fatture aperte
+4. Cliente: Apre dettaglio riparazione e consulta timeline stati + documenti PDF
+5. Cliente: Apre dettaglio ordine e consulta stato, importi, storico aggiornamenti
+6. Cliente: Se preventivo in attesa, approva o rifiuta dal portale
+7. Sistema: Aggiorna stato pratica e notifica team interno
+8. Cliente: Se fattura aperta, usa link pagamento online
+```
+
+**Error cases:** Credenziali errate -> blocco temporaneo. Tentativo accesso a record altrui -> 403. Sessione scaduta -> redirect login.
+
+### Flow 8: Vetrina Pubblica e Richiesta Preventivo
+
+```
+1. Visitatore: Apre sito pubblico
+2. Sistema: Mostra servizi, tempi medi, recensioni e CTA contatto
+3. Visitatore: Compila form richiesta preventivo/appuntamento
+4. Sistema: Valida campi + consenso privacy + anti-spam
+5. Sistema: Crea lead/richiesta nel gestionale e invia conferma email
+6. Commerciale: Prende in carico lead e contatta il cliente
+7. Commerciale: Converte lead in Cliente + Riparazione/Ordine se confermato
+```
+
+**Error cases:** Spam/bot -> richiesta bloccata. Dati incompleti -> errori inline. Email non valida -> richiesta non inviata.
+
 ## Epic List
 
 ### Epic 1: Autenticazione e Gestione Utenti
@@ -442,6 +501,16 @@ Il sistema è progettato per uso interno da parte di un team composto da 3 ruoli
 - **FR covered:** FR-011, FR-012, FR-013
 - **Priority:** Low
 
+### Epic 8: Portale Cliente
+- **Description:** Area riservata clienti con autenticazione dedicata, dashboard personale, consultazione ordini/riparazioni e azioni self-service su preventivi/fatture
+- **FR covered:** FR-015
+- **Priority:** High
+
+### Epic 9: Vetrina Pubblica e Lead Capture
+- **Description:** Sito pubblico servizi con contenuti marketing e form richieste preventivo/appuntamento integrato nel gestionale
+- **FR covered:** FR-016
+- **Priority:** High
+
 ## Assumptions & Risks
 
 ### Assumptions
@@ -451,6 +520,8 @@ Il sistema è progettato per uso interno da parte di un team composto da 3 ruoli
 4. I clienti hanno un indirizzo email valido per ricevere preventivi e notifiche
 5. L'aliquota IVA standard è 22% (modificabile in configurazione)
 6. Il sistema sarà utilizzato da un singolo centro riparazioni (single-tenant)
+7. I clienti finali sono disponibili a usare un portale self-service via web/mobile
+8. Il team interno aggiorna periodicamente i contenuti della vetrina pubblica
 
 ### Risks
 1. **Complessità workflow riparazioni** - Il workflow a 10 stati con transizioni validate potrebbe risultare troppo rigido per casi reali. Mitigation: transizioni configurabili, override Admin, possibilità di aggiungere stati custom in futuro.
@@ -459,6 +530,9 @@ Il sistema è progettato per uso interno da parte di un team composto da 3 ruoli
 4. **Invio email in produzione** - SMTP richiede configurazione SPF/DKIM per evitare spam. Mitigation: usare servizio email transazionale (SendGrid, Mailgun).
 5. **Volume dati a lungo termine** - Query aggregate potrebbero rallentare con migliaia di riparazioni/anno. Mitigation: indici, query materializzate, archiviazione dati storici.
 6. **Migrazione dati Django** - Se esistono dati nel vecchio sistema, la migrazione potrebbe essere complessa. Mitigation: script dedicato, validazione post-migrazione.
+7. **Sicurezza portale cliente** - Possibile aumento tentativi di credential stuffing e accessi non autorizzati. Mitigation: MFA opzionale, rate limiting forte, monitoraggio anomalie, lockout progressivo.
+8. **Qualita contenuti vetrina** - Contenuti obsoleti possono ridurre conversioni e fiducia. Mitigation: owner editoriale interno, review mensile, analytics su pagine chiave.
+9. **Traffico bot sul form pubblico** - Aumento spam e lead non validi. Mitigation: captcha/honeypot, throttling IP, deduplica richieste.
 
 ---
 

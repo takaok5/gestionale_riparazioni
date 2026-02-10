@@ -9,5 +9,7 @@
 | 5 | Magazzino e Ordini | 7 | [epic-5-magazzino-ordini](epics/epic-5-magazzino-ordini.md) |
 | 6 | Dashboard e Reportistica | 7 | [epic-6-dashboard-reportistica](epics/epic-6-dashboard-reportistica.md) |
 | 7 | Notifiche e Integrazioni | 6 | [epic-7-notifiche-integrazioni](epics/epic-7-notifiche-integrazioni.md) |
+| 8 | Portale Cliente | 7 | [epic-8-portale-clienti](epics/epic-8-portale-clienti.md) |
+| 9 | Vetrina Pubblica e Lead Capture | 7 | [epic-9-vetrina-pubblica](epics/epic-9-vetrina-pubblica.md) |
 
 _Full epic details are sharded into `docs/epics/` for easier consumption by story-pipeline._
