@@ -1,6 +1,6 @@
 story_id: '2.5'
 status: 'in_progress'
-currentStep: 9
+currentStep: 10
 completedSteps:
   - 1
   - 2
@@ -10,7 +10,8 @@ completedSteps:
   - 6
   - 7
   - 8
-lastTaskCompleted: 'step-08-review'
+  - 9
+lastTaskCompleted: 'step-09-commit'
 worktree: false
 started_at: '2026-02-10T23:39:05+01:00'
-timestamp: '2026-02-11T00:01:56+01:00'
+timestamp: '2026-02-11T00:04:03+01:00'
