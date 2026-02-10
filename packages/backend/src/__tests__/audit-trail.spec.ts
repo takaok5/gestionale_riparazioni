@@ -40,6 +40,18 @@ const fornitoreUpdatePayload = {
   telefono: "0299988877",
 };
 
+const fornitoreCreatePayload = {
+  nome: "Ricambi Sud",
+  categoria: "RICAMBI",
+  partitaIva: "22222222222",
+  telefono: "0812345678",
+  email: "ricambi.sud@test.it",
+  indirizzo: "Via Napoli 20",
+  cap: "80100",
+  citta: "Napoli",
+  provincia: "NA",
+};
+
 async function createAziendaCliente(index: number) {
   return request(app)
     .post("/api/clienti")
@@ -143,6 +155,43 @@ describe("AC-2 - Audit UPDATE su Fornitore", () => {
     expect(row?.dettagli?.new?.ragioneSociale).toBe("Ricambi Nord Srl");
     expect(row?.dettagli?.old?.telefono).toBe("0211122233");
     expect(row?.dettagli?.new?.telefono).toBe("0299988877");
+  });
+});
+
+describe("AC-2bis - Audit CREATE su Fornitore", () => {
+  it("returns 201 on POST /api/fornitori", async () => {
+    const response = await request(app)
+      .post("/api/fornitori")
+      .set("Authorization", adminAuthHeader())
+      .send(fornitoreCreatePayload);
+
+    expect(response.status).toBe(201);
+    expect(response.body.id).toEqual(expect.any(Number));
+    expect(response.body.codiceFornitore).toMatch(/^FOR-/);
+  });
+
+  it("writes CREATE audit entry with modelName Fornitore", async () => {
+    const createResponse = await request(app)
+      .post("/api/fornitori")
+      .set("Authorization", adminAuthHeader())
+      .send(fornitoreCreatePayload);
+
+    const auditResponse = await request(app)
+      .get("/api/audit-log?modelName=Fornitore&page=1")
+      .set("Authorization", adminAuthHeader());
+
+    const createdId = createResponse.body.id as number;
+    const rows = (auditResponse.body.results ?? []) as Array<{
+      action?: string;
+      modelName?: string;
+      objectId?: string;
+    }>;
+    const row = rows.find((item) => item.objectId === String(createdId));
+
+    expect(auditResponse.status).toBe(200);
+    expect(row?.action).toBe("CREATE");
+    expect(row?.modelName).toBe("Fornitore");
+    expect(row?.objectId).toBe(String(createdId));
   });
 });
 

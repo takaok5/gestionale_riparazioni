@@ -1,0 +1,276 @@
+
+> gestionale-riparazioni@0.1.0 test
+> npm run test --workspaces --if-present --run
+
+npm warn Unknown cli config "--run". This will stop working in the next major version of npm.
+
+> @gestionale/backend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend[39m
+
+ [32m✓[39m src/__tests__/users-update-deactivate.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 100[2mms[22m[39m
+ [31m❯[39m src/__tests__/fornitori-create-atdd.spec.ts [2m([22m[2m10 tests[22m[2m | [22m[31m10 failed[39m[2m)[22m[32m 113[2mms[22m[39m
+[31m   [31m×[31m AC-1 - Admin crea fornitore con codice FOR-000001[2m > [22mreturns 201 with id and codiceFornitore FOR-000001 for first supplier[39m[32m 46[2mms[22m[39m
+[31m     → expected 404 to be 201 // Object.is equality[39m
+[31m   [31m×[31m AC-1 - Admin crea fornitore con codice FOR-000001[2m > [22mpersists categoria RICAMBI and partitaIva in response body[39m[32m 9[2mms[22m[39m
+[31m     → expected 404 to be 201 // Object.is equality[39m
+[31m   [31m×[31m AC-2 - Categoria SERVIZI accettata[2m > [22mreturns 201 when categoria is SERVIZI[39m[32m 6[2mms[22m[39m
+[31m     → expected 404 to be 201 // Object.is equality[39m
+[31m   [31m×[31m AC-2 - Categoria SERVIZI accettata[2m > [22mreturns a codiceFornitore with FOR- prefix for SERVIZI supplier[39m[32m 7[2mms[22m[39m
+[31m     → expected 404 to be 201 // Object.is equality[39m
+[31m   [31m×[31m AC-3 - partitaIva invalida[2m > [22mreturns 400 VALIDATION_ERROR with field partitaIva[39m[32m 5[2mms[22m[39m
+[31m     → expected 404 to be 400 // Object.is equality[39m
+[31m   [31m×[31m AC-3 - partitaIva invalida[2m > [22mreturns explicit P.IVA validation message[39m[32m 4[2mms[22m[39m
+[31m     → expected 404 to be 400 // Object.is equality[39m
+[31m   [31m×[31m AC-4 - partitaIva duplicata[2m > [22mreturns 409 PARTITA_IVA_EXISTS for duplicate partitaIva[39m[32m 9[2mms[22m[39m
+[31m     → expected 404 to be 409 // Object.is equality[39m
+[31m   [31m×[31m AC-4 - partitaIva duplicata[2m > [22mdoes not return a created id for duplicate request[39m[32m 14[2mms[22m[39m
+[31m     → expected 404 to be 201 // Object.is equality[39m
+[31m   [31m×[31m AC-5 - Tecnico non autorizzato[2m > [22mreturns 403 FORBIDDEN for TECNICO on POST /api/fornitori[39m[32m 6[2mms[22m[39m
+[31m     → expected 404 to be 403 // Object.is equality[39m
+[31m   [31m×[31m AC-5 - Tecnico non autorizzato[2m > [22mdoes not expose created supplier fields on forbidden response[39m[32m 4[2mms[22m[39m
+[31m     → expected 404 to be 403 // Object.is equality[39m
+ [32m✓[39m src/__tests__/clienti-create-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 118[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-create.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 130[2mms[22m[39m
+ [32m✓[39m src/__tests__/audit-trail.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 164[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-detail-update-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 207[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-list-search-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 277[2mms[22m[39m
+ [32m✓[39m src/__tests__/auth-refresh.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 714[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Rinnovo con refresh token valido[2m > [22mreturns 200 with new accessToken and refreshToken [33m 410[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-change-password.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 726[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Current password errata[2m > [22mkeeps old password valid when change fails [33m 630[2mms[22m[39m
+ [32m✓[39m src/__tests__/auth-login.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1260[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login Utente valido[2m > [22mreturns 200 with accessToken and refreshToken when credentials are valid [33m 404[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 10 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/fornitori-create-atdd.spec.ts[2m > [22mAC-1 - Admin crea fornitore con codice FOR-000001[2m > [22mreturns 201 with id and codiceFornitore FOR-000001 for first supplier
+[31m[1mAssertionError[22m: expected 404 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/fornitori-create-atdd.spec.ts:[2m49:29[22m[39m
+    [90m 47| [39m      [33m.[39m[34msend[39m([34mbuildFornitorePayload[39m())[33m;[39m
+    [90m 48| [39m
+    [90m 49| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m 50| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mid)[33m.[39m[34mtoEqual[39m(expect[33m.[39m[34many[39m([33mNumber[39m))[33m;[39m
+    [90m 51| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mcodiceFornitore)[33m.[39m[34mtoBe[39m([32m"FOR-000001"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/fornitori-create-atdd.spec.ts[2m > [22mAC-1 - Admin crea fornitore con codice FOR-000001[2m > [22mpersists categoria RICAMBI and partitaIva in response body
+[31m[1mAssertionError[22m: expected 404 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/fornitori-create-atdd.spec.ts:[2m60:29[22m[39m
+    [90m 58| [39m      [33m.[39m[34msend[39m([34mbuildFornitorePayload[39m())[33m;[39m
+    [90m 59| [39m
+    [90m 60| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m 61| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mcategoria)[33m.[39m[34mtoBe[39m([32m"RICAMBI"[39m)[33m;[39m
+    [90m 62| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mpartitaIva)[33m.[39m[34mtoBe[39m([32m"12345678901"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/fornitori-create-atdd.spec.ts[2m > [22mAC-2 - Categoria SERVIZI accettata[2m > [22mreturns 201 when categoria is SERVIZI
+[31m[1mAssertionError[22m: expected 404 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/fornitori-create-atdd.spec.ts:[2m85:29[22m[39m
+    [90m 83| [39m      )[33m;[39m
+    [90m 84| [39m
+    [90m 85| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m 86| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mcategoria)[33m.[39m[34mtoBe[39m([32m"SERVIZI"[39m)[33m;[39m
+    [90m 87| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/fornitori-create-atdd.spec.ts[2m > [22mAC-2 - Categoria SERVIZI accettata[2m > [22mreturns a codiceFornitore with FOR- prefix for SERVIZI supplier
+[31m[1mAssertionError[22m: expected 404 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/fornitori-create-atdd.spec.ts:[2m107:29[22m[39m
+    [90m105| [39m      )[33m;[39m
+    [90m106| [39m
+    [90m107| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m108| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mcodiceFornitore)[33m.[39m[34mtoMatch[39m([36m/^FOR-/[39m)[33m;[39m
+    [90m109| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/fornitori-create-atdd.spec.ts[2m > [22mAC-3 - partitaIva invalida[2m > [22mreturns 400 VALIDATION_ERROR with field partitaIva
+[31m[1mAssertionError[22m: expected 404 to be 400 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 400[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/fornitori-create-atdd.spec.ts:[2m119:29[22m[39m
+    [90m117| [39m      [33m.[39m[34msend[39m([34mbuildFornitorePayload[39m({ partitaIva[33m:[39m [32m"123"[39m }))[33m;[39m
+    [90m118| [39m
+    [90m119| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m400[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m120| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mcode)[33m.[39m[34mtoBe[39m([32m"VALIDATION_ERROR"[39m)[33m;[39m
+    [90m121| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mdetails[33m.[39mfield)[33m.[39m[34mtoBe[39m([32m"partitaIva"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/fornitori-create-atdd.spec.ts[2m > [22mAC-3 - partitaIva invalida[2m > [22mreturns explicit P.IVA validation message
+[31m[1mAssertionError[22m: expected 404 to be 400 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 400[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/fornitori-create-atdd.spec.ts:[2m130:29[22m[39m
+    [90m128| [39m      [33m.[39m[34msend[39m([34mbuildFornitorePayload[39m({ partitaIva[33m:[39m [32m"123"[39m }))[33m;[39m
+    [90m129| [39m
+    [90m130| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m400[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m131| [39m    expect(response.body.error.message).toBe("P.IVA must be 11 digits"…
+    [90m132| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mid)[33m.[39m[34mtoBeUndefined[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/fornitori-create-atdd.spec.ts[2m > [22mAC-4 - partitaIva duplicata[2m > [22mreturns 409 PARTITA_IVA_EXISTS for duplicate partitaIva
+[31m[1mAssertionError[22m: expected 404 to be 409 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 409[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/fornitori-create-atdd.spec.ts:[2m148:38[22m[39m
+    [90m146| [39m      .send(buildFornitorePayload({ partitaIva: "11111111111", email: …
+    [90m147| [39m
+    [90m148| [39m    [34mexpect[39m(duplicateResponse[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m409[39m)[33m;[39m
+    [90m   | [39m                                     [31m^[39m
+    [90m149| [39m    expect(duplicateResponse.body.error.code).toBe("PARTITA_IVA_EXISTS…
+    [90m150| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/fornitori-create-atdd.spec.ts[2m > [22mAC-4 - partitaIva duplicata[2m > [22mdoes not return a created id for duplicate request
+[31m[1mAssertionError[22m: expected 404 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/fornitori-create-atdd.spec.ts:[2m163:34[22m[39m
+    [90m161| [39m      .send(buildFornitorePayload({ partitaIva: "11111111111", email: …
+    [90m162| [39m
+    [90m163| [39m    [34mexpect[39m(firstResponse[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                                 [31m^[39m
+    [90m164| [39m    [34mexpect[39m(secondResponse[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m409[39m)[33m;[39m
+    [90m165| [39m    [34mexpect[39m(secondResponse[33m.[39mbody[33m.[39mid)[33m.[39m[34mtoBeUndefined[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/fornitori-create-atdd.spec.ts[2m > [22mAC-5 - Tecnico non autorizzato[2m > [22mreturns 403 FORBIDDEN for TECNICO on POST /api/fornitori
+[31m[1mAssertionError[22m: expected 404 to be 403 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 403[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/fornitori-create-atdd.spec.ts:[2m176:29[22m[39m
+    [90m174| [39m      [33m.[39m[34msend[39m([34mbuildFornitorePayload[39m())[33m;[39m
+    [90m175| [39m
+    [90m176| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m403[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m177| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mcode)[33m.[39m[34mtoBe[39m([32m"FORBIDDEN"[39m)[33m;[39m
+    [90m178| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mmessage)[33m.[39m[34mtoBe[39m([32m"Accesso negato"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/fornitori-create-atdd.spec.ts[2m > [22mAC-5 - Tecnico non autorizzato[2m > [22mdoes not expose created supplier fields on forbidden response
+[31m[1mAssertionError[22m: expected 404 to be 403 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 403[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/fornitori-create-atdd.spec.ts:[2m187:29[22m[39m
+    [90m185| [39m      [33m.[39m[34msend[39m([34mbuildFornitorePayload[39m())[33m;[39m
+    [90m186| [39m
+    [90m187| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m403[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m188| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mid)[33m.[39m[34mtoBeUndefined[39m()[33m;[39m
+    [90m189| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mcodiceFornitore)[33m.[39m[34mtoBeUndefined[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/10]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m9 passed[39m[22m[90m (10)[39m
+[2m      Tests [22m [1m[31m10 failed[39m[22m[2m | [22m[1m[32m83 passed[39m[22m[90m (93)[39m
+[2m   Start at [22m 23:01:05
+[2m   Duration [22m 3.39s[2m (transform 708ms, setup 0ms, collect 15.09s, tests 3.81s, environment 2ms, prepare 2.71s)[22m
+
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error workspace @gestionale/backend@0.1.0
+npm error location C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c vitest run
+
+
+> @gestionale/frontend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/frontend[39m
+
+No test files found, exiting with code 0
+
+[2minclude: [22m[33msrc/**/*.test.ts[2m, [22msrc/**/*.spec.ts[39m
+[2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+
+
+> @gestionale/shared@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/shared[39m
+
+No test files found, exiting with code 0
+
+[2minclude: [22m[33msrc/**/*.test.ts[2m, [22msrc/**/*.spec.ts[39m
+[2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+

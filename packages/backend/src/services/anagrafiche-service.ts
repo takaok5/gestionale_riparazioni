@@ -18,6 +18,11 @@ type DuplicateEmailFailure = {
   code: "EMAIL_ALREADY_EXISTS";
 };
 
+type DuplicatePartitaIvaFailure = {
+  ok: false;
+  code: "PARTITA_IVA_EXISTS";
+};
+
 type NotFoundFailure = {
   ok: false;
   code: "NOT_FOUND";
@@ -29,6 +34,7 @@ type ServiceUnavailableFailure = {
 };
 
 type TipologiaCliente = "PRIVATO" | "AZIENDA";
+type CategoriaFornitore = "RICAMBI" | "SERVIZI" | "ALTRO";
 
 interface CreateClienteInput {
   actorUserId: unknown;
@@ -44,6 +50,19 @@ interface CreateClienteInput {
   email: unknown;
   partitaIva: unknown;
   codiceFiscale: unknown;
+}
+
+interface CreateFornitoreInput {
+  actorUserId: unknown;
+  nome: unknown;
+  categoria: unknown;
+  partitaIva: unknown;
+  telefono: unknown;
+  email: unknown;
+  indirizzo: unknown;
+  cap: unknown;
+  citta: unknown;
+  provincia: unknown;
 }
 
 interface UpdateFornitoreInput {
@@ -144,6 +163,14 @@ interface ClienteListPayload {
   };
 }
 
+interface FornitoreCreatePayload {
+  id: number;
+  codiceFornitore: string;
+  nome: string;
+  categoria: CategoriaFornitore;
+  partitaIva: string | null;
+}
+
 type CreateClienteResult =
   | {
       ok: true;
@@ -158,6 +185,12 @@ type CreateClienteResult =
     }
   | ValidationFailure
   | DuplicateEmailFailure
+  | ServiceUnavailableFailure;
+
+type CreateFornitoreResult =
+  | { ok: true; data: FornitoreCreatePayload }
+  | ValidationFailure
+  | DuplicatePartitaIvaFailure
   | ServiceUnavailableFailure;
 
 type UpdateFornitoreResult =
@@ -209,6 +242,19 @@ interface ParsedCreateClienteInput {
   email: string | null;
   partitaIva: string | null;
   codiceFiscale: string | null;
+}
+
+interface ParsedCreateFornitoreInput {
+  actorUserId: number;
+  nome: string;
+  categoria: CategoriaFornitore;
+  partitaIva: string | null;
+  telefono: string | null;
+  email: string | null;
+  indirizzo: string;
+  cap: string;
+  citta: string;
+  provincia: string;
 }
 
 interface ParsedUpdateFornitoreInput {
@@ -265,8 +311,17 @@ interface TestClienteRecord {
 
 interface TestFornitoreRecord {
   id: number;
+  codiceFornitore: string;
+  nome: string;
+  categoria: CategoriaFornitore;
+  partitaIva: string | null;
   ragioneSociale: string | null;
+  indirizzo: string;
+  citta: string;
+  cap: string;
+  provincia: string;
   telefono: string | null;
+  email: string | null;
 }
 
 interface TestRiparazioneRecord {
@@ -281,6 +336,7 @@ interface TestRiparazioneRecord {
 const TEST_PAGE_SIZE = 10;
 const MAX_LIST_LIMIT = 100;
 const MAX_CODICE_CLIENTE_GENERATION_ATTEMPTS = 3;
+const MAX_CODICE_FORNITORE_GENERATION_ATTEMPTS = 3;
 const VALID_PROVINCE_CODES = new Set([
   "AG", "AL", "AN", "AO", "AR", "AP", "AT", "AV", "BA", "BT", "BL", "BN", "BG", "BI",
   "BO", "BZ", "BS", "BR", "CA", "CL", "CB", "CI", "CE", "CT", "CZ", "CH", "CO", "CS",
@@ -314,8 +370,17 @@ const baseTestClienti: TestClienteRecord[] = [
 const baseTestFornitori: TestFornitoreRecord[] = [
   {
     id: 5,
+    codiceFornitore: "FOR-000000",
+    nome: "Ricambi Nord",
+    categoria: "RICAMBI",
+    partitaIva: "33333333333",
     ragioneSociale: "Ricambi Nord",
+    indirizzo: "Via Nord 5",
+    citta: "Milano",
+    cap: "20100",
+    provincia: "MI",
     telefono: "0211122233",
+    email: "ricambi.nord@test.local",
   },
 ];
 
@@ -382,6 +447,8 @@ let testAuditLogs = cloneAuditLogs(baseTestAuditLogs);
 
 let nextTestClienteId = computeNextId(testClienti.map((item) => item.id));
 let nextTestClienteCodeSequence = computeNextClienteCodeSequence(testClienti);
+let nextTestFornitoreId = computeNextId(testFornitori.map((item) => item.id));
+let nextTestFornitoreCodeSequence = computeNextFornitoreCodeSequence(testFornitori);
 let nextTestAuditLogId = computeNextId(testAuditLogs.map((item) => item.id));
 
 let prismaClient: PrismaClient | null = null;
@@ -435,9 +502,35 @@ function formatClienteCode(sequence: number): string {
   return `CLI-${String(sequence).padStart(6, "0")}`;
 }
 
+function extractFornitoreCodeSequence(codiceFornitore: string): number {
+  const match = codiceFornitore.match(/(\d+)$/);
+  if (!match) {
+    return 0;
+  }
+
+  const parsed = Number(match[1]);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    return 0;
+  }
+
+  return parsed;
+}
+
+function formatFornitoreCode(sequence: number): string {
+  return `FOR-${String(sequence).padStart(6, "0")}`;
+}
+
 function computeNextClienteCodeSequence(records: TestClienteRecord[]): number {
   const maxSequence = records.reduce(
     (acc, current) => Math.max(acc, extractClienteCodeSequence(current.codiceCliente)),
+    0,
+  );
+  return maxSequence + 1;
+}
+
+function computeNextFornitoreCodeSequence(records: TestFornitoreRecord[]): number {
+  const maxSequence = records.reduce(
+    (acc, current) => Math.max(acc, extractFornitoreCodeSequence(current.codiceFornitore)),
     0,
   );
   return maxSequence + 1;
@@ -488,6 +581,13 @@ function buildDuplicateEmailFailure(): DuplicateEmailFailure {
   return {
     ok: false,
     code: "EMAIL_ALREADY_EXISTS",
+  };
+}
+
+function buildDuplicatePartitaIvaFailure(): DuplicatePartitaIvaFailure {
+  return {
+    ok: false,
+    code: "PARTITA_IVA_EXISTS",
   };
 }
 
@@ -581,6 +681,23 @@ function normalizeTipologia(value: unknown): TipologiaCliente | null {
 
   const normalized = value.trim().toUpperCase();
   if (normalized === "PRIVATO" || normalized === "AZIENDA") {
+    return normalized;
+  }
+
+  return null;
+}
+
+function normalizeCategoriaFornitore(value: unknown): CategoriaFornitore | null {
+  if (value === undefined || value === null) {
+    return "ALTRO";
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "RICAMBI" || normalized === "SERVIZI" || normalized === "ALTRO") {
     return normalized;
   }
 
@@ -708,6 +825,103 @@ function parseCreateClienteInput(
       email: email ? email.toLowerCase() : null,
       partitaIva,
       codiceFiscale,
+    },
+  };
+}
+
+function parseCreateFornitoreInput(
+  input: CreateFornitoreInput,
+):
+  | { ok: true; data: ParsedCreateFornitoreInput }
+  | ValidationFailure {
+  const actorUserId = asPositiveInteger(input.actorUserId);
+  if (actorUserId === null) {
+    return buildValidationFailure({
+      field: "actorUserId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const nome = asRequiredString(input.nome);
+  if (!nome) {
+    return buildValidationFailure({
+      field: "nome",
+      rule: "required",
+    });
+  }
+
+  const categoria = normalizeCategoriaFornitore(input.categoria);
+  if (!categoria) {
+    return buildValidationFailure({
+      field: "categoria",
+      rule: "invalid_enum",
+    });
+  }
+
+  const indirizzo = asRequiredString(input.indirizzo);
+  if (!indirizzo) {
+    return buildValidationFailure({
+      field: "indirizzo",
+      rule: "required",
+    });
+  }
+
+  const citta = asRequiredString(input.citta);
+  if (!citta) {
+    return buildValidationFailure({
+      field: "citta",
+      rule: "required",
+    });
+  }
+
+  const cap = asRequiredString(input.cap);
+  if (!cap || !/^\d{5}$/.test(cap)) {
+    return buildValidationFailure({
+      field: "cap",
+      rule: "invalid_cap",
+    });
+  }
+
+  const provincia = asRequiredString(input.provincia);
+  if (!provincia || !isValidProvinciaCode(provincia.toUpperCase())) {
+    return buildValidationFailure({
+      field: "provincia",
+      rule: "invalid_provincia",
+    });
+  }
+
+  const email = asOptionalString(input.email);
+  if (email && !isValidEmail(email)) {
+    return buildValidationFailure({
+      field: "email",
+      rule: "invalid_email",
+    });
+  }
+
+  const partitaIva = asOptionalString(input.partitaIva);
+  if (partitaIva && !isValidPartitaIvaFormat(partitaIva)) {
+    return buildValidationFailure(
+      {
+        field: "partitaIva",
+        rule: "invalid_partita_iva_format",
+      },
+      "P.IVA must be 11 digits",
+    );
+  }
+
+  return {
+    ok: true,
+    data: {
+      actorUserId,
+      nome,
+      categoria,
+      partitaIva,
+      telefono: asOptionalString(input.telefono),
+      email: email ? email.toLowerCase() : null,
+      indirizzo,
+      cap,
+      citta,
+      provincia: provincia.toUpperCase(),
     },
   };
 }
@@ -1230,6 +1444,176 @@ async function createClienteInDatabase(
 
   return buildValidationFailure({
     field: "codiceCliente",
+    rule: "unique",
+  });
+}
+
+async function createFornitoreInTestStore(
+  payload: ParsedCreateFornitoreInput,
+): Promise<CreateFornitoreResult> {
+  if (
+    payload.partitaIva &&
+    testFornitori.some((item) => item.partitaIva === payload.partitaIva)
+  ) {
+    return buildDuplicatePartitaIvaFailure();
+  }
+
+  const codiceFornitore = formatFornitoreCode(nextTestFornitoreCodeSequence);
+  nextTestFornitoreCodeSequence += 1;
+
+  const created: TestFornitoreRecord = {
+    id: nextTestFornitoreId,
+    codiceFornitore,
+    nome: payload.nome,
+    categoria: payload.categoria,
+    partitaIva: payload.partitaIva,
+    ragioneSociale: payload.nome,
+    indirizzo: payload.indirizzo,
+    citta: payload.citta,
+    cap: payload.cap,
+    provincia: payload.provincia,
+    telefono: payload.telefono,
+    email: payload.email,
+  };
+
+  nextTestFornitoreId += 1;
+  testFornitori.push(created);
+
+  appendTestAuditLog({
+    userId: payload.actorUserId,
+    action: "CREATE",
+    modelName: "Fornitore",
+    objectId: String(created.id),
+  });
+
+  return {
+    ok: true,
+    data: {
+      id: created.id,
+      codiceFornitore: created.codiceFornitore,
+      nome: created.nome,
+      categoria: created.categoria,
+      partitaIva: created.partitaIva,
+    },
+  };
+}
+
+async function createFornitoreInDatabase(
+  payload: ParsedCreateFornitoreInput,
+): Promise<CreateFornitoreResult> {
+  if (payload.partitaIva) {
+    try {
+      const existing = await getPrismaClient().fornitore.findFirst({
+        where: { partitaIva: payload.partitaIva },
+        select: { id: true },
+      });
+      if (existing) {
+        return buildDuplicatePartitaIvaFailure();
+      }
+    } catch {
+      return {
+        ok: false,
+        code: "SERVICE_UNAVAILABLE",
+      };
+    }
+  }
+
+  for (let attempt = 1; attempt <= MAX_CODICE_FORNITORE_GENERATION_ATTEMPTS; attempt += 1) {
+    try {
+      const created = await getPrismaClient().$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          const latestFornitore = await tx.fornitore.findFirst({
+            orderBy: { id: "desc" },
+            select: { codiceFornitore: true },
+          });
+          const codiceFornitore = formatFornitoreCode(
+            extractFornitoreCodeSequence(latestFornitore?.codiceFornitore ?? "") + 1,
+          );
+
+          const fornitore = await tx.fornitore.create({
+            data: {
+              codiceFornitore,
+              nome: payload.nome,
+              categoria: payload.categoria,
+              partitaIva: payload.partitaIva,
+              ragioneSociale: payload.nome,
+              indirizzo: payload.indirizzo,
+              citta: payload.citta,
+              cap: payload.cap,
+              provincia: payload.provincia,
+              telefono: payload.telefono,
+              email: payload.email,
+            },
+            select: {
+              id: true,
+              codiceFornitore: true,
+              nome: true,
+              categoria: true,
+              partitaIva: true,
+            },
+          });
+
+          await tx.auditLog.create({
+            data: {
+              userId: payload.actorUserId,
+              action: "CREATE",
+              modelName: "Fornitore",
+              objectId: String(fornitore.id),
+            },
+          });
+
+          return fornitore;
+        },
+      );
+
+      return {
+        ok: true,
+        data: {
+          id: created.id,
+          codiceFornitore: created.codiceFornitore,
+          nome: created.nome,
+          categoria:
+            created.categoria === "RICAMBI" || created.categoria === "SERVIZI"
+              ? created.categoria
+              : "ALTRO",
+          partitaIva: created.partitaIva,
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        const targets = Array.isArray(error.meta?.target)
+          ? error.meta.target.map((item) => String(item).toLowerCase())
+          : [];
+
+        if (targets.some((target) => target.includes("partitaiva"))) {
+          return buildDuplicatePartitaIvaFailure();
+        }
+
+        if (
+          targets.some((target) => target.includes("codicefornitore")) &&
+          attempt < MAX_CODICE_FORNITORE_GENERATION_ATTEMPTS
+        ) {
+          continue;
+        }
+
+        return buildValidationFailure({
+          field: "codiceFornitore",
+          rule: "unique",
+        });
+      }
+
+      return {
+        ok: false,
+        code: "SERVICE_UNAVAILABLE",
+      };
+    }
+  }
+
+  return buildValidationFailure({
+    field: "codiceFornitore",
     rule: "unique",
   });
 }
@@ -1940,6 +2324,21 @@ async function createCliente(input: CreateClienteInput): Promise<CreateClienteRe
   return createClienteInDatabase(parsed.data);
 }
 
+async function createFornitore(
+  input: CreateFornitoreInput,
+): Promise<CreateFornitoreResult> {
+  const parsed = parseCreateFornitoreInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return createFornitoreInTestStore(parsed.data);
+  }
+
+  return createFornitoreInDatabase(parsed.data);
+}
+
 async function updateFornitore(
   input: UpdateFornitoreInput,
 ): Promise<UpdateFornitoreResult> {
@@ -2038,6 +2437,8 @@ function resetAnagraficheStoreForTests(): void {
   testAuditLogs = cloneAuditLogs(baseTestAuditLogs);
   nextTestClienteId = computeNextId(testClienti.map((item) => item.id));
   nextTestClienteCodeSequence = computeNextClienteCodeSequence(testClienti);
+  nextTestFornitoreId = computeNextId(testFornitori.map((item) => item.id));
+  nextTestFornitoreCodeSequence = computeNextFornitoreCodeSequence(testFornitori);
   nextTestAuditLogId = computeNextId(testAuditLogs.map((item) => item.id));
 }
 
@@ -2049,6 +2450,7 @@ function ensureTestEnvironment(): void {
 
 export {
   createCliente,
+  createFornitore,
   getClienteById,
   updateCliente,
   updateFornitore,
@@ -2058,6 +2460,8 @@ export {
   resetAnagraficheStoreForTests,
   type CreateClienteInput,
   type CreateClienteResult,
+  type CreateFornitoreInput,
+  type CreateFornitoreResult,
   type GetClienteByIdInput,
   type GetClienteByIdResult,
   type UpdateClienteInput,

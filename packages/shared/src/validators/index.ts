@@ -1,20 +1,8 @@
 /**
- * Valida una Partita IVA italiana (11 cifre, algoritmo Luhn modificato).
+ * Valida una Partita IVA italiana come stringa numerica di 11 cifre.
  */
 export function isValidPartitaIva(pi: string): boolean {
-  if (!/^\d{11}$/.test(pi)) return false;
-
-  let sum = 0;
-  for (let i = 0; i < 11; i++) {
-    const digit = parseInt(pi[i], 10);
-    if (i % 2 === 0) {
-      sum += digit;
-    } else {
-      const doubled = digit * 2;
-      sum += doubled > 9 ? doubled - 9 : doubled;
-    }
-  }
-  return sum % 10 === 0;
+  return /^\d{11}$/.test(pi);
 }
 
 /**

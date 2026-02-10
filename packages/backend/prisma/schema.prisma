@@ -66,7 +66,7 @@ model Fornitore {
   nome            String
   cognome         String?
   ragioneSociale  String?
-  partitaIva      String?
+  partitaIva      String?             @unique
   codiceFiscale   String?
   indirizzo       String
   citta           String

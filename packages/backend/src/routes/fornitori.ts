@@ -2,6 +2,9 @@ import { Router, type Response } from "express";
 import { buildErrorResponse } from "../lib/errors.js";
 import { authenticate, authorize } from "../middleware/auth.js";
 import {
+  createFornitore,
+  type CreateFornitoreInput,
+  type CreateFornitoreResult,
   updateFornitore,
   type UpdateFornitoreInput,
   type UpdateFornitoreResult,
@@ -9,10 +12,51 @@ import {
 
 const fornitoriRouter = Router();
 
+type CreateFornitoreFailure = Exclude<
+  CreateFornitoreResult,
+  { ok: true; data: unknown }
+>;
+
 type UpdateFornitoreFailure = Exclude<
   UpdateFornitoreResult,
   { ok: true; data: unknown }
 >;
+
+function respondCreateFornitoreFailure(
+  res: Response,
+  result: CreateFornitoreFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Payload non valido",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "PARTITA_IVA_EXISTS") {
+    res
+      .status(409)
+      .json(
+        buildErrorResponse("PARTITA_IVA_EXISTS", "Partita IVA gia esistente"),
+      );
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "ANAGRAFICHE_SERVICE_UNAVAILABLE",
+        "Servizio anagrafiche non disponibile",
+      ),
+    );
+}
 
 function respondUpdateFornitoreFailure(
   res: Response,
@@ -43,6 +87,34 @@ function respondUpdateFornitoreFailure(
       ),
     );
 }
+
+fornitoriRouter.post(
+  "/",
+  authenticate,
+  authorize("ADMIN"),
+  async (req, res) => {
+    const payload: CreateFornitoreInput = {
+      actorUserId: req.user?.userId,
+      nome: req.body?.nome,
+      categoria: req.body?.categoria,
+      partitaIva: req.body?.partitaIva,
+      telefono: req.body?.telefono,
+      email: req.body?.email,
+      indirizzo: req.body?.indirizzo,
+      cap: req.body?.cap,
+      citta: req.body?.citta,
+      provincia: req.body?.provincia,
+    };
+
+    const result = await createFornitore(payload);
+    if (!result.ok) {
+      respondCreateFornitoreFailure(res, result);
+      return;
+    }
+
+    res.status(201).json(result.data);
+  },
+);
 
 fornitoriRouter.put(
   "/:id",
