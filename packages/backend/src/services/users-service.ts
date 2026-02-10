@@ -126,11 +126,12 @@ function parseCreateUserInput(
     return buildValidationFailure({ field: "email", rule: "invalid_format" });
   }
 
-  if (typeof input.password !== "string") {
+  const password = asNonEmptyString(input.password);
+  if (!password) {
     return buildValidationFailure({ field: "password", rule: "required" });
   }
 
-  if (input.password.length < 8) {
+  if (password.length < 8) {
     return buildValidationFailure({
       field: "password",
       rule: "min_length",
@@ -151,7 +152,7 @@ function parseCreateUserInput(
     data: {
       username,
       email: email.toLowerCase(),
-      password: input.password,
+      password,
       role: input.role as Role,
     },
   };
