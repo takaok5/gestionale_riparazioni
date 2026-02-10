@@ -2,10 +2,10 @@
 
 ## Patterns Found
 
-- packages/backend/src/routes/clienti.ts:33 usa helper dedicato per convertire errori service in HTTP status + uildErrorResponse.
+- packages/backend/src/routes/clienti.ts:33 usa helper dedicato per convertire errori service in HTTP status + buildErrorResponse.
 - packages/backend/src/routes/clienti.ts:234 mostra pattern route POST con payload tipizzato, chiamata service e 201 su successo.
-- packages/backend/src/routes/fornitori.ts:47 applica gia uthenticate + authorize("ADMIN") sui write endpoint fornitori.
-- packages/backend/src/services/anagrafiche-service.ts:607 centralizza parse/validazione input con ield e ule testabili.
+- packages/backend/src/routes/fornitori.ts:47 applica gia authenticate + authorize("ADMIN") sui write endpoint fornitori.
+- packages/backend/src/services/anagrafiche-service.ts:607 centralizza parse/validazione input con field e rule testabili.
 - packages/backend/src/services/anagrafiche-service.ts:434 implementa generazione codice progressivo (CLI-000001) riusabile per FOR-000001.
 - packages/backend/src/services/anagrafiche-service.ts:1134 implementa create DB in transaction con audit e retry/gestione P2002.
 - packages/backend/src/services/anagrafiche-service.ts:1237 mostra separazione test store vs database per mantenere test deterministici.
@@ -21,6 +21,6 @@
 
 - express + router module in packages/backend/src/routes/*.
 - Prisma (@prisma/client) per persistenza e transazioni.
-- itest + supertest per test ATDD API su endpoint REST.
-- Helper uildErrorResponse in packages/backend/src/lib/errors.ts per envelope errori coerente.
-- Middleware uthenticate/uthorize in packages/backend/src/middleware/auth.ts per RBAC.
+- vitest + supertest per test ATDD API su endpoint REST.
+- Helper buildErrorResponse in packages/backend/src/lib/errors.ts per envelope errori coerente.
+- Middleware authenticate/authorize in packages/backend/src/middleware/auth.ts per RBAC.
