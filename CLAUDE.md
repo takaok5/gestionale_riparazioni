@@ -50,6 +50,8 @@ docs/                  # Documentazione progetto
   epics/               # Epic shardati (epic-1-*.md ... epic-7-*.md)
   stories/             # Story files (generati da story-pipeline)
   sprint-artifacts/    # Sprint artifacts
+.claude/
+  plans/               # Piani implementativi generati dalla story-pipeline
 e2e/                   # Playwright E2E tests
 _bmad/                 # Pipeline framework
 ```

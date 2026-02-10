@@ -52,6 +52,15 @@ async function createPrivatoCliente(index: number, nome: string) {
     });
 }
 
+async function getCurrentClientiTotal(userId: number): Promise<number> {
+  const response = await request(app)
+    .get("/api/clienti?page=1&limit=1")
+    .set("Authorization", authHeader("COMMERCIALE", userId));
+
+  expect(response.status).toBe(200);
+  return Number(response.body?.meta?.total ?? 0);
+}
+
 beforeEach(() => {
   resetUsersStoreForTests();
   resetAnagraficheStoreForTests();
@@ -59,7 +68,11 @@ beforeEach(() => {
 
 describe("AC-1 - Lista clienti paginata", () => {
   it("tests AC-1: should return 200 with data[10] and meta {page:1,limit:10,total:25,totalPages:3}", async () => {
-    for (let i = 1; i <= 24; i += 1) {
+    const baselineTotal = await getCurrentClientiTotal(4901);
+    expect(baselineTotal).toBeLessThanOrEqual(25);
+
+    const toSeed = 25 - baselineTotal;
+    for (let i = 1; i <= toSeed; i += 1) {
       const seeded = await createAziendaCliente(i);
       expect(seeded.status).toBe(201);
     }
@@ -78,7 +91,12 @@ describe("AC-1 - Lista clienti paginata", () => {
   });
 
   it("tests AC-1: should return records ordered by id asc on page 1", async () => {
-    for (let i = 1; i <= 12; i += 1) {
+    const targetTotal = 13;
+    const baselineTotal = await getCurrentClientiTotal(4902);
+    expect(baselineTotal).toBeLessThanOrEqual(targetTotal);
+
+    const toSeed = targetTotal - baselineTotal;
+    for (let i = 1; i <= toSeed; i += 1) {
       const seeded = await createAziendaCliente(i);
       expect(seeded.status).toBe(201);
     }
@@ -89,7 +107,7 @@ describe("AC-1 - Lista clienti paginata", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.data[0].id).toBeLessThan(response.body.data[1].id);
-    expect(response.body.meta.totalPages).toBe(2);
+    expect(response.body.meta.totalPages).toBe(Math.ceil(targetTotal / 10));
   });
 });
 
@@ -200,5 +218,26 @@ describe("AC-4 - Sad path filtro tipologia invalida", () => {
     expect(response.status).toBe(400);
     expect(response.body.error.details.field).toBe("tipologia");
     expect(response.body.error.details.rule).toBe("invalid_enum");
+  });
+
+  it("tests AC-4: should reject empty tipologia filter", async () => {
+    const response = await request(app)
+      .get("/api/clienti?tipologia=")
+      .set("Authorization", authHeader("COMMERCIALE", 5009));
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    expect(response.body.error.details.field).toBe("tipologia");
+  });
+
+  it("tests AC-4: should reject limit above max boundary", async () => {
+    const response = await request(app)
+      .get("/api/clienti?limit=1000")
+      .set("Authorization", authHeader("COMMERCIALE", 5010));
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    expect(response.body.error.details.field).toBe("limit");
+    expect(response.body.error.details.rule).toBe("too_large");
   });
 });

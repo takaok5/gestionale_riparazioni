@@ -198,6 +198,7 @@ interface TestFornitoreRecord {
 }
 
 const TEST_PAGE_SIZE = 10;
+const MAX_LIST_LIMIT = 100;
 const MAX_CODICE_CLIENTE_GENERATION_ATTEMPTS = 3;
 const VALID_PROVINCE_CODES = new Set([
   "AG", "AL", "AN", "AO", "AR", "AP", "AT", "AV", "BA", "BT", "BL", "BN", "BG", "BI",
@@ -716,7 +717,7 @@ function normalizeTipologiaFilter(
 
   const normalized = value.trim().toUpperCase();
   if (!normalized) {
-    return undefined;
+    return null;
   }
 
   if (normalized === "PRIVATO" || normalized === "AZIENDA") {
@@ -750,6 +751,12 @@ function parseListClientiInput(
       return buildValidationFailure({
         field: "limit",
         rule: "invalid_integer",
+      });
+    }
+    if (parsedLimit > MAX_LIST_LIMIT) {
+      return buildValidationFailure({
+        field: "limit",
+        rule: "too_large",
       });
     }
     limit = parsedLimit;
