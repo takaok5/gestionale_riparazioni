@@ -1,5 +1,6 @@
 import { type Request, type Response, type NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { buildErrorResponse } from "../lib/errors.js";
 
 interface JwtPayload {
   userId: number;
@@ -109,7 +110,7 @@ function authorize(...roles: string[]) {
       return;
     }
     if (!roles.includes(req.user.role)) {
-      res.status(403).json({ error: "Accesso negato" });
+      res.status(403).json(buildErrorResponse("FORBIDDEN", "Accesso negato"));
       return;
     }
     next();

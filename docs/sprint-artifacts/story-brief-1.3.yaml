@@ -1,0 +1,63 @@
+﻿story_id: "1.3"
+story_title: "Creazione Utente (Admin)"
+acceptance_criteria:
+  - id: "AC-1"
+    text: "Given I am Admin When I POST /api/users with valid payload Then user is created and returns 201"
+  - id: "AC-2"
+    text: "Given I am Admin When I POST /api/users with existing username Then I receive 409 USERNAME_EXISTS"
+  - id: "AC-3"
+    text: "Given I am Admin When I POST /api/users with weak password (<8) Then I receive 400 validation error"
+  - id: "AC-4"
+    text: "Given I am Tecnico When I POST /api/users Then I receive 403 FORBIDDEN"
+
+ac_to_codebase_findings:
+  AC-1:
+    - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/prisma/schema.prisma:27 (User model already present)"
+    - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/middleware/auth.ts:105 (role-based authorize middleware)"
+  AC-2:
+    - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/prisma/schema.prisma:29 (@unique username)"
+  AC-3:
+    - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/package.json:27 (zod available for request validation)"
+    - "no existing files found for password validation dedicated to /api/users"
+  AC-4:
+    - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/middleware/auth.ts:111 (403 when role not allowed)"
+
+target_modules:
+  - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/index.ts"
+  - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/middleware/auth.ts"
+  - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/lib/errors.ts"
+  - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/prisma/schema.prisma"
+
+patterns_to_follow:
+  - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/routes/auth.ts:55 - Router handlers call service, map result to HTTP status, and return early on failures"
+  - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/routes/auth.ts:83 - Use buildErrorResponse(code, message, details?) for structured API errors"
+  - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/middleware/auth.ts:105 - Reusable authorize(...roles) middleware for role checks"
+  - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/services/auth-service.ts:101 - Prisma user.findUnique with explicit select mapping"
+  - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/__tests__/auth-login.spec.ts:10 - AC-oriented integration tests with supertest + vitest"
+
+dependencies:
+  - module: "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/index.ts"
+    used_by:
+      - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/__tests__/auth-login.spec.ts"
+      - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/__tests__/auth-refresh.spec.ts"
+  - module: "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/middleware/auth.ts"
+    used_by:
+      - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/services/auth-service.ts"
+      - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/routes/auth.ts"
+  - module: "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/lib/errors.ts"
+    used_by:
+      - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/routes/auth.ts"
+  - module: "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/prisma/schema.prisma"
+    used_by:
+      - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/services/auth-service.ts"
+
+risks:
+  - "No /api/users route/service exists yet; creating new modules introduces wiring risk in index.ts and middleware integration."
+  - "Prisma unique constraint errors (username/email) must be translated to stable API errors (USERNAME_EXISTS) without leaking DB internals."
+  - "Current test mode in auth-service uses in-memory seeded users; create-user flow may need explicit strategy to avoid non-deterministic tests."
+  - "Current authorize middleware returns plain { error: string }; users endpoint may need consistent error envelope with buildErrorResponse."
+
+existing_tests:
+  - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/__tests__/auth-login.spec.ts"
+  - "C:/Users/FAT-E/Desktop/story-1.3/packages/backend/src/__tests__/auth-refresh.spec.ts"
+  - "no existing files found for /api/users creation endpoint tests"
