@@ -1,0 +1,10 @@
+﻿story_id: '1.8'
+status: 'blocked'
+currentStep: 2
+completedSteps: [1]
+lastTaskCompleted: 'step-02-story-source-check'
+worktree: false
+started_at: '2026-02-10T18:35:28+01:00'
+timestamp: '2026-02-10T18:36:35+01:00'
+blocked_reason: 'Story 1.8 not found in docs/epics/epic-1-autenticazione-utenti.md (available: 1.1-1.7)'
+next_action: 'Define Story 1.8 in epic details or run pipeline for an existing story id'
