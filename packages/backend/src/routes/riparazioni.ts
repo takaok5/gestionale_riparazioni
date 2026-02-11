@@ -5,12 +5,20 @@ import {
   createRiparazione,
   type CreateRiparazioneInput,
   type CreateRiparazioneResult,
+  listRiparazioni,
+  type ListRiparazioniInput,
+  type ListRiparazioniResult,
 } from "../services/riparazioni-service.js";
 
 const riparazioniRouter = Router();
 
 type CreateRiparazioneFailure = Exclude<
   CreateRiparazioneResult,
+  { ok: true; data: unknown }
+>;
+
+type ListRiparazioniFailure = Exclude<
+  ListRiparazioniResult,
   { ok: true; data: unknown }
 >;
 
@@ -47,6 +55,54 @@ function respondCreateRiparazioneFailure(
       ),
     );
 }
+
+function respondListRiparazioniFailure(
+  res: Response,
+  result: ListRiparazioniFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Parametri non validi",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "RIPARAZIONI_SERVICE_UNAVAILABLE",
+        "Servizio riparazioni non disponibile",
+      ),
+    );
+}
+
+riparazioniRouter.get("/", authenticate, async (req, res) => {
+  const payload: ListRiparazioniInput = {
+    page: req.query.page,
+    limit: req.query.limit,
+    stato: req.query.stato,
+    tecnicoId: req.query.tecnicoId,
+    priorita: req.query.priorita,
+    dataRicezioneDa: req.query.dataRicezioneDa,
+    dataRicezioneA: req.query.dataRicezioneA,
+    search: req.query.search,
+  };
+
+  const result = await listRiparazioni(payload);
+  if (!result.ok) {
+    respondListRiparazioniFailure(res, result);
+    return;
+  }
+
+  res.status(200).json(result.data);
+});
 
 riparazioniRouter.post("/", authenticate, async (req, res) => {
   const payload: CreateRiparazioneInput = {

@@ -34,7 +34,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  auditLogs AuditLog[]
+  auditLogs              AuditLog[]
+  riparazioniAssegnate   Riparazione[] @relation("RiparazioneTecnico")
 }
 
 model Cliente {
@@ -110,6 +111,8 @@ model Riparazione {
   id               Int      @id @default(autoincrement())
   clienteId        Int
   cliente          Cliente  @relation(fields: [clienteId], references: [id])
+  tecnicoId        Int?
+  tecnico          User?    @relation("RiparazioneTecnico", fields: [tecnicoId], references: [id])
   codiceRiparazione String  @unique
   stato            String   @default("RICEVUTA")
   dataRicezione    DateTime @default(now())
@@ -124,5 +127,6 @@ model Riparazione {
   updatedAt        DateTime @updatedAt
 
   @@index([clienteId])
+  @@index([tecnicoId])
   @@index([dataRicezione])
 }

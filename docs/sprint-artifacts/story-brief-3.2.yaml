@@ -1,0 +1,69 @@
+target_modules:
+  - path: packages/backend/src/routes/riparazioni.ts
+    reason: Add GET /api/riparazioni handler that reads query params and calls a list service; current router defines POST only.
+    evidence: packages/backend/src/routes/riparazioni.ts:1
+  - path: packages/backend/src/services/riparazioni-service.ts
+    reason: Add list input types, validation, filtering/search/pagination logic, and database query support.
+    evidence: packages/backend/src/services/riparazioni-service.ts:5
+  - path: packages/backend/prisma/schema.prisma
+    reason: Story AC-3 needs tecnicoId filter, but Riparazione model currently has no tecnicoId field.
+    evidence: packages/backend/prisma/schema.prisma:109
+
+patterns_to_follow:
+  - name: list_route_payload_from_query
+    pattern: Build payload from req.query, call service list method, return data, and map validation errors with shared responder.
+    examples:
+      - packages/backend/src/routes/clienti.ts:172
+      - packages/backend/src/routes/fornitori.ts:210
+  - name: list_query_validation_and_defaults
+    pattern: Parse page/limit/search and enum filters with positive integer guards, max limit checks, and structured field/rule validation failures.
+    examples:
+      - packages/backend/src/services/anagrafiche-service.ts:1243
+      - packages/backend/src/services/anagrafiche-service.ts:1308
+  - name: list_test_store_filter_search_pagination
+    pattern: In test-store mode apply filters/search, stable ordering, offset/limit slicing, and meta with totalPages.
+    examples:
+      - packages/backend/src/services/anagrafiche-service.ts:2718
+      - packages/backend/src/services/anagrafiche-service.ts:2763
+  - name: list_database_query_with_where_skip_take
+    pattern: Build conditional where clause, use skip/take for pagination, count total, compute totalPages.
+    examples:
+      - packages/backend/src/services/anagrafiche-service.ts:2810
+      - packages/backend/src/services/anagrafiche-service.ts:2879
+  - name: riparazioni_projection_for_lists
+    pattern: Reuse riparazioni select projection and ordering conventions already present in anagrafiche aggregates.
+    examples:
+      - packages/backend/src/services/anagrafiche-service.ts:2530
+
+dependencies:
+  - path: packages/backend/src/index.ts
+    usage: Imports and mounts riparazioni router.
+    evidence: packages/backend/src/index.ts:10
+  - path: packages/backend/src/routes/riparazioni.ts
+    usage: Imports service functions from riparazioni-service.
+    evidence: packages/backend/src/routes/riparazioni.ts:4
+  - path: packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts
+    usage: Imports resetRiparazioniStoreForTests from riparazioni-service for setup.
+    evidence: packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts:4
+
+risks:
+  - risk: AC-3 requires filtering by tecnicoId, but current Prisma Riparazione schema has no tecnicoId.
+    evidence: packages/backend/prisma/schema.prisma:109
+  - risk: dataRicezione is handled as ISO string in test-store and DateTime in DB paths; date range filtering may diverge if parsing is inconsistent.
+    evidence: packages/backend/src/services/riparazioni-service.ts:301
+  - risk: No established date-range parsing helper pattern for Da/A query params in backend services.
+    evidence: packages/backend/src/services
+
+existing_tests:
+  - path: packages/backend/src/__tests__/clienti-list-search-atdd.spec.ts
+    coverage: List pagination, search, filters, and validation patterns.
+    evidence: packages/backend/src/__tests__/clienti-list-search-atdd.spec.ts:69
+  - path: packages/backend/src/__tests__/fornitori-list-search-atdd.spec.ts
+    coverage: List pagination, search, filters, and validation patterns.
+    evidence: packages/backend/src/__tests__/fornitori-list-search-atdd.spec.ts:58
+  - path: packages/backend/src/__tests__/audit-trail.spec.ts
+    coverage: List endpoint pagination behavior and response shape patterns.
+    evidence: packages/backend/src/__tests__/audit-trail.spec.ts:251
+  - path: packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts
+    coverage: Existing riparazioni endpoint/service setup and auth scaffolding.
+    evidence: packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts:4

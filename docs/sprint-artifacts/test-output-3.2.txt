@@ -1,0 +1,369 @@
+
+> gestionale-riparazioni@0.1.0 test
+> npm run test --workspaces --if-present --run
+
+npm warn Unknown cli config "--run". This will stop working in the next major version of npm.
+
+> @gestionale/backend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend[39m
+
+ [32m✓[39m src/__tests__/fornitori-detail-update-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 111[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-update-deactivate.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 113[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-create-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 144[2mms[22m[39m
+ [32m✓[39m src/__tests__/fornitori-create-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 150[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-create-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 148[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-create.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 170[2mms[22m[39m
+ [32m✓[39m src/__tests__/audit-trail.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 211[2mms[22m[39m
+ [32m✓[39m src/__tests__/fornitori-list-search-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 232[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-detail-update-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 251[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-list-search-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 343[2mms[22m[39m
+ [31m❯[39m src/__tests__/riparazioni-list-filter-atdd.spec.ts [2m([22m[2m14 tests[22m[2m | [22m[31m14 failed[39m[2m)[22m[33m 417[2mms[22m[39m
+[31m   [31m×[31m AC-1 - Lista riparazioni paginata[2m > [22mtests AC-1: Given 30 repairs exist When GET /api/riparazioni?page=1&limit=15 Then returns 200 with 15 rows and meta {page:1,limit:15,total:30,totalPages:2}[39m[32m 240[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-1 - Lista riparazioni paginata[2m > [22mtests AC-1: Given list endpoint is paginated When page 1 is requested Then ordering is deterministic by dataRicezione desc[39m[32m 17[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-2 - Filtro per stato IN_LAVORAZIONE[2m > [22mtests AC-2: Given repairs exist When GET /api/riparazioni?stato=IN_LAVORAZIONE Then all returned rows have stato IN_LAVORAZIONE[39m[32m 16[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-2 - Filtro per stato IN_LAVORAZIONE[2m > [22mtests AC-2: Given stato filter is active When GET /api/riparazioni?stato=IN_LAVORAZIONE Then no row with stato different from IN_LAVORAZIONE is returned[39m[32m 7[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-3 - Filtro per tecnicoId[2m > [22mtests AC-3: Given repairs are assigned to tecnico id=3 When GET /api/riparazioni?tecnicoId=3 Then all rows belong to tecnicoId=3[39m[32m 20[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-3 - Filtro per tecnicoId[2m > [22mtests AC-3: Given records exist for tecnicoId=3 and tecnicoId=8 When filtering tecnicoId=3 Then result excludes tecnicoId=8[39m[32m 17[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-4 - Filtro per priorita ALTA[2m > [22mtests AC-4: Given ALTA and NORMALE repairs exist When GET /api/riparazioni?priorita=ALTA Then all rows have priorita ALTA[39m[32m 12[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-4 - Filtro per priorita ALTA[2m > [22mtests AC-4: Given ALTA and NORMALE repairs exist When filtering priorita ALTA Then result excludes priorita NORMALE[39m[32m 13[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-5 - Filtro per range data ricezione[2m > [22mtests AC-5: Given repairs across different days When filtering 2026-02-01..2026-02-10 Then returns only rows in the inclusive range[39m[32m 25[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-5 - Filtro per range data ricezione[2m > [22mtests AC-5: Given rows exist on both boundaries When filtering range 2026-02-01..2026-02-10 Then both boundaries are included[39m[32m 17[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-6 - Ricerca per Galaxy[2m > [22mtests AC-6: Given rows with modello/marca/codice including Galaxy exist When GET /api/riparazioni?search=Galaxy Then all returned rows match one of those fields[39m[32m 13[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-6 - Ricerca per Galaxy[2m > [22mtests AC-6: Given search is case-insensitive When GET /api/riparazioni?search=Galaxy Then result excludes non matching values[39m[32m 10[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-7 - Sad path limit oltre massimo[2m > [22mtests AC-7: Given max limit is 100 When GET /api/riparazioni?limit=1000 Then returns 400 VALIDATION_ERROR[39m[32m 4[2mms[22m[39m
+[31m     → expected 404 to be 400 // Object.is equality[39m
+[31m   [31m×[31m AC-7 - Sad path limit oltre massimo[2m > [22mtests AC-7: Given invalid high limit When request fails Then details rule is too_large[39m[32m 3[2mms[22m[39m
+[31m     → expected 404 to be 400 // Object.is equality[39m
+ [32m✓[39m src/__tests__/auth-refresh.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 755[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Rinnovo con refresh token valido[2m > [22mreturns 200 with new accessToken and refreshToken [33m 421[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Rinnovo con refresh token valido[2m > [22mreturns user payload with id, username, email and role [33m 304[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-change-password.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 776[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Current password errata[2m > [22mkeeps old password valid when change fails [33m 672[2mms[22m[39m
+ [32m✓[39m src/__tests__/auth-login.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1370[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login Utente valido[2m > [22mreturns 200 with accessToken and refreshToken when credentials are valid [33m 409[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login Utente valido[2m > [22mreturns user payload with id, username, email, role [33m 304[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Account disabilitato[2m > [22mreturns no tokens for disabled account [33m 305[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 14 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-list-filter-atdd.spec.ts[2m > [22mAC-1 - Lista riparazioni paginata[2m > [22mtests AC-1: Given 30 repairs exist When GET /api/riparazioni?page=1&limit=15 Then returns 200 with 15 rows and meta {page:1,limit:15,total:30,totalPages:2}
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-list-filter-atdd.spec.ts:[2m84:29[22m[39m
+    [90m 82| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [34mauthHeader[39m([32m"TECNICO"[39m[33m,[39m [34m7401[39m))[33m;[39m
+    [90m 83| [39m
+    [90m 84| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m 85| [39m    [34mexpect[39m([33mArray[39m[33m.[39m[34misArray[39m(response[33m.[39mbody[33m.[39mdata))[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m 86| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mdata)[33m.[39m[34mtoHaveLength[39m([34m15[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-list-filter-atdd.spec.ts[2m > [22mAC-1 - Lista riparazioni paginata[2m > [22mtests AC-1: Given list endpoint is paginated When page 1 is requested Then ordering is deterministic by dataRicezione desc
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-list-filter-atdd.spec.ts:[2m108:29[22m[39m
+    [90m106| [39m    const rows = (response.body.data ?? []) as Array<{ dataRicezione?:…
+    [90m107| [39m
+    [90m108| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m109| [39m    [34mexpect[39m(rows[33m.[39mlength)[33m.[39m[34mtoBeGreaterThan[39m([34m0[39m)[33m;[39m
+    [90m110| [39m    [35mif[39m (rows[33m.[39mlength [33m>=[39m [34m2[39m) {
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-list-filter-atdd.spec.ts[2m > [22mAC-2 - Filtro per stato IN_LAVORAZIONE[2m > [22mtests AC-2: Given repairs exist When GET /api/riparazioni?stato=IN_LAVORAZIONE Then all returned rows have stato IN_LAVORAZIONE
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-list-filter-atdd.spec.ts:[2m132:29[22m[39m
+    [90m130| [39m    const rows = (response.body.data ?? []) as Array<{ stato?: string …
+    [90m131| [39m
+    [90m132| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m133| [39m    expect(rows.every((row) => row.stato === "IN_LAVORAZIONE")).toBe(t…
+    [90m134| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-list-filter-atdd.spec.ts[2m > [22mAC-2 - Filtro per stato IN_LAVORAZIONE[2m > [22mtests AC-2: Given stato filter is active When GET /api/riparazioni?stato=IN_LAVORAZIONE Then no row with stato different from IN_LAVORAZIONE is returned
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-list-filter-atdd.spec.ts:[2m146:29[22m[39m
+    [90m144| [39m    const rows = (response.body.data ?? []) as Array<{ stato?: string …
+    [90m145| [39m
+    [90m146| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m147| [39m    expect(rows.some((row) => row.stato !== "IN_LAVORAZIONE")).toBe(fa…
+    [90m148| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-list-filter-atdd.spec.ts[2m > [22mAC-3 - Filtro per tecnicoId[2m > [22mtests AC-3: Given repairs are assigned to tecnico id=3 When GET /api/riparazioni?tecnicoId=3 Then all rows belong to tecnicoId=3
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-list-filter-atdd.spec.ts:[2m167:29[22m[39m
+    [90m165| [39m    const rows = (response.body.data ?? []) as Array<{ tecnicoId?: num…
+    [90m166| [39m
+    [90m167| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m168| [39m    [34mexpect[39m(rows[33m.[39m[34mevery[39m((row) [33m=>[39m row[33m.[39mtecnicoId [33m===[39m [34m3[39m))[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m169| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-list-filter-atdd.spec.ts[2m > [22mAC-3 - Filtro per tecnicoId[2m > [22mtests AC-3: Given records exist for tecnicoId=3 and tecnicoId=8 When filtering tecnicoId=3 Then result excludes tecnicoId=8
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-list-filter-atdd.spec.ts:[2m184:29[22m[39m
+    [90m182| [39m    const rows = (response.body.data ?? []) as Array<{ tecnicoId?: num…
+    [90m183| [39m
+    [90m184| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m185| [39m    [34mexpect[39m(rows[33m.[39m[34msome[39m((row) [33m=>[39m row[33m.[39mtecnicoId [33m===[39m [34m8[39m))[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+    [90m186| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-list-filter-atdd.spec.ts[2m > [22mAC-4 - Filtro per priorita ALTA[2m > [22mtests AC-4: Given ALTA and NORMALE repairs exist When GET /api/riparazioni?priorita=ALTA Then all rows have priorita ALTA
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-list-filter-atdd.spec.ts:[2m203:29[22m[39m
+    [90m201| [39m    const rows = (response.body.data ?? []) as Array<{ priorita?: stri…
+    [90m202| [39m
+    [90m203| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m204| [39m    [34mexpect[39m(rows[33m.[39mlength)[33m.[39m[34mtoBeGreaterThan[39m([34m0[39m)[33m;[39m
+    [90m205| [39m    [34mexpect[39m(rows[33m.[39m[34mevery[39m((row) [33m=>[39m row[33m.[39mpriorita [33m===[39m [32m"ALTA"[39m))[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-list-filter-atdd.spec.ts[2m > [22mAC-4 - Filtro per priorita ALTA[2m > [22mtests AC-4: Given ALTA and NORMALE repairs exist When filtering priorita ALTA Then result excludes priorita NORMALE
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-list-filter-atdd.spec.ts:[2m221:29[22m[39m
+    [90m219| [39m    const rows = (response.body.data ?? []) as Array<{ priorita?: stri…
+    [90m220| [39m
+    [90m221| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m222| [39m    [34mexpect[39m(rows[33m.[39m[34msome[39m((row) [33m=>[39m row[33m.[39mpriorita [33m===[39m [32m"NORMALE"[39m))[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+    [90m223| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-list-filter-atdd.spec.ts[2m > [22mAC-5 - Filtro per range data ricezione[2m > [22mtests AC-5: Given repairs across different days When filtering 2026-02-01..2026-02-10 Then returns only rows in the inclusive range
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-list-filter-atdd.spec.ts:[2m248:29[22m[39m
+    [90m246| [39m    [35mconst[39m to [33m=[39m [35mnew[39m [33mDate[39m([32m"2026-02-10T23:59:59.999Z"[39m)[33m.[39m[34mgetTime[39m()[33m;[39m
+    [90m247| [39m
+    [90m248| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m249| [39m    [34mexpect[39m(
+    [90m250| [39m      rows[33m.[39m[34mevery[39m((row) [33m=>[39m {
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-list-filter-atdd.spec.ts[2m > [22mAC-5 - Filtro per range data ricezione[2m > [22mtests AC-5: Given rows exist on both boundaries When filtering range 2026-02-01..2026-02-10 Then both boundaries are included
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-list-filter-atdd.spec.ts:[2m270:29[22m[39m
+    [90m268| [39m    const rows = (response.body.data ?? []) as Array<{ dataRicezione?:…
+    [90m269| [39m
+    [90m270| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m271| [39m    expect(rows.some((row) => row.dataRicezione?.startsWith("2026-02-0…
+    [90m272| [39m      [35mtrue[39m[33m,[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-list-filter-atdd.spec.ts[2m > [22mAC-6 - Ricerca per Galaxy[2m > [22mtests AC-6: Given rows with modello/marca/codice including Galaxy exist When GET /api/riparazioni?search=Galaxy Then all returned rows match one of those fields
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-list-filter-atdd.spec.ts:[2m306:29[22m[39m
+    [90m304| [39m    }[33m>[39m[33m;[39m
+    [90m305| [39m
+    [90m306| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m307| [39m    [34mexpect[39m(rows[33m.[39mlength)[33m.[39m[34mtoBeGreaterThan[39m([34m0[39m)[33m;[39m
+    [90m308| [39m    [34mexpect[39m(
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-list-filter-atdd.spec.ts[2m > [22mAC-6 - Ricerca per Galaxy[2m > [22mtests AC-6: Given search is case-insensitive When GET /api/riparazioni?search=Galaxy Then result excludes non matching values
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-list-filter-atdd.spec.ts:[2m335:29[22m[39m
+    [90m333| [39m    const rows = (response.body.data ?? []) as Array<{ modelloDisposit…
+    [90m334| [39m
+    [90m335| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m336| [39m    [34mexpect[39m(
+    [90m337| [39m      rows.some((row) => (row.modelloDispositivo ?? "").toLowerCase() …
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-list-filter-atdd.spec.ts[2m > [22mAC-7 - Sad path limit oltre massimo[2m > [22mtests AC-7: Given max limit is 100 When GET /api/riparazioni?limit=1000 Then returns 400 VALIDATION_ERROR
+[31m[1mAssertionError[22m: expected 404 to be 400 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 400[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-list-filter-atdd.spec.ts:[2m348:29[22m[39m
+    [90m346| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [34mauthHeader[39m([32m"TECNICO"[39m[33m,[39m [34m8001[39m))[33m;[39m
+    [90m347| [39m
+    [90m348| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m400[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m349| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mcode)[33m.[39m[34mtoBe[39m([32m"VALIDATION_ERROR"[39m)[33m;[39m
+    [90m350| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mdetails[33m.[39mfield)[33m.[39m[34mtoBe[39m([32m"limit"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-list-filter-atdd.spec.ts[2m > [22mAC-7 - Sad path limit oltre massimo[2m > [22mtests AC-7: Given invalid high limit When request fails Then details rule is too_large
+[31m[1mAssertionError[22m: expected 404 to be 400 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 400[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-list-filter-atdd.spec.ts:[2m358:29[22m[39m
+    [90m356| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [34mauthHeader[39m([32m"TECNICO"[39m[33m,[39m [34m8002[39m))[33m;[39m
+    [90m357| [39m
+    [90m358| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m400[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m359| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mdetails[33m.[39mfield)[33m.[39m[34mtoBe[39m([32m"limit"[39m)[33m;[39m
+    [90m360| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mdetails[33m.[39mrule)[33m.[39m[34mtoBe[39m([32m"too_large"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/14]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m13 passed[39m[22m[90m (14)[39m
+[2m      Tests [22m [1m[31m14 failed[39m[22m[2m | [22m[1m[32m119 passed[39m[22m[90m (133)[39m
+[2m   Start at [22m 18:19:38
+[2m   Duration [22m 3.75s[2m (transform 1.17s, setup 0ms, collect 24.95s, tests 5.19s, environment 3ms, prepare 3.57s)[22m
+
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error workspace @gestionale/backend@0.1.0
+npm error location C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c vitest run
+
+
+> @gestionale/frontend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/frontend[39m
+
+No test files found, exiting with code 0
+
+[2minclude: [22m[33msrc/**/*.test.ts[2m, [22msrc/**/*.spec.ts[39m
+[2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+
+
+> @gestionale/shared@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/shared[39m
+
+ [32m✓[39m src/validators/index.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 18:19:43
+[2m   Duration [22m 678ms[2m (transform 39ms, setup 0ms, collect 76ms, tests 3ms, environment 0ms, prepare 193ms)[22m
+
