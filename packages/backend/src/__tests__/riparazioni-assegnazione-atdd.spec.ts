@@ -108,10 +108,13 @@ describe("AC-1 - Assegnazione valida a tecnico", () => {
     await seedUsersUpToId8();
     await seedRiparazioniUntilId10();
 
-    await request(app)
+    const assignResponse = await request(app)
       .patch("/api/riparazioni/10/assegna")
       .set("Authorization", authHeader("ADMIN", 30002))
       .send({ tecnicoId: 7 });
+
+    expect(assignResponse.status).toBe(200);
+    expect(assignResponse.body.data.tecnicoId).toBe(7);
 
     const detailResponse = await request(app)
       .get("/api/riparazioni/10")
@@ -142,10 +145,13 @@ describe("AC-2 - Rifiuto assegnazione a utente non tecnico", () => {
     await seedUsersUpToId8();
     await seedRiparazioniUntilId10();
 
-    await request(app)
+    const assignResponse = await request(app)
       .patch("/api/riparazioni/10/assegna")
       .set("Authorization", authHeader("ADMIN", 30004))
       .send({ tecnicoId: 5 });
+
+    expect(assignResponse.status).toBe(400);
+    expect(assignResponse.body.error.message).toBe("User must have TECNICO role");
 
     const detailResponse = await request(app)
       .get("/api/riparazioni/10")
@@ -176,10 +182,13 @@ describe("AC-3 - Riassegnazione a un altro tecnico", () => {
     await seedUsersUpToId8();
     await seedRiparazioniUntilId10();
 
-    await request(app)
+    const assignResponse = await request(app)
       .patch("/api/riparazioni/10/assegna")
       .set("Authorization", authHeader("ADMIN", 30006))
       .send({ tecnicoId: 8 });
+
+    expect(assignResponse.status).toBe(200);
+    expect(assignResponse.body.data.tecnicoId).toBe(8);
 
     const detailResponse = await request(app)
       .get("/api/riparazioni/10")
@@ -210,10 +219,13 @@ describe("AC-4 - Divieto assegnazione per non Admin", () => {
     await seedUsersUpToId8();
     await seedRiparazioniUntilId10();
 
-    await request(app)
+    const assignResponse = await request(app)
       .patch("/api/riparazioni/10/assegna")
       .set("Authorization", authHeader("TECNICO", 30008))
       .send({ tecnicoId: 8 });
+
+    expect(assignResponse.status).toBe(403);
+    expect(assignResponse.body.error.code).toBe("FORBIDDEN");
 
     const detailResponse = await request(app)
       .get("/api/riparazioni/10")
@@ -222,5 +234,35 @@ describe("AC-4 - Divieto assegnazione per non Admin", () => {
     expect(detailResponse.status).toBe(200);
     expect(detailResponse.body.data.id).toBe(10);
     expect(detailResponse.body.data.tecnico.id).toBe(7);
+  });
+});
+
+describe("Review hardening - error handling coverage", () => {
+  it("Given tecnicoId=999 does not exist When ADMIN patches /api/riparazioni/10/assegna Then returns 404 USER_NOT_FOUND", async () => {
+    await seedUsersUpToId8();
+    await seedRiparazioniUntilId10();
+
+    const response = await request(app)
+      .patch("/api/riparazioni/10/assegna")
+      .set("Authorization", authHeader("ADMIN", 30009))
+      .send({ tecnicoId: 999 });
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("USER_NOT_FOUND");
+    expect(response.body.error.message).toBe("Utente non trovato");
+  });
+
+  it("Given tecnicoId is not a positive integer When ADMIN patches /api/riparazioni/10/assegna Then returns 400 VALIDATION_ERROR on tecnicoId", async () => {
+    await seedUsersUpToId8();
+    await seedRiparazioniUntilId10();
+
+    const response = await request(app)
+      .patch("/api/riparazioni/10/assegna")
+      .set("Authorization", authHeader("ADMIN", 30010))
+      .send({ tecnicoId: "abc" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    expect(response.body.error.details.field).toBe("tecnicoId");
   });
 });
