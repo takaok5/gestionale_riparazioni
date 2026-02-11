@@ -1,0 +1,52 @@
+target_modules:
+  - packages/backend/src/routes/riparazioni.ts
+  - packages/backend/src/services/riparazioni-service.ts
+  - packages/backend/src/middleware/auth.ts
+
+patterns_to_follow:
+  - file: packages/backend/src/routes/riparazioni.ts:33
+    pattern: Route-level error mapper translating service codes to HTTP status and standard error payload.
+  - file: packages/backend/src/routes/riparazioni.ts:130
+    pattern: Build payloads from req params/body as unknown values and validate in service layer.
+  - file: packages/backend/src/routes/users.ts:224
+    pattern: PATCH route with authenticate + authorize("ADMIN") + try/catch + centralized response.
+  - file: packages/backend/src/middleware/auth.ts:106
+    pattern: authorize(...roles) returns FORBIDDEN response for unauthorized roles.
+  - file: packages/backend/src/services/riparazioni-service.ts:221
+    pattern: asPositiveInteger helper for strict numeric id validation.
+  - file: packages/backend/src/services/riparazioni-service.ts:334
+    pattern: buildValidationFailure helper for consistent validation error objects.
+  - file: packages/backend/src/services/riparazioni-service.ts:443
+    pattern: Parse/validate DTO input and return typed parsed payload before business logic.
+  - file: packages/backend/src/services/riparazioni-service.ts:1225
+    pattern: Dual execution path for test store vs Prisma DB selected by runtime environment.
+
+dependencies:
+  - module: packages/backend/src/routes/riparazioni.ts
+    used_by:
+      - packages/backend/src/index.ts:10
+  - module: packages/backend/src/services/riparazioni-service.ts
+    used_by:
+      - packages/backend/src/routes/riparazioni.ts:4
+      - packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts:6
+      - packages/backend/src/__tests__/riparazioni-list-filter-atdd.spec.ts:9
+      - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts:9
+  - module: packages/backend/src/middleware/auth.ts
+    used_by:
+      - packages/backend/src/routes/riparazioni.ts:3
+      - packages/backend/src/routes/users.ts:3
+      - packages/backend/src/routes/clienti.ts
+      - packages/backend/src/routes/fornitori.ts
+      - packages/backend/src/routes/audit-log.ts
+
+risks:
+  - New PATCH /api/riparazioni/:id/assegna route is currently missing and may diverge from existing route error contracts.
+  - Assignment logic must be implemented consistently in both in-memory test store and Prisma code paths.
+  - Inconsistent id validation can cause wrong 400 behavior if not aligned with asPositiveInteger and validation helpers.
+  - Role handling for TECNICO assignment and non-admin access can regress forbidden behavior if middleware integration is wrong.
+  - Reassignment may require synchronization with status/history or audit trails, with potential data consistency issues.
+
+existing_tests:
+  - packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-list-filter-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts
