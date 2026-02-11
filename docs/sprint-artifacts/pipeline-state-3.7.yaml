@@ -1,8 +1,8 @@
 ﻿story_id: '3.7'
 status: 'in_progress'
-currentStep: 9
-completedSteps: [1, 2, 3, 4, 5, 6, 7, 8]
-lastTaskCompleted: 'review'
+currentStep: 10
+completedSteps: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+lastTaskCompleted: 'commit'
 worktree: false
 started_at: '\Users\FAT-E\progetti\gestionale_riparazioni-main\docs\sprint-artifacts\pipeline-state-3.7.yaml:7:started_at: '2026-02-11T22:35:39'
-timestamp: '2026-02-11T23:05:33'
+timestamp: '2026-02-11T23:07:51'
