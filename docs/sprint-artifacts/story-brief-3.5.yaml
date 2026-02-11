@@ -1,0 +1,52 @@
+target_modules:
+  - packages/backend/src/routes/riparazioni.ts
+  - packages/backend/src/services/riparazioni-service.ts
+  - packages/backend/src/__tests__/riparazioni-assegnazione-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts
+
+patterns_to_follow:
+  - file: packages/backend/src/routes/riparazioni.ts:138
+    pattern: Route-level failure mapper that translates typed service result codes into HTTP status and buildErrorResponse payloads.
+  - file: packages/backend/src/routes/riparazioni.ts:216
+    pattern: PATCH endpoint structure with authenticate/authorize middleware, payload extraction from req params/body, and service call.
+  - file: packages/backend/src/services/riparazioni-service.ts:362
+    pattern: buildValidationFailure helper is reused to produce consistent VALIDATION_ERROR objects with details and optional message.
+  - file: packages/backend/src/services/riparazioni-service.ts:621
+    pattern: parse* input functions validate unknown DTO fields up front and short-circuit with validation failures before business logic.
+  - file: packages/backend/src/services/riparazioni-service.ts:1283
+    pattern: Dual implementation pattern (test in-memory store and Prisma transaction path) for deterministic tests and production behavior.
+  - file: packages/backend/src/services/riparazioni-service.ts:1466
+    pattern: Test helper updates stato and appends chronology entry in statiHistory with timestamp and userId-like metadata.
+  - file: packages/backend/src/__tests__/riparazioni-assegnazione-atdd.spec.ts:92
+    pattern: ATDD tests use Given/When/Then naming, supertest PATCH calls, seeded fixtures, and assertion of both status and payload fields.
+  - file: packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts:121
+    pattern: Detail endpoint assertions verify statiHistory ordering/content after controlled status mutations.
+
+dependencies:
+  - module: packages/backend/src/routes/riparazioni.ts
+    used_by:
+      - packages/backend/src/index.ts:10
+      - packages/backend/src/index.ts:24
+  - module: packages/backend/src/services/riparazioni-service.ts
+    used_by:
+      - packages/backend/src/routes/riparazioni.ts:4
+      - packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts:6
+      - packages/backend/src/__tests__/riparazioni-list-filter-atdd.spec.ts:9
+      - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts:9
+      - packages/backend/src/__tests__/riparazioni-assegnazione-atdd.spec.ts:6
+  - module: packages/backend/src/__tests__/riparazioni-assegnazione-atdd.spec.ts
+    used_by:
+      - packages/backend/vitest.config.ts:1
+
+risks:
+  - Transition rules can diverge between test-store and Prisma paths, causing RED/GREEN mismatch across environments.
+  - Missing authorization checks (assigned tecnico or ADMIN override) may leak state-change capability to unauthorized users.
+  - History persistence can be incomplete (stato changed without RiparazioneStatoHistory insert), breaking auditability AC.
+  - Invalid transition handling must be explicit and stable, otherwise clients may receive inconsistent 400/403/404 semantics.
+  - Existing list/detail behavior depends on stato values and history shape; regressions can break previously green ATDD suites.
+
+existing_tests:
+  - packages/backend/src/__tests__/riparazioni-assegnazione-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-list-filter-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts

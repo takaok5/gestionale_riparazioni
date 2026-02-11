@@ -42,6 +42,14 @@ interface AssegnaRiparazioneTecnicoInput {
   tecnicoId: unknown;
 }
 
+interface CambiaStatoRiparazioneInput {
+  riparazioneId: unknown;
+  actorUserId: unknown;
+  actorRole: unknown;
+  stato: unknown;
+  note?: unknown;
+}
+
 interface ValidationDetails extends Record<string, unknown> {
   field: string;
   rule: string;
@@ -136,6 +144,11 @@ interface AssegnaRiparazioneTecnicoPayload {
   tecnicoId: number;
 }
 
+interface CambiaStatoRiparazionePayload {
+  id: number;
+  stato: string;
+}
+
 interface TestRiparazioneRecord extends CreatedRiparazionePayload {
   statiHistory: RiparazioneStatoHistoryPayload[];
   preventivi: RiparazionePreventivoPayload[];
@@ -157,6 +170,11 @@ type ClienteNotFoundFailure = {
 type NotFoundFailure = {
   ok: false;
   code: "NOT_FOUND";
+};
+
+type ForbiddenFailure = {
+  ok: false;
+  code: "FORBIDDEN";
 };
 
 type UserNotFoundFailure = {
@@ -192,6 +210,13 @@ type AssegnaRiparazioneTecnicoResult =
   | UserNotFoundFailure
   | ServiceUnavailableFailure;
 
+type CambiaStatoRiparazioneResult =
+  | { ok: true; data: CambiaStatoRiparazionePayload }
+  | ValidationFailure
+  | NotFoundFailure
+  | ForbiddenFailure
+  | ServiceUnavailableFailure;
+
 interface ParsedCreateRiparazioneInput {
   actorUserId: number;
   clienteId: number;
@@ -224,6 +249,14 @@ interface ParsedAssegnaRiparazioneTecnicoInput {
   tecnicoId: number;
 }
 
+interface ParsedCambiaStatoRiparazioneInput {
+  riparazioneId: number;
+  actorUserId: number;
+  actorRole: string;
+  stato: string;
+  note?: string;
+}
+
 const ALLOWED_PRIORITA: Priorita[] = ["BASSA", "NORMALE", "ALTA"];
 const ALLOWED_STATI = new Set<string>([
   "RICEVUTA",
@@ -236,6 +269,13 @@ const ALLOWED_STATI = new Set<string>([
   "APPROVATA",
   "IN_ATTESA_RICAMBI",
   "ANNULLATA",
+]);
+const ALLOWED_ACTOR_ROLES = new Set<string>(["ADMIN", "TECNICO", "COMMERCIALE"]);
+const BASE_ALLOWED_TRANSITIONS = new Map<string, Set<string>>([
+  ["RICEVUTA", new Set<string>(["IN_DIAGNOSI"])],
+  ["IN_DIAGNOSI", new Set<string>(["IN_LAVORAZIONE"])],
+  ["IN_LAVORAZIONE", new Set<string>(["COMPLETATA"])],
+  ["COMPLETATA", new Set<string>(["CONSEGNATA"])],
 ]);
 const INITIAL_STATO = "RICEVUTA";
 const DEFAULT_LIST_LIMIT = 15;
@@ -646,6 +686,123 @@ function parseAssegnaRiparazioneTecnicoInput(
       tecnicoId,
     },
   };
+}
+
+function parseCambiaStatoRiparazioneInput(
+  input: CambiaStatoRiparazioneInput,
+):
+  | { ok: true; data: ParsedCambiaStatoRiparazioneInput }
+  | ValidationFailure {
+  const riparazioneId = asPositiveInteger(input.riparazioneId);
+  if (riparazioneId === null) {
+    return buildValidationFailure({
+      field: "riparazioneId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const actorUserId = asPositiveInteger(input.actorUserId);
+  if (actorUserId === null) {
+    return buildValidationFailure({
+      field: "actorUserId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const actorRole = asRequiredString(input.actorRole);
+  if (!actorRole) {
+    return buildValidationFailure({
+      field: "actorRole",
+      rule: "required",
+    });
+  }
+
+  const normalizedActorRole = actorRole.toUpperCase();
+  if (!ALLOWED_ACTOR_ROLES.has(normalizedActorRole)) {
+    return buildValidationFailure({
+      field: "actorRole",
+      rule: "invalid_enum",
+    });
+  }
+
+  const stato = normalizeStatoFilter(input.stato);
+  if (stato === undefined) {
+    return buildValidationFailure(
+      {
+        field: "stato",
+        rule: "required",
+      },
+      "stato is required",
+    );
+  }
+
+  if (stato === null) {
+    return buildValidationFailure({
+      field: "stato",
+      rule: "invalid_enum",
+    });
+  }
+
+  let note: string | undefined;
+  if (input.note !== undefined && input.note !== null) {
+    if (typeof input.note !== "string") {
+      return buildValidationFailure({
+        field: "note",
+        rule: "invalid_string",
+      });
+    }
+
+    const trimmedNote = input.note.trim();
+    if (!trimmedNote) {
+      return buildValidationFailure({
+        field: "note",
+        rule: "invalid_string",
+      });
+    }
+
+    note = trimmedNote;
+  }
+
+  return {
+    ok: true,
+    data: {
+      riparazioneId,
+      actorUserId,
+      actorRole: normalizedActorRole,
+      stato,
+      note,
+    },
+  };
+}
+
+function isBaseTransitionAllowed(from: string, to: string): boolean {
+  const allowed = BASE_ALLOWED_TRANSITIONS.get(from);
+  if (!allowed) {
+    return false;
+  }
+
+  return allowed.has(to);
+}
+
+function buildInvalidTransitionMessage(from: string, to: string): string {
+  return `Invalid state transition from ${from} to ${to}`;
+}
+
+function validateBaseTransition(
+  from: string,
+  to: string,
+): ValidationFailure | null {
+  if (isBaseTransitionAllowed(from, to)) {
+    return null;
+  }
+
+  return buildValidationFailure(
+    {
+      field: "stato",
+      rule: "invalid_transition",
+    },
+    buildInvalidTransitionMessage(from, to),
+  );
 }
 
 function formatDateCode(date: Date): string {
@@ -1391,6 +1548,139 @@ async function assegnaRiparazioneTecnicoInDatabase(
   }
 }
 
+async function cambiaStatoRiparazioneInTestStore(
+  payload: ParsedCambiaStatoRiparazioneInput,
+): Promise<CambiaStatoRiparazioneResult> {
+  const target = testRiparazioni.find((row) => row.id === payload.riparazioneId);
+  if (!target) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  const isAdmin = payload.actorRole === "ADMIN";
+  const isTecnico = payload.actorRole === "TECNICO";
+  if (!isAdmin && !isTecnico) {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+    };
+  }
+
+  if (!isAdmin && target.tecnicoId !== payload.actorUserId) {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+    };
+  }
+
+  const transitionFailure = validateBaseTransition(target.stato, payload.stato);
+  if (transitionFailure) {
+    return transitionFailure;
+  }
+
+  target.stato = payload.stato;
+  const historyTimestamp = new Date(Date.now() + target.statiHistory.length);
+  target.statiHistory.push({
+    stato: payload.stato,
+    dataOra: historyTimestamp.toISOString(),
+    userId: payload.actorUserId,
+    note: payload.note ?? "",
+  });
+
+  return {
+    ok: true,
+    data: {
+      id: target.id,
+      stato: target.stato,
+    },
+  };
+}
+
+async function cambiaStatoRiparazioneInDatabase(
+  payload: ParsedCambiaStatoRiparazioneInput,
+): Promise<CambiaStatoRiparazioneResult> {
+  try {
+    return await getPrismaClient().$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const targetRiparazione = await tx.riparazione.findUnique({
+          where: { id: payload.riparazioneId },
+          select: {
+            id: true,
+            stato: true,
+            tecnicoId: true,
+          },
+        });
+
+        if (!targetRiparazione) {
+          return {
+            ok: false as const,
+            code: "NOT_FOUND" as const,
+          };
+        }
+
+        const isAdmin = payload.actorRole === "ADMIN";
+        const isTecnico = payload.actorRole === "TECNICO";
+        if (!isAdmin && !isTecnico) {
+          return {
+            ok: false as const,
+            code: "FORBIDDEN" as const,
+          };
+        }
+
+        if (!isAdmin && targetRiparazione.tecnicoId !== payload.actorUserId) {
+          return {
+            ok: false as const,
+            code: "FORBIDDEN" as const,
+          };
+        }
+
+        const transitionFailure = validateBaseTransition(
+          targetRiparazione.stato,
+          payload.stato,
+        );
+        if (transitionFailure) {
+          return transitionFailure;
+        }
+
+        const updated = await tx.riparazione.update({
+          where: { id: payload.riparazioneId },
+          data: {
+            stato: payload.stato,
+          },
+          select: {
+            id: true,
+            stato: true,
+          },
+        });
+
+        await tx.riparazioneStatoHistory.create({
+          data: {
+            riparazioneId: updated.id,
+            stato: payload.stato,
+            userId: payload.actorUserId,
+            note: payload.note,
+          },
+        });
+
+        return {
+          ok: true as const,
+          data: {
+            id: updated.id,
+            stato: updated.stato,
+          },
+        };
+      },
+    );
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
 async function createRiparazione(
   input: CreateRiparazioneInput,
 ): Promise<CreateRiparazioneResult> {
@@ -1451,6 +1741,21 @@ async function assegnaRiparazioneTecnico(
   return assegnaRiparazioneTecnicoInDatabase(parsed.data);
 }
 
+async function cambiaStatoRiparazione(
+  input: CambiaStatoRiparazioneInput,
+): Promise<CambiaStatoRiparazioneResult> {
+  const parsed = parseCambiaStatoRiparazioneInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return cambiaStatoRiparazioneInTestStore(parsed.data);
+  }
+
+  return cambiaStatoRiparazioneInDatabase(parsed.data);
+}
+
 function ensureTestEnvironment(): void {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
@@ -1490,6 +1795,7 @@ function setRiparazioneStatoForTests(
 
 export {
   assegnaRiparazioneTecnico,
+  cambiaStatoRiparazione,
   createRiparazione,
   getRiparazioneDettaglio,
   listRiparazioni,
@@ -1497,6 +1803,8 @@ export {
   setRiparazioneStatoForTests,
   type AssegnaRiparazioneTecnicoInput,
   type AssegnaRiparazioneTecnicoResult,
+  type CambiaStatoRiparazioneInput,
+  type CambiaStatoRiparazioneResult,
   type CreateRiparazioneInput,
   type CreateRiparazioneResult,
   type GetRiparazioneDettaglioInput,
