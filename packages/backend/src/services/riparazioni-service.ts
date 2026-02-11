@@ -175,6 +175,7 @@ type NotFoundFailure = {
 type ForbiddenFailure = {
   ok: false;
   code: "FORBIDDEN";
+  message?: string;
 };
 
 type UserNotFoundFailure = {
@@ -1565,6 +1566,15 @@ async function cambiaStatoRiparazioneInTestStore(
 
   const isAdmin = payload.actorRole === "ADMIN";
   const isTecnico = payload.actorRole === "TECNICO";
+  const isCancellationRequest = payload.stato === "ANNULLATA";
+  if (isCancellationRequest && !isAdmin) {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      message: "Only admins can cancel repairs",
+    };
+  }
+
   if (!isAdmin && !isTecnico) {
     return {
       ok: false,
@@ -1579,9 +1589,11 @@ async function cambiaStatoRiparazioneInTestStore(
     };
   }
 
-  const transitionFailure = validateBaseTransition(target.stato, payload.stato);
-  if (transitionFailure) {
-    return transitionFailure;
+  if (!(isAdmin && isCancellationRequest)) {
+    const transitionFailure = validateBaseTransition(target.stato, payload.stato);
+    if (transitionFailure) {
+      return transitionFailure;
+    }
   }
 
   target.stato = payload.stato;
@@ -1626,6 +1638,15 @@ async function cambiaStatoRiparazioneInDatabase(
 
         const isAdmin = payload.actorRole === "ADMIN";
         const isTecnico = payload.actorRole === "TECNICO";
+        const isCancellationRequest = payload.stato === "ANNULLATA";
+        if (isCancellationRequest && !isAdmin) {
+          return {
+            ok: false as const,
+            code: "FORBIDDEN" as const,
+            message: "Only admins can cancel repairs",
+          };
+        }
+
         if (!isAdmin && !isTecnico) {
           return {
             ok: false as const,
@@ -1640,12 +1661,14 @@ async function cambiaStatoRiparazioneInDatabase(
           };
         }
 
-        const transitionFailure = validateBaseTransition(
-          targetRiparazione.stato,
-          payload.stato,
-        );
-        if (transitionFailure) {
-          return transitionFailure;
+        if (!(isAdmin && isCancellationRequest)) {
+          const transitionFailure = validateBaseTransition(
+            targetRiparazione.stato,
+            payload.stato,
+          );
+          if (transitionFailure) {
+            return transitionFailure;
+          }
         }
 
         const updated = await tx.riparazione.update({
@@ -1664,7 +1687,7 @@ async function cambiaStatoRiparazioneInDatabase(
             riparazioneId: updated.id,
             stato: payload.stato,
             userId: payload.actorUserId,
-            note: payload.note,
+            note: payload.note ?? "",
           },
         });
 

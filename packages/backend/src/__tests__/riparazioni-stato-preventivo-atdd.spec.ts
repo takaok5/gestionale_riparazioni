@@ -170,15 +170,19 @@ const preventivoTransitions: PreventivoTransitionCase[] = [
 
 for (const transitionCase of preventivoTransitions) {
   describe(`AC-${transitionCase.acId} - ${transitionCase.title}`, () => {
+    const actorRole: Role =
+      transitionCase.toStato === "ANNULLATA" ? "ADMIN" : "TECNICO";
+    const actorUserId = actorRole === "ADMIN" ? 1 : 7;
+
     it(
-      `Tests AC-${transitionCase.acId}: Given riparazione 10 in stato ${transitionCase.fromStato} and assigned tecnico userId=7 When PATCH /api/riparazioni/10/stato with {"stato":"${transitionCase.toStato}","note":"${transitionCase.note}"} Then 200 with data.stato ${transitionCase.toStato}`,
+      `Tests AC-${transitionCase.acId}: Given riparazione 10 in stato ${transitionCase.fromStato} and actor ${actorRole} userId=${actorUserId} When PATCH /api/riparazioni/10/stato with {"stato":"${transitionCase.toStato}","note":"${transitionCase.note}"} Then 200 with data.stato ${transitionCase.toStato}`,
       async () => {
         await prepareBaseScenario();
         setRiparazioneStatoForTests(10, transitionCase.fromStato);
 
         const response = await request(app)
           .patch("/api/riparazioni/10/stato")
-          .set("Authorization", authHeader("TECNICO", 7))
+          .set("Authorization", authHeader(actorRole, actorUserId))
           .send({ stato: transitionCase.toStato, note: transitionCase.note });
 
         expect(response.status).toBe(200);
@@ -188,7 +192,7 @@ for (const transitionCase of preventivoTransitions) {
     );
 
     it(
-      `Tests AC-${transitionCase.acId}: Given transition to ${transitionCase.toStato} succeeds When GET /api/riparazioni/10 Then latest statiHistory row contains stato ${transitionCase.toStato}, userId 7 and note "${transitionCase.note}"`,
+      `Tests AC-${transitionCase.acId}: Given transition to ${transitionCase.toStato} succeeds When GET /api/riparazioni/10 Then latest statiHistory row contains stato ${transitionCase.toStato}, userId ${actorUserId} and note "${transitionCase.note}"`,
       async () => {
         await prepareBaseScenario();
         setRiparazioneStatoForTests(10, transitionCase.fromStato);
@@ -197,7 +201,7 @@ for (const transitionCase of preventivoTransitions) {
 
         const patchResponse = await request(app)
           .patch("/api/riparazioni/10/stato")
-          .set("Authorization", authHeader("TECNICO", 7))
+          .set("Authorization", authHeader(actorRole, actorUserId))
           .send({ stato: transitionCase.toStato, note: transitionCase.note });
 
         expect(patchResponse.status).toBe(200);
@@ -215,13 +219,58 @@ for (const transitionCase of preventivoTransitions) {
 
         const latest = history[history.length - 1];
         expect(latest?.stato).toBe(transitionCase.toStato);
-        expect(latest?.userId).toBe(7);
+        expect(latest?.userId).toBe(actorUserId);
         expect(latest?.note).toBe(transitionCase.note);
         expect(Number.isNaN(Date.parse(String(latest?.dataOra ?? "")))).toBe(false);
       },
     );
   });
 }
+
+describe("AC-4b - Tecnico non puo' annullare da IN_ATTESA_APPROVAZIONE", () => {
+  it('Tests AC-4b: Given riparazione 10 in stato IN_ATTESA_APPROVAZIONE and actor TECNICO userId=7 When PATCH /api/riparazioni/10/stato {"stato":"ANNULLATA","note":"Tentativo annullamento tecnico"} Then 403 FORBIDDEN with exact message', async () => {
+    await prepareBaseScenario();
+    setRiparazioneStatoForTests(10, "IN_ATTESA_APPROVAZIONE");
+
+    const response = await request(app)
+      .patch("/api/riparazioni/10/stato")
+      .set("Authorization", authHeader("TECNICO", 7))
+      .send({
+        stato: "ANNULLATA",
+        note: "Tentativo annullamento tecnico",
+      });
+
+    expect(response.status).toBe(403);
+    expect(response.body?.error?.code).toBe("FORBIDDEN");
+    expect(response.body?.error?.message).toBe("Only admins can cancel repairs");
+  });
+
+  it("Tests AC-4b: Given cancellation by tecnico is forbidden When GET /api/riparazioni/10 Then stato remains IN_ATTESA_APPROVAZIONE and history length is unchanged", async () => {
+    await prepareBaseScenario();
+    setRiparazioneStatoForTests(10, "IN_ATTESA_APPROVAZIONE");
+
+    const beforeLength = await getDettaglioStatiHistoryLength();
+
+    const patchResponse = await request(app)
+      .patch("/api/riparazioni/10/stato")
+      .set("Authorization", authHeader("TECNICO", 7))
+      .send({
+        stato: "ANNULLATA",
+        note: "Tentativo annullamento tecnico",
+      });
+
+    expect(patchResponse.status).toBe(403);
+
+    const detailResponse = await request(app)
+      .get("/api/riparazioni/10")
+      .set("Authorization", authHeader("TECNICO", 7));
+
+    expect(detailResponse.status).toBe(200);
+    expect(detailResponse.body?.data?.stato).toBe("IN_ATTESA_APPROVAZIONE");
+    expect(Array.isArray(detailResponse.body?.data?.statiHistory)).toBe(true);
+    expect((detailResponse.body?.data?.statiHistory ?? []).length).toBe(beforeLength);
+  });
+});
 
 describe("AC-8 - Transizione non valida da PREVENTIVO_EMESSO", () => {
   it('Tests AC-8: Given riparazione 10 in stato PREVENTIVO_EMESSO When PATCH /api/riparazioni/10/stato {"stato":"IN_LAVORAZIONE","note":"Tentativo salto approvazione"} Then 400 VALIDATION_ERROR with exact message', async () => {

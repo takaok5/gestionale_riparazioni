@@ -213,9 +213,10 @@ function respondCambiaStatoRiparazioneFailure(
   }
 
   if (result.code === "FORBIDDEN") {
+    const message = result.message ?? "Accesso negato";
     res
       .status(403)
-      .json(buildErrorResponse("FORBIDDEN", "Accesso negato"));
+      .json(buildErrorResponse("FORBIDDEN", message));
     return;
   }
 

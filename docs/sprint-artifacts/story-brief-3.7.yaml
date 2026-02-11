@@ -1,0 +1,53 @@
+﻿story_id: '3.7'
+story_title: 'Annullamento Riparazione (Admin)'
+acceptance_criteria:
+  - "Given I am Admin and riparazione id=10 has stato IN_LAVORAZIONE When I PATCH /api/riparazioni/10/stato with { stato: ANNULLATA, note: Cliente ha ritirato dispositivo } Then stato changes to ANNULLATA and response is 200"
+  - "Given I am Admin and riparazione stato is RICEVUTA When I PATCH /api/riparazioni/10/stato with { stato: ANNULLATA } Then stato changes to ANNULLATA"
+  - "Given I am Tecnico (not Admin) When I PATCH /api/riparazioni/10/stato with { stato: ANNULLATA } Then response is 403 with message 'Only admins can cancel repairs'"
+
+target_modules:
+  - packages/backend/src/routes/riparazioni.ts
+  - packages/backend/src/services/riparazioni-service.ts
+  - packages/backend/src/__tests__/riparazioni-stato-base-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-stato-preventivo-atdd.spec.ts
+
+patterns_to_follow:
+  - file: packages/backend/src/routes/riparazioni.ts:287
+    pattern: "PATCH /riparazioni/:id/stato handler builds input and calls cambiaStatoRiparazione"
+  - file: packages/backend/src/routes/riparazioni.ts:189
+    pattern: "Centralized failure mapping for 400/403/404 responses"
+  - file: packages/backend/src/services/riparazioni-service.ts:260
+    pattern: "BASE_ALLOWED_TRANSITIONS defines legal state transitions"
+  - file: packages/backend/src/services/riparazioni-service.ts:695
+    pattern: "Input validation and parsing for cambiaStatoRiparazione"
+  - file: packages/backend/src/services/riparazioni-service.ts:1566
+    pattern: "Role and ownership checks before stato mutation"
+  - file: packages/backend/src/__tests__/riparazioni-stato-base-atdd.spec.ts:100
+    pattern: "ATDD patch stato test pattern with auth and follow-up assertions"
+
+dependencies:
+  - source: packages/backend/src/index.ts:10
+    depends_on: packages/backend/src/routes/riparazioni.ts
+    reason: "Registers and mounts riparazioni router"
+  - source: packages/backend/src/routes/riparazioni.ts:8
+    depends_on: packages/backend/src/services/riparazioni-service.ts
+    reason: "Imports cambiaStatoRiparazione and related helpers"
+  - source: packages/backend/src/__tests__/riparazioni-stato-base-atdd.spec.ts:7
+    depends_on: packages/backend/src/services/riparazioni-service.ts
+    reason: "Imports service helper functions and enums"
+  - source: packages/backend/src/__tests__/riparazioni-stato-preventivo-atdd.spec.ts:7
+    depends_on: packages/backend/src/services/riparazioni-service.ts
+    reason: "Imports service helper functions and enums"
+
+risks:
+  - "Allowing cancel transitions from additional states can break current transition-matrix expectations"
+  - "Current role logic may allow assigned tecnico transitions; cancellation must be admin-only"
+  - "403 error message likely differs from required AC message and needs explicit mapping"
+  - "Optional note handling for cancel must remain compatible with existing validation"
+
+existing_tests:
+  - packages/backend/src/__tests__/riparazioni-stato-base-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-stato-preventivo-atdd.spec.ts
+
+notes:
+  - "No existing frontend modules found for this story area"
