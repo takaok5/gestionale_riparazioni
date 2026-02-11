@@ -70,6 +70,7 @@ interface UpdateFornitoreInput {
   fornitoreId: unknown;
   ragioneSociale: unknown;
   telefono: unknown;
+  categoria: unknown;
 }
 
 interface ListAuditLogsInput {
@@ -91,8 +92,16 @@ interface ListFornitoriInput {
   categoria: unknown;
 }
 
+interface GetFornitoreByIdInput {
+  fornitoreId: unknown;
+}
+
 interface GetClienteByIdInput {
   clienteId: unknown;
+}
+
+interface ListFornitoreOrdiniInput {
+  fornitoreId: unknown;
 }
 
 interface UpdateClienteInput {
@@ -195,6 +204,34 @@ interface FornitoreCreatePayload {
   partitaIva: string | null;
 }
 
+interface FornitoreDetailPayload {
+  id: number;
+  codiceFornitore: string;
+  nome: string;
+  cognome: string | null;
+  ragioneSociale: string | null;
+  categoria: CategoriaFornitore;
+  partitaIva: string | null;
+  codiceFiscale: string | null;
+  indirizzo: string;
+  citta: string;
+  cap: string;
+  provincia: string;
+  telefono: string | null;
+  email: string | null;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface FornitoreOrdineItem {
+  id: number;
+  numeroOrdine: string;
+  stato: string;
+  dataOrdine: string;
+  totale: number;
+}
+
 type CreateClienteResult =
   | {
       ok: true;
@@ -218,7 +255,15 @@ type CreateFornitoreResult =
   | ServiceUnavailableFailure;
 
 type UpdateFornitoreResult =
-  | { ok: true; data: { id: number; ragioneSociale: string | null } }
+  | {
+      ok: true;
+      data: {
+        id: number;
+        ragioneSociale: string | null;
+        telefono: string | null;
+        categoria: CategoriaFornitore;
+      };
+    }
   | ValidationFailure
   | NotFoundFailure
   | ServiceUnavailableFailure;
@@ -238,6 +283,12 @@ type ListFornitoriResult =
   | ValidationFailure
   | ServiceUnavailableFailure;
 
+type GetFornitoreByIdResult =
+  | { ok: true; data: { data: FornitoreDetailPayload } }
+  | ValidationFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
 type GetClienteByIdResult =
   | { ok: true; data: { data: ClienteDetailPayload } }
   | ValidationFailure
@@ -253,6 +304,12 @@ type UpdateClienteResult =
 
 type ListClienteRiparazioniResult =
   | { ok: true; data: { data: ClienteRiparazioneItem[] } }
+  | ValidationFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
+type ListFornitoreOrdiniResult =
+  | { ok: true; data: { data: FornitoreOrdineItem[] } }
   | ValidationFailure
   | NotFoundFailure
   | ServiceUnavailableFailure;
@@ -291,6 +348,7 @@ interface ParsedUpdateFornitoreInput {
   fornitoreId: number;
   ragioneSociale?: string | null;
   telefono?: string | null;
+  categoria?: CategoriaFornitore;
 }
 
 interface ParsedListAuditLogsInput {
@@ -313,8 +371,16 @@ interface ParsedListFornitoriInput {
   categoria?: CategoriaFornitore;
 }
 
+interface ParsedGetFornitoreByIdInput {
+  fornitoreId: number;
+}
+
 interface ParsedGetClienteByIdInput {
   clienteId: number;
+}
+
+interface ParsedListFornitoreOrdiniInput {
+  fornitoreId: number;
 }
 
 interface ParsedUpdateClienteInput {
@@ -349,6 +415,9 @@ interface TestFornitoreRecord {
   id: number;
   codiceFornitore: string;
   nome: string;
+  cognome: string | null;
+  codiceFiscale: string | null;
+  note: string | null;
   categoria: CategoriaFornitore;
   partitaIva: string | null;
   ragioneSociale: string | null;
@@ -358,6 +427,17 @@ interface TestFornitoreRecord {
   provincia: string;
   telefono: string | null;
   email: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface TestFornitoreOrdineRecord {
+  id: number;
+  fornitoreId: number;
+  numeroOrdine: string;
+  stato: string;
+  dataOrdine: string;
+  totale: number;
 }
 
 interface TestRiparazioneRecord {
@@ -408,6 +488,9 @@ const baseTestFornitori: TestFornitoreRecord[] = [
     id: 5,
     codiceFornitore: "FOR-000000",
     nome: "Ricambi Nord",
+    cognome: null,
+    codiceFiscale: null,
+    note: null,
     categoria: "RICAMBI",
     partitaIva: "33333333333",
     ragioneSociale: "Ricambi Nord",
@@ -417,8 +500,12 @@ const baseTestFornitori: TestFornitoreRecord[] = [
     provincia: "MI",
     telefono: "0211122233",
     email: "ricambi.nord@test.local",
+    createdAt: "2026-02-10T08:00:00.000Z",
+    updatedAt: "2026-02-10T08:00:00.000Z",
   },
 ];
+
+const baseTestFornitoreOrdini: TestFornitoreOrdineRecord[] = [];
 
 const baseTestRiparazioni: TestRiparazioneRecord[] = [
   {
@@ -478,6 +565,7 @@ const baseTestAuditLogs: AuditLogListItem[] = [
 
 let testClienti = cloneTestClienti(baseTestClienti);
 let testFornitori = cloneTestFornitori(baseTestFornitori);
+let testFornitoreOrdini = cloneTestFornitoreOrdini(baseTestFornitoreOrdini);
 let testRiparazioni = cloneTestRiparazioni(baseTestRiparazioni);
 let testAuditLogs = cloneAuditLogs(baseTestAuditLogs);
 
@@ -494,6 +582,12 @@ function cloneTestClienti(source: TestClienteRecord[]): TestClienteRecord[] {
 }
 
 function cloneTestFornitori(source: TestFornitoreRecord[]): TestFornitoreRecord[] {
+  return source.map((item) => ({ ...item }));
+}
+
+function cloneTestFornitoreOrdini(
+  source: TestFornitoreOrdineRecord[],
+): TestFornitoreOrdineRecord[] {
   return source.map((item) => ({ ...item }));
 }
 
@@ -1005,6 +1099,25 @@ function parseUpdateFornitoreInput(
     };
   }
 
+  let parsedCategoria: CategoriaFornitore | undefined;
+  if (input.categoria !== undefined) {
+    if (typeof input.categoria !== "string") {
+      return buildValidationFailure({
+        field: "categoria",
+        rule: "invalid_enum",
+      });
+    }
+
+    const normalizedCategoria = normalizeCategoriaFornitoreFilter(input.categoria);
+    if (!normalizedCategoria) {
+      return buildValidationFailure({
+        field: "categoria",
+        rule: "invalid_enum",
+      });
+    }
+    parsedCategoria = normalizedCategoria;
+  }
+
   const data: ParsedUpdateFornitoreInput = {
     actorUserId,
     fornitoreId,
@@ -1018,7 +1131,15 @@ function parseUpdateFornitoreInput(
     data.telefono = parsedTelefono.value;
   }
 
-  if (data.ragioneSociale === undefined && data.telefono === undefined) {
+  if (parsedCategoria !== undefined) {
+    data.categoria = parsedCategoria;
+  }
+
+  if (
+    data.ragioneSociale === undefined &&
+    data.telefono === undefined &&
+    data.categoria === undefined
+  ) {
     return buildValidationFailure({
       field: "payload",
       rule: "at_least_one_field_required",
@@ -1249,6 +1370,27 @@ function parseListClientiInput(
   };
 }
 
+function parseGetFornitoreByIdInput(
+  input: GetFornitoreByIdInput,
+):
+  | { ok: true; data: ParsedGetFornitoreByIdInput }
+  | ValidationFailure {
+  const fornitoreId = asPositiveInteger(input.fornitoreId);
+  if (fornitoreId === null) {
+    return buildValidationFailure({
+      field: "fornitoreId",
+      rule: "invalid_integer",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      fornitoreId,
+    },
+  };
+}
+
 function parseGetClienteByIdInput(
   input: GetClienteByIdInput,
 ):
@@ -1266,6 +1408,27 @@ function parseGetClienteByIdInput(
     ok: true,
     data: {
       clienteId,
+    },
+  };
+}
+
+function parseListFornitoreOrdiniInput(
+  input: ListFornitoreOrdiniInput,
+):
+  | { ok: true; data: ParsedListFornitoreOrdiniInput }
+  | ValidationFailure {
+  const fornitoreId = asPositiveInteger(input.fornitoreId);
+  if (fornitoreId === null) {
+    return buildValidationFailure({
+      field: "fornitoreId",
+      rule: "invalid_integer",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      fornitoreId,
     },
   };
 }
@@ -1389,6 +1552,28 @@ function mapTestClienteToDetail(record: TestClienteRecord): ClienteDetailPayload
     cap: record.cap,
     citta: record.citta,
     provincia: record.provincia,
+  };
+}
+
+function mapTestFornitoreToDetail(record: TestFornitoreRecord): FornitoreDetailPayload {
+  return {
+    id: record.id,
+    codiceFornitore: record.codiceFornitore,
+    nome: record.nome,
+    cognome: record.cognome,
+    ragioneSociale: record.ragioneSociale,
+    categoria: record.categoria,
+    partitaIva: record.partitaIva,
+    codiceFiscale: record.codiceFiscale,
+    indirizzo: record.indirizzo,
+    citta: record.citta,
+    cap: record.cap,
+    provincia: record.provincia,
+    telefono: record.telefono,
+    email: record.email,
+    note: record.note,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
   };
 }
 
@@ -1588,11 +1773,15 @@ async function createFornitoreInTestStore(
 
   const codiceFornitore = formatFornitoreCode(nextTestFornitoreCodeSequence);
   nextTestFornitoreCodeSequence += 1;
+  const now = new Date().toISOString();
 
   const created: TestFornitoreRecord = {
     id: nextTestFornitoreId,
     codiceFornitore,
     nome: payload.nome,
+    cognome: null,
+    codiceFiscale: null,
+    note: null,
     categoria: payload.categoria,
     partitaIva: payload.partitaIva,
     ragioneSociale: payload.nome,
@@ -1602,6 +1791,8 @@ async function createFornitoreInTestStore(
     provincia: payload.provincia,
     telefono: payload.telefono,
     email: payload.email,
+    createdAt: now,
+    updatedAt: now,
   };
 
   nextTestFornitoreId += 1;
@@ -1763,6 +1954,7 @@ async function updateFornitoreInTestStore(
   const oldSnapshot = {
     ragioneSociale: current.ragioneSociale,
     telefono: current.telefono,
+    categoria: current.categoria,
   };
 
   const updated: TestFornitoreRecord = {
@@ -1773,6 +1965,9 @@ async function updateFornitoreInTestStore(
         : current.ragioneSociale,
     telefono:
       payload.telefono !== undefined ? payload.telefono : current.telefono,
+    categoria:
+      payload.categoria !== undefined ? payload.categoria : current.categoria,
+    updatedAt: new Date().toISOString(),
   };
 
   testFornitori[targetIndex] = updated;
@@ -1787,6 +1982,7 @@ async function updateFornitoreInTestStore(
       new: {
         ragioneSociale: updated.ragioneSociale,
         telefono: updated.telefono,
+        categoria: updated.categoria,
       },
     },
   });
@@ -1796,6 +1992,8 @@ async function updateFornitoreInTestStore(
     data: {
       id: updated.id,
       ragioneSociale: updated.ragioneSociale,
+      telefono: updated.telefono,
+      categoria: updated.categoria,
     },
   };
 }
@@ -1812,6 +2010,7 @@ async function updateFornitoreInDatabase(
             id: true,
             ragioneSociale: true,
             telefono: true,
+            categoria: true,
           },
         });
 
@@ -1822,12 +2021,16 @@ async function updateFornitoreInDatabase(
         const data: {
           ragioneSociale?: string | null;
           telefono?: string | null;
+          categoria?: CategoriaFornitore;
         } = {};
         if (payload.ragioneSociale !== undefined) {
           data.ragioneSociale = payload.ragioneSociale;
         }
         if (payload.telefono !== undefined) {
           data.telefono = payload.telefono;
+        }
+        if (payload.categoria !== undefined) {
+          data.categoria = payload.categoria;
         }
 
         const updated = await tx.fornitore.update({
@@ -1837,6 +2040,7 @@ async function updateFornitoreInDatabase(
             id: true,
             ragioneSociale: true,
             telefono: true,
+            categoria: true,
           },
         });
 
@@ -1850,10 +2054,12 @@ async function updateFornitoreInDatabase(
               old: {
                 ragioneSociale: existing.ragioneSociale,
                 telefono: existing.telefono,
+                categoria: existing.categoria,
               },
               new: {
                 ragioneSociale: updated.ragioneSociale,
                 telefono: updated.telefono,
+                categoria: updated.categoria,
               },
             },
           },
@@ -1864,6 +2070,11 @@ async function updateFornitoreInDatabase(
           data: {
             id: updated.id,
             ragioneSociale: updated.ragioneSociale,
+            telefono: updated.telefono,
+            categoria:
+              updated.categoria === "RICAMBI" || updated.categoria === "SERVIZI"
+                ? updated.categoria
+                : "ALTRO",
           },
         } as const;
       },
@@ -1871,6 +2082,187 @@ async function updateFornitoreInDatabase(
 
     return result;
   } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function getFornitoreByIdInTestStore(
+  payload: ParsedGetFornitoreByIdInput,
+): Promise<GetFornitoreByIdResult> {
+  const target = testFornitori.find((record) => record.id === payload.fornitoreId);
+  if (!target) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      data: mapTestFornitoreToDetail(target),
+    },
+  };
+}
+
+async function getFornitoreByIdInDatabase(
+  payload: ParsedGetFornitoreByIdInput,
+): Promise<GetFornitoreByIdResult> {
+  try {
+    const row = await getPrismaClient().fornitore.findUnique({
+      where: { id: payload.fornitoreId },
+      select: {
+        id: true,
+        codiceFornitore: true,
+        nome: true,
+        cognome: true,
+        ragioneSociale: true,
+        categoria: true,
+        partitaIva: true,
+        codiceFiscale: true,
+        indirizzo: true,
+        citta: true,
+        cap: true,
+        provincia: true,
+        telefono: true,
+        email: true,
+        note: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!row) {
+      return {
+        ok: false,
+        code: "NOT_FOUND",
+      };
+    }
+
+    return {
+      ok: true,
+      data: {
+        data: {
+          id: row.id,
+          codiceFornitore: row.codiceFornitore,
+          nome: row.nome,
+          cognome: row.cognome,
+          ragioneSociale: row.ragioneSociale,
+          categoria:
+            row.categoria === "RICAMBI" || row.categoria === "SERVIZI"
+              ? row.categoria
+              : "ALTRO",
+          partitaIva: row.partitaIva,
+          codiceFiscale: row.codiceFiscale,
+          indirizzo: row.indirizzo,
+          citta: row.citta,
+          cap: row.cap,
+          provincia: row.provincia,
+          telefono: row.telefono,
+          email: row.email,
+          note: row.note,
+          createdAt: row.createdAt.toISOString(),
+          updatedAt: row.updatedAt.toISOString(),
+        },
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function listFornitoreOrdiniInTestStore(
+  payload: ParsedListFornitoreOrdiniInput,
+): Promise<ListFornitoreOrdiniResult> {
+  const exists = testFornitori.some((record) => record.id === payload.fornitoreId);
+  if (!exists) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  const rows = testFornitoreOrdini
+    .filter((row) => row.fornitoreId === payload.fornitoreId)
+    .sort((left, right) => left.id - right.id)
+    .map((row) => ({
+      id: row.id,
+      numeroOrdine: row.numeroOrdine,
+      stato: row.stato,
+      dataOrdine: row.dataOrdine,
+      totale: row.totale,
+    }));
+
+  return {
+    ok: true,
+    data: {
+      data: rows,
+    },
+  };
+}
+
+async function listFornitoreOrdiniInDatabase(
+  payload: ParsedListFornitoreOrdiniInput,
+): Promise<ListFornitoreOrdiniResult> {
+  try {
+    const existing = await getPrismaClient().fornitore.findUnique({
+      where: { id: payload.fornitoreId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return {
+        ok: false,
+        code: "NOT_FOUND",
+      };
+    }
+
+    const rows = await getPrismaClient().ordineFornitore.findMany({
+      where: { fornitoreId: payload.fornitoreId },
+      orderBy: [
+        { dataOrdine: "desc" },
+        { id: "asc" },
+      ],
+      select: {
+        id: true,
+        numeroOrdine: true,
+        stato: true,
+        dataOrdine: true,
+        totale: true,
+      },
+    });
+
+    return {
+      ok: true,
+      data: {
+        data: rows.map((row) => ({
+          id: row.id,
+          numeroOrdine: row.numeroOrdine,
+          stato: row.stato,
+          dataOrdine: row.dataOrdine.toISOString(),
+          totale: row.totale,
+        })),
+      },
+    };
+  } catch (error) {
+    if (
+      error instanceof PrismaClientKnownRequestError &&
+      error.code === "P2021"
+    ) {
+      return {
+        ok: true,
+        data: {
+          data: [],
+        },
+      };
+    }
+
     return {
       ok: false,
       code: "SERVICE_UNAVAILABLE",
@@ -2646,6 +3038,21 @@ async function listFornitori(
   return listFornitoriInDatabase(parsed.data);
 }
 
+async function getFornitoreById(
+  input: GetFornitoreByIdInput,
+): Promise<GetFornitoreByIdResult> {
+  const parsed = parseGetFornitoreByIdInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return getFornitoreByIdInTestStore(parsed.data);
+  }
+
+  return getFornitoreByIdInDatabase(parsed.data);
+}
+
 async function getClienteById(
   input: GetClienteByIdInput,
 ): Promise<GetClienteByIdResult> {
@@ -2676,6 +3083,21 @@ async function updateCliente(
   return updateClienteInDatabase(parsed.data);
 }
 
+async function listFornitoreOrdini(
+  input: ListFornitoreOrdiniInput,
+): Promise<ListFornitoreOrdiniResult> {
+  const parsed = parseListFornitoreOrdiniInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return listFornitoreOrdiniInTestStore(parsed.data);
+  }
+
+  return listFornitoreOrdiniInDatabase(parsed.data);
+}
+
 async function listClienteRiparazioni(
   input: ListClienteRiparazioniInput,
 ): Promise<ListClienteRiparazioniResult> {
@@ -2695,6 +3117,7 @@ function resetAnagraficheStoreForTests(): void {
   ensureTestEnvironment();
   testClienti = cloneTestClienti(baseTestClienti);
   testFornitori = cloneTestFornitori(baseTestFornitori);
+  testFornitoreOrdini = cloneTestFornitoreOrdini(baseTestFornitoreOrdini);
   testRiparazioni = cloneTestRiparazioni(baseTestRiparazioni);
   testAuditLogs = cloneAuditLogs(baseTestAuditLogs);
   nextTestClienteId = computeNextId(testClienti.map((item) => item.id));
@@ -2702,6 +3125,78 @@ function resetAnagraficheStoreForTests(): void {
   nextTestFornitoreId = computeNextId(testFornitori.map((item) => item.id));
   nextTestFornitoreCodeSequence = computeNextFornitoreCodeSequence(testFornitori);
   nextTestAuditLogId = computeNextId(testAuditLogs.map((item) => item.id));
+}
+
+function seedFornitoreDetailScenarioForTests(): void {
+  ensureTestEnvironment();
+
+  const scenarioFornitore: TestFornitoreRecord = {
+    id: 3,
+    codiceFornitore: "FOR-000003",
+    nome: "Ricambi Centro",
+    cognome: null,
+    codiceFiscale: null,
+    note: null,
+    categoria: "RICAMBI",
+    partitaIva: "33333333334",
+    ragioneSociale: "Ricambi Centro",
+    indirizzo: "Via Roma 10",
+    citta: "Roma",
+    cap: "00100",
+    provincia: "RM",
+    telefono: "0612345678",
+    email: "fornitore3@test.local",
+    createdAt: "2026-02-11T09:00:00.000Z",
+    updatedAt: "2026-02-11T09:00:00.000Z",
+  };
+
+  const preserved = testFornitori.filter((record) => record.id !== scenarioFornitore.id);
+  testFornitori = cloneTestFornitori([scenarioFornitore, ...preserved]);
+  nextTestFornitoreId = computeNextId(testFornitori.map((item) => item.id));
+  nextTestFornitoreCodeSequence = computeNextFornitoreCodeSequence(testFornitori);
+
+  testFornitoreOrdini = cloneTestFornitoreOrdini([
+    {
+      id: 3001,
+      fornitoreId: 3,
+      numeroOrdine: "ORD-000301",
+      stato: "APERTO",
+      dataOrdine: "2026-02-11T09:00:00.000Z",
+      totale: 120.5,
+    },
+    {
+      id: 3002,
+      fornitoreId: 3,
+      numeroOrdine: "ORD-000302",
+      stato: "IN_LAVORAZIONE",
+      dataOrdine: "2026-02-10T10:30:00.000Z",
+      totale: 88,
+    },
+    {
+      id: 3003,
+      fornitoreId: 3,
+      numeroOrdine: "ORD-000303",
+      stato: "SPEDITO",
+      dataOrdine: "2026-02-09T16:00:00.000Z",
+      totale: 44.99,
+    },
+    {
+      id: 3004,
+      fornitoreId: 3,
+      numeroOrdine: "ORD-000304",
+      stato: "CONSEGNATO",
+      dataOrdine: "2026-02-08T14:15:00.000Z",
+      totale: 310.75,
+    },
+    {
+      id: 3005,
+      fornitoreId: 3,
+      numeroOrdine: "ORD-000305",
+      stato: "CHIUSO",
+      dataOrdine: "2026-02-07T11:45:00.000Z",
+      totale: 15,
+    },
+  ]);
 }
 
 function ensureTestEnvironment(): void {
@@ -2713,7 +3208,9 @@ function ensureTestEnvironment(): void {
 export {
   createCliente,
   createFornitore,
+  getFornitoreById,
   getClienteById,
+  listFornitoreOrdini,
   updateCliente,
   updateFornitore,
   listAuditLogs,
@@ -2721,10 +3218,13 @@ export {
   listFornitori,
   listClienteRiparazioni,
   resetAnagraficheStoreForTests,
+  seedFornitoreDetailScenarioForTests,
   type CreateClienteInput,
   type CreateClienteResult,
   type CreateFornitoreInput,
   type CreateFornitoreResult,
+  type GetFornitoreByIdInput,
+  type GetFornitoreByIdResult,
   type GetClienteByIdInput,
   type GetClienteByIdResult,
   type UpdateClienteInput,
@@ -2737,6 +3237,8 @@ export {
   type ListClientiResult,
   type ListFornitoriInput,
   type ListFornitoriResult,
+  type ListFornitoreOrdiniInput,
+  type ListFornitoreOrdiniResult,
   type ListClienteRiparazioniInput,
   type ListClienteRiparazioniResult,
 };

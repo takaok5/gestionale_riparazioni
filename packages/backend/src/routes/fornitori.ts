@@ -5,7 +5,13 @@ import {
   createFornitore,
   type CreateFornitoreInput,
   type CreateFornitoreResult,
+  getFornitoreById,
+  type GetFornitoreByIdInput,
+  type GetFornitoreByIdResult,
   listFornitori,
+  listFornitoreOrdini,
+  type ListFornitoreOrdiniInput,
+  type ListFornitoreOrdiniResult,
   type ListFornitoriInput,
   type ListFornitoriResult,
   updateFornitore,
@@ -27,6 +33,16 @@ type UpdateFornitoreFailure = Exclude<
 
 type ListFornitoriFailure = Exclude<
   ListFornitoriResult,
+  { ok: true; data: unknown }
+>;
+
+type GetFornitoreByIdFailure = Exclude<
+  GetFornitoreByIdResult,
+  { ok: true; data: unknown }
+>;
+
+type ListFornitoreOrdiniFailure = Exclude<
+  ListFornitoreOrdiniResult,
   { ok: true; data: unknown }
 >;
 
@@ -120,6 +136,74 @@ function respondListFornitoriFailure(
         "ANAGRAFICHE_SERVICE_UNAVAILABLE",
         "Servizio anagrafiche non disponibile",
       ),
+      );
+}
+
+function respondGetFornitoreByIdFailure(
+  res: Response,
+  result: GetFornitoreByIdFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Parametri non validi",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "NOT_FOUND") {
+    res
+      .status(404)
+      .json(buildErrorResponse("FORNITORE_NOT_FOUND", "Fornitore non trovato"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "ANAGRAFICHE_SERVICE_UNAVAILABLE",
+        "Servizio anagrafiche non disponibile",
+      ),
+    );
+}
+
+function respondListFornitoreOrdiniFailure(
+  res: Response,
+  result: ListFornitoreOrdiniFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Parametri non validi",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "NOT_FOUND") {
+    res
+      .status(404)
+      .json(buildErrorResponse("FORNITORE_NOT_FOUND", "Fornitore non trovato"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "ANAGRAFICHE_SERVICE_UNAVAILABLE",
+        "Servizio anagrafiche non disponibile",
+      ),
     );
 }
 
@@ -173,6 +257,25 @@ fornitoriRouter.post(
   },
 );
 
+fornitoriRouter.get(
+  "/:id",
+  authenticate,
+  authorize("ADMIN"),
+  async (req, res) => {
+    const payload: GetFornitoreByIdInput = {
+      fornitoreId: req.params.id,
+    };
+
+    const result = await getFornitoreById(payload);
+    if (!result.ok) {
+      respondGetFornitoreByIdFailure(res, result);
+      return;
+    }
+
+    res.status(200).json(result.data);
+  },
+);
+
 fornitoriRouter.put(
   "/:id",
   authenticate,
@@ -183,11 +286,31 @@ fornitoriRouter.put(
       fornitoreId: req.params.id,
       ragioneSociale: req.body?.ragioneSociale,
       telefono: req.body?.telefono,
+      categoria: req.body?.categoria,
     };
 
     const result = await updateFornitore(payload);
     if (!result.ok) {
       respondUpdateFornitoreFailure(res, result);
+      return;
+    }
+
+    res.status(200).json(result.data);
+  },
+);
+
+fornitoriRouter.get(
+  "/:id/ordini",
+  authenticate,
+  authorize("ADMIN"),
+  async (req, res) => {
+    const payload: ListFornitoreOrdiniInput = {
+      fornitoreId: req.params.id,
+    };
+
+    const result = await listFornitoreOrdini(payload);
+    if (!result.ok) {
+      respondListFornitoreOrdiniFailure(res, result);
       return;
     }
 

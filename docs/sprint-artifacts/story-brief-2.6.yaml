@@ -1,0 +1,34 @@
+target_modules:
+  - packages/backend/src/routes/fornitori.ts
+  - packages/backend/src/services/anagrafiche-service.ts
+  - packages/backend/prisma/schema.prisma
+
+patterns_to_follow:
+  - description: "Pattern route dettaglio con payload id, chiamata service e mapper errori in router Express."
+    file: packages/backend/src/routes/clienti.ts:189
+  - description: "Pattern route annidata /:id/{resource} con payload tipizzato e risposta 200 con array dati."
+    file: packages/backend/src/routes/clienti.ts:220
+  - description: "Pattern validazione update con parsing campi opzionali + errore at_least_one_field_required quando payload vuoto."
+    file: packages/backend/src/services/anagrafiche-service.ts:1021
+  - description: "Pattern aggiornamento test-store con snapshot old/new e append audit log per azione UPDATE."
+    file: packages/backend/src/services/anagrafiche-service.ts:1780
+
+dependencies:
+  - packages/backend/src/index.ts
+  - packages/backend/src/lib/errors.ts
+  - packages/backend/src/middleware/auth.ts
+  - packages/backend/src/routes/fornitori.ts
+  - packages/backend/src/services/anagrafiche-service.ts
+
+risks:
+  - "AC-1 non coperto: in fornitori router manca GET /:id e nel service non esiste una funzione get dettaglio fornitore."
+  - "AC-2 parzialmente coperto: update fornitore attuale accetta ragioneSociale/telefono, ma l'AC richiede anche categoria."
+  - "AC-3 non coperto: mancano endpoint /api/fornitori/:id/ordini e relativa logica service/DB; non esiste relazione ordini in schema Prisma."
+  - "In test-mode il fornitore id=3 non esiste (base fixture usa id=5), quindi i test ATDD devono creare/normalizzare i dati prima delle asserzioni."
+  - "Rischio regressione autorizzazioni: l'AC-4 richiede 403 per Tecnico su PUT e va mantenuto coerente con middleware authorize('ADMIN')."
+
+existing_tests:
+  - packages/backend/src/__tests__/fornitori-create-atdd.spec.ts
+  - packages/backend/src/__tests__/fornitori-list-search-atdd.spec.ts
+  - packages/backend/src/__tests__/audit-trail.spec.ts
+  - packages/backend/src/__tests__/clienti-detail-update-atdd.spec.ts

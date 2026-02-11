@@ -77,6 +77,22 @@ model Fornitore {
   note            String?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
+
+  ordini          OrdineFornitore[]
+}
+
+model OrdineFornitore {
+  id           Int       @id @default(autoincrement())
+  fornitoreId  Int
+  fornitore    Fornitore @relation(fields: [fornitoreId], references: [id])
+  numeroOrdine String    @unique
+  stato        String
+  dataOrdine   DateTime
+  totale       Float
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([fornitoreId])
 }
 
 model AuditLog {
