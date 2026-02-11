@@ -1,0 +1,184 @@
+
+> gestionale-riparazioni@0.1.0 test
+> npm run test --workspaces --if-present --run
+
+npm warn Unknown cli config "--run". This will stop working in the next major version of npm.
+
+> @gestionale/backend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend[39m
+
+ [32m✓[39m src/__tests__/fornitori-detail-update-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 137[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-create-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 169[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-update-deactivate.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 167[2mms[22m[39m
+ [32m✓[39m src/__tests__/fornitori-create-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 177[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-create.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 189[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-create-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 194[2mms[22m[39m
+ [32m✓[39m src/__tests__/audit-trail.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 240[2mms[22m[39m
+ [32m✓[39m src/__tests__/fornitori-list-search-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 281[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-detail-update-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 285[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-list-search-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 380[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-detail-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 445[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-list-filter-atdd.spec.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 469[2mms[22m[39m
+ [31m❯[39m src/__tests__/riparazioni-assegnazione-atdd.spec.ts [2m([22m[2m8 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[33m 731[2mms[22m[39m
+[31m   [31m×[31m AC-1 - Assegnazione valida a tecnico[2m > [22mTests AC-1: Given admin and user id=7 role TECNICO When PATCH /api/riparazioni/10/assegna {tecnicoId:7} Then 200 and data.id=10 data.tecnicoId=7[39m[32m 226[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+   [32m✓[39m AC-1 - Assegnazione valida a tecnico[2m > [22mTests AC-1: Given assignment to tecnico id=7 succeeds When requesting detail Then riparazione 10 has tecnico.id=7[32m 100[2mms[22m[39m
+[31m   [31m×[31m AC-2 - Rifiuto assegnazione a utente non tecnico[2m > [22mTests AC-2: Given user id=5 role COMMERCIALE When PATCH /api/riparazioni/10/assegna {tecnicoId:5} Then 400 with VALIDATION_ERROR and message[39m[32m 84[2mms[22m[39m
+[31m     → expected 404 to be 400 // Object.is equality[39m
+   [32m✓[39m AC-2 - Rifiuto assegnazione a utente non tecnico[2m > [22mTests AC-2: Given assignment to COMMERCIALE fails When requesting detail Then tecnico.id remains 7[32m 71[2mms[22m[39m
+[31m   [31m×[31m AC-3 - Riassegnazione a un altro tecnico[2m > [22mTests AC-3: Given riparazione id=10 assigned to tecnico id=7 When PATCH /api/riparazioni/10/assegna {tecnicoId:8} Then 200 and data.tecnicoId=8[39m[32m 83[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-3 - Riassegnazione a un altro tecnico[2m > [22mTests AC-3: Given reassignment to tecnico id=8 succeeds When requesting detail Then tecnico.id is 8[39m[32m 70[2mms[22m[39m
+[31m     → expected 7 to be 8 // Object.is equality[39m
+[31m   [31m×[31m AC-4 - Divieto assegnazione per non Admin[2m > [22mTests AC-4: Given user role TECNICO When PATCH /api/riparazioni/10/assegna Then 403 FORBIDDEN[39m[32m 47[2mms[22m[39m
+[31m     → expected 404 to be 403 // Object.is equality[39m
+   [32m✓[39m AC-4 - Divieto assegnazione per non Admin[2m > [22mTests AC-4: Given non-admin assignment attempt When reading detail after request Then tecnico.id remains unchanged[32m 49[2mms[22m[39m
+ [32m✓[39m src/__tests__/auth-refresh.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 803[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Rinnovo con refresh token valido[2m > [22mreturns 200 with new accessToken and refreshToken [33m 446[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Rinnovo con refresh token valido[2m > [22mreturns user payload with id, username, email and role [33m 326[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-change-password.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 828[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Current password errata[2m > [22mkeeps old password valid when change fails [33m 713[2mms[22m[39m
+ [32m✓[39m src/__tests__/auth-login.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1334[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login Utente valido[2m > [22mreturns 200 with accessToken and refreshToken when credentials are valid [33m 430[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login Utente valido[2m > [22mreturns user payload with id, username, email, role [33m 324[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 5 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-assegnazione-atdd.spec.ts[2m > [22mAC-1 - Assegnazione valida a tecnico[2m > [22mTests AC-1: Given admin and user id=7 role TECNICO When PATCH /api/riparazioni/10/assegna {tecnicoId:7} Then 200 and data.id=10 data.tecnicoId=7
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-assegnazione-atdd.spec.ts:[2m102:29[22m[39m
+    [90m100| [39m      [33m.[39m[34msend[39m({ tecnicoId[33m:[39m [34m7[39m })[33m;[39m
+    [90m101| [39m
+    [90m102| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m103| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mdata[33m.[39mid)[33m.[39m[34mtoBe[39m([34m10[39m)[33m;[39m
+    [90m104| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mdata[33m.[39mtecnicoId)[33m.[39m[34mtoBe[39m([34m7[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-assegnazione-atdd.spec.ts[2m > [22mAC-2 - Rifiuto assegnazione a utente non tecnico[2m > [22mTests AC-2: Given user id=5 role COMMERCIALE When PATCH /api/riparazioni/10/assegna {tecnicoId:5} Then 400 with VALIDATION_ERROR and message
+[31m[1mAssertionError[22m: expected 404 to be 400 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 400[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-assegnazione-atdd.spec.ts:[2m136:29[22m[39m
+    [90m134| [39m      [33m.[39m[34msend[39m({ tecnicoId[33m:[39m [34m5[39m })[33m;[39m
+    [90m135| [39m
+    [90m136| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m400[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m137| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mcode)[33m.[39m[34mtoBe[39m([32m"VALIDATION_ERROR"[39m)[33m;[39m
+    [90m138| [39m    expect(response.body.error.message).toBe("User must have TECNICO r…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-assegnazione-atdd.spec.ts[2m > [22mAC-3 - Riassegnazione a un altro tecnico[2m > [22mTests AC-3: Given riparazione id=10 assigned to tecnico id=7 When PATCH /api/riparazioni/10/assegna {tecnicoId:8} Then 200 and data.tecnicoId=8
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-assegnazione-atdd.spec.ts:[2m170:29[22m[39m
+    [90m168| [39m      [33m.[39m[34msend[39m({ tecnicoId[33m:[39m [34m8[39m })[33m;[39m
+    [90m169| [39m
+    [90m170| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m171| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mdata[33m.[39mid)[33m.[39m[34mtoBe[39m([34m10[39m)[33m;[39m
+    [90m172| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mdata[33m.[39mtecnicoId)[33m.[39m[34mtoBe[39m([34m8[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-assegnazione-atdd.spec.ts[2m > [22mAC-3 - Riassegnazione a un altro tecnico[2m > [22mTests AC-3: Given reassignment to tecnico id=8 succeeds When requesting detail Then tecnico.id is 8
+[31m[1mAssertionError[22m: expected 7 to be 8 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 8[39m
+[31m+ 7[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-assegnazione-atdd.spec.ts:[2m190:49[22m[39m
+    [90m188| [39m    [34mexpect[39m(detailResponse[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m189| [39m    [34mexpect[39m(detailResponse[33m.[39mbody[33m.[39mdata[33m.[39mid)[33m.[39m[34mtoBe[39m([34m10[39m)[33m;[39m
+    [90m190| [39m    [34mexpect[39m(detailResponse[33m.[39mbody[33m.[39mdata[33m.[39mtecnico[33m.[39mid)[33m.[39m[34mtoBe[39m([34m8[39m)[33m;[39m
+    [90m   | [39m                                                [31m^[39m
+    [90m191| [39m  })[33m;[39m
+    [90m192| [39m})[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-assegnazione-atdd.spec.ts[2m > [22mAC-4 - Divieto assegnazione per non Admin[2m > [22mTests AC-4: Given user role TECNICO When PATCH /api/riparazioni/10/assegna Then 403 FORBIDDEN
+[31m[1mAssertionError[22m: expected 404 to be 403 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 403[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-assegnazione-atdd.spec.ts:[2m204:29[22m[39m
+    [90m202| [39m      [33m.[39m[34msend[39m({ tecnicoId[33m:[39m [34m7[39m })[33m;[39m
+    [90m203| [39m
+    [90m204| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m403[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m205| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mcode)[33m.[39m[34mtoBe[39m([32m"FORBIDDEN"[39m)[33m;[39m
+    [90m206| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mmessage)[33m.[39m[34mtoBe[39m([32m"Accesso negato"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m15 passed[39m[22m[90m (16)[39m
+[2m      Tests [22m [1m[31m5 failed[39m[22m[2m | [22m[1m[32m144 passed[39m[22m[90m (149)[39m
+[2m   Start at [22m 19:39:17
+[2m   Duration [22m 3.85s[2m (transform 1.58s, setup 0ms, collect 29.84s, tests 6.83s, environment 4ms, prepare 4.74s)[22m
+
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error workspace @gestionale/backend@0.1.0
+npm error location C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c vitest run
+
+
+> @gestionale/frontend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/frontend[39m
+
+No test files found, exiting with code 0
+
+[2minclude: [22m[33msrc/**/*.test.ts[2m, [22msrc/**/*.spec.ts[39m
+[2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+
+
+> @gestionale/shared@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/shared[39m
+
+ [32m✓[39m src/validators/index.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 19:39:22
+[2m   Duration [22m 576ms[2m (transform 37ms, setup 0ms, collect 35ms, tests 3ms, environment 0ms, prepare 164ms)[22m
+
