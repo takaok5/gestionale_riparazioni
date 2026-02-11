@@ -1,0 +1,41 @@
+target_modules:
+  - packages/backend/src/routes/riparazioni.ts
+  - packages/backend/src/services/riparazioni-service.ts
+  - packages/backend/src/__tests__/riparazioni-stato-base-atdd.spec.ts
+
+patterns_to_follow:
+  - file: packages/backend/src/routes/riparazioni.ts:287
+    pattern: PATCH /:id/stato endpoint builds payload with actor context and delegates to cambiaStatoRiparazione, returning data envelope and shared error mapping.
+  - file: packages/backend/src/services/riparazioni-service.ts:274
+    pattern: Transition rules are centralized in BASE_ALLOWED_TRANSITIONS and validated through validateBaseTransition before mutating stato.
+  - file: packages/backend/src/services/riparazioni-service.ts:1601
+    pattern: Database path uses Prisma transaction to update riparazione.stato and insert riparazioneStatoHistory atomically.
+  - file: packages/backend/src/__tests__/riparazioni-stato-base-atdd.spec.ts:101
+    pattern: ATDD tests assert PATCH /api/riparazioni/:id/stato responses and follow-up GET /api/riparazioni/:id to verify stato and history.
+
+dependencies:
+  - module: packages/backend/src/routes/riparazioni.ts
+    used_by:
+      - packages/backend/src/index.ts:10
+      - packages/backend/src/index.ts:24
+  - module: packages/backend/src/services/riparazioni-service.ts
+    used_by:
+      - packages/backend/src/routes/riparazioni.ts:4
+      - packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts:6
+      - packages/backend/src/__tests__/riparazioni-list-filter-atdd.spec.ts:9
+      - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts:9
+      - packages/backend/src/__tests__/riparazioni-stato-base-atdd.spec.ts:9
+      - packages/backend/src/__tests__/riparazioni-assegnazione-atdd.spec.ts:6
+  - module: packages/backend/src/__tests__/riparazioni-stato-base-atdd.spec.ts
+    used_by:
+      - packages/backend/vitest.config.ts:1
+
+risks:
+  - Transition rules currently cover only base workflow; adding preventivo transitions must preserve existing base transitions and error messages.
+  - Test-store and Prisma paths must stay in sync; missing preventivo transitions in either path will cause ATDD divergence.
+  - Stato history must be appended for every successful transition; omissions break detail/timeline expectations.
+  - Some preventivo-related transitions (APPROVATA -> IN_ATTESA_RICAMBI/IN_LAVORAZIONE) may need additional business checks not yet modeled.
+
+existing_tests:
+  - packages/backend/src/__tests__/riparazioni-stato-base-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts

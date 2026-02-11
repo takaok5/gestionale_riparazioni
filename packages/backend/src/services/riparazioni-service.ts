@@ -273,7 +273,11 @@ const ALLOWED_STATI = new Set<string>([
 const ALLOWED_ACTOR_ROLES = new Set<string>(["ADMIN", "TECNICO", "COMMERCIALE"]);
 const BASE_ALLOWED_TRANSITIONS = new Map<string, Set<string>>([
   ["RICEVUTA", new Set<string>(["IN_DIAGNOSI"])],
-  ["IN_DIAGNOSI", new Set<string>(["IN_LAVORAZIONE"])],
+  ["IN_DIAGNOSI", new Set<string>(["IN_LAVORAZIONE", "PREVENTIVO_EMESSO"])],
+  ["PREVENTIVO_EMESSO", new Set<string>(["IN_ATTESA_APPROVAZIONE"])],
+  ["IN_ATTESA_APPROVAZIONE", new Set<string>(["APPROVATA", "ANNULLATA"])],
+  ["APPROVATA", new Set<string>(["IN_ATTESA_RICAMBI", "IN_LAVORAZIONE"])],
+  ["IN_ATTESA_RICAMBI", new Set<string>(["IN_LAVORAZIONE"])],
   ["IN_LAVORAZIONE", new Set<string>(["COMPLETATA"])],
   ["COMPLETATA", new Set<string>(["CONSEGNATA"])],
 ]);
