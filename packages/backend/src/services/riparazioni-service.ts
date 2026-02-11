@@ -32,6 +32,10 @@ interface ListRiparazioniInput {
   search: unknown;
 }
 
+interface GetRiparazioneDettaglioInput {
+  riparazioneId: unknown;
+}
+
 interface ValidationDetails extends Record<string, unknown> {
   field: string;
   rule: string;
@@ -72,7 +76,60 @@ interface ListRiparazioniResponsePayload {
   meta: PaginationMeta;
 }
 
-interface TestRiparazioneRecord extends CreatedRiparazionePayload {}
+interface RiparazioneClientePayload {
+  id: number;
+  nome: string;
+  telefono: string;
+  email: string;
+}
+
+interface RiparazioneTecnicoPayload {
+  id: number;
+  username: string;
+}
+
+interface RiparazioneStatoHistoryPayload {
+  stato: string;
+  dataOra: string;
+  userId: number;
+  note: string;
+}
+
+interface RiparazionePreventivoPayload {
+  id: number;
+  numeroPreventivo: string;
+  stato: string;
+  totale: number;
+}
+
+interface RiparazioneRicambioPayload {
+  id: number;
+  codiceArticolo: string;
+  descrizione: string;
+  quantita: number;
+  prezzoUnitario: number;
+}
+
+interface RiparazioneDettaglioPayload {
+  id: number;
+  codiceRiparazione: string;
+  stato: string;
+  cliente: RiparazioneClientePayload;
+  tecnico: RiparazioneTecnicoPayload;
+  statiHistory: RiparazioneStatoHistoryPayload[];
+  preventivi: RiparazionePreventivoPayload[];
+  ricambi: RiparazioneRicambioPayload[];
+}
+
+interface GetRiparazioneDettaglioResponsePayload {
+  data: RiparazioneDettaglioPayload;
+}
+
+interface TestRiparazioneRecord extends CreatedRiparazionePayload {
+  statiHistory: RiparazioneStatoHistoryPayload[];
+  preventivi: RiparazionePreventivoPayload[];
+  ricambi: RiparazioneRicambioPayload[];
+}
 
 type ValidationFailure = {
   ok: false;
@@ -84,6 +141,11 @@ type ValidationFailure = {
 type ClienteNotFoundFailure = {
   ok: false;
   code: "CLIENTE_NOT_FOUND";
+};
+
+type NotFoundFailure = {
+  ok: false;
+  code: "NOT_FOUND";
 };
 
 type ServiceUnavailableFailure = {
@@ -99,6 +161,12 @@ type CreateRiparazioneResult =
 type ListRiparazioniResult =
   | { ok: true; data: ListRiparazioniResponsePayload }
   | ValidationFailure
+  | ServiceUnavailableFailure;
+
+type GetRiparazioneDettaglioResult =
+  | { ok: true; data: GetRiparazioneDettaglioResponsePayload }
+  | ValidationFailure
+  | NotFoundFailure
   | ServiceUnavailableFailure;
 
 interface ParsedCreateRiparazioneInput {
@@ -122,6 +190,10 @@ interface ParsedListRiparazioniInput {
   dataRicezioneDa?: Date;
   dataRicezioneA?: Date;
   search?: string;
+}
+
+interface ParsedGetRiparazioneDettaglioInput {
+  riparazioneId: number;
 }
 
 const ALLOWED_PRIORITA: Priorita[] = ["BASSA", "NORMALE", "ALTA"];
@@ -497,6 +569,27 @@ function parseListRiparazioniInput(
   };
 }
 
+function parseGetRiparazioneDettaglioInput(
+  input: GetRiparazioneDettaglioInput,
+):
+  | { ok: true; data: ParsedGetRiparazioneDettaglioInput }
+  | ValidationFailure {
+  const riparazioneId = asPositiveInteger(input.riparazioneId);
+  if (riparazioneId === null) {
+    return buildValidationFailure({
+      field: "riparazioneId",
+      rule: "invalid_integer",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      riparazioneId,
+    },
+  };
+}
+
 function formatDateCode(date: Date): string {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
@@ -559,6 +652,105 @@ function toListPayload(record: TestRiparazioneRecord): ListedRiparazionePayload 
   };
 }
 
+function buildTestPreventivi(
+  riparazioneId: number,
+): RiparazionePreventivoPayload[] {
+  return [
+    {
+      id: riparazioneId * 100 + 1,
+      numeroPreventivo: `PREV-${riparazioneId.toString().padStart(4, "0")}-01`,
+      stato: "EMESSO",
+      totale: 149.99,
+    },
+    {
+      id: riparazioneId * 100 + 2,
+      numeroPreventivo: `PREV-${riparazioneId.toString().padStart(4, "0")}-02`,
+      stato: "APPROVATO",
+      totale: 219.5,
+    },
+  ];
+}
+
+function buildTestRicambi(riparazioneId: number): RiparazioneRicambioPayload[] {
+  return [
+    {
+      id: riparazioneId * 1000 + 1,
+      codiceArticolo: "RIC-SCH-001",
+      descrizione: "Display OLED",
+      quantita: 1,
+      prezzoUnitario: 89.9,
+    },
+    {
+      id: riparazioneId * 1000 + 2,
+      codiceArticolo: "RIC-BAT-002",
+      descrizione: "Batteria 4500mAh",
+      quantita: 1,
+      prezzoUnitario: 34.5,
+    },
+    {
+      id: riparazioneId * 1000 + 3,
+      codiceArticolo: "RIC-CON-003",
+      descrizione: "Connettore ricarica",
+      quantita: 1,
+      prezzoUnitario: 12.0,
+    },
+    {
+      id: riparazioneId * 1000 + 4,
+      codiceArticolo: "RIC-VIT-004",
+      descrizione: "Set viti telaio",
+      quantita: 8,
+      prezzoUnitario: 0.3,
+    },
+    {
+      id: riparazioneId * 1000 + 5,
+      codiceArticolo: "RIC-GUA-005",
+      descrizione: "Guarnizione impermeabile",
+      quantita: 1,
+      prezzoUnitario: 6.5,
+    },
+  ];
+}
+
+function buildTestClientePayload(clienteId: number): RiparazioneClientePayload {
+  if (clienteId === 5) {
+    return {
+      id: 5,
+      nome: "Cliente Test 5",
+      telefono: "3331234505",
+      email: "cliente5@test.local",
+    };
+  }
+
+  return {
+    id: clienteId,
+    nome: `Cliente ${clienteId}`,
+    telefono: "0000000000",
+    email: `cliente${clienteId}@test.local`,
+  };
+}
+
+function buildTestTecnicoPayload(tecnicoId: number | null): RiparazioneTecnicoPayload {
+  const id = tecnicoId ?? 0;
+
+  return {
+    id,
+    username: `tecnico-${id}`,
+  };
+}
+
+function toDettaglioPayload(record: TestRiparazioneRecord): RiparazioneDettaglioPayload {
+  return {
+    id: record.id,
+    codiceRiparazione: record.codiceRiparazione,
+    stato: record.stato,
+    cliente: buildTestClientePayload(record.clienteId),
+    tecnico: buildTestTecnicoPayload(record.tecnicoId),
+    statiHistory: record.statiHistory.map((entry) => ({ ...entry })),
+    preventivi: record.preventivi.map((entry) => ({ ...entry })),
+    ricambi: record.ricambi.map((entry) => ({ ...entry })),
+  };
+}
+
 async function createRiparazioneInTestStore(
   payload: ParsedCreateRiparazioneInput,
 ): Promise<CreateRiparazioneResult> {
@@ -570,9 +762,10 @@ async function createRiparazioneInTestStore(
   const dateCode = formatDateCode(now);
   const sequence = computeNextDailySequence(testRiparazioni, dateCode);
   const codiceRiparazione = formatRiparazioneCode(dateCode, sequence);
+  const riparazioneId = nextTestRiparazioneId;
 
   const created: TestRiparazioneRecord = {
-    id: nextTestRiparazioneId,
+    id: riparazioneId,
     clienteId: payload.clienteId,
     tecnicoId: payload.actorUserId,
     codiceRiparazione,
@@ -585,6 +778,9 @@ async function createRiparazioneInTestStore(
     descrizioneProblema: payload.descrizioneProblema,
     accessoriConsegnati: payload.accessoriConsegnati,
     priorita: payload.priorita,
+    statiHistory: [],
+    preventivi: buildTestPreventivi(riparazioneId),
+    ricambi: buildTestRicambi(riparazioneId),
   };
 
   nextTestRiparazioneId += 1;
@@ -884,6 +1080,148 @@ async function listRiparazioniInDatabase(
   }
 }
 
+async function getRiparazioneDettaglioInTestStore(
+  payload: ParsedGetRiparazioneDettaglioInput,
+): Promise<GetRiparazioneDettaglioResult> {
+  const target = testRiparazioni.find((row) => row.id === payload.riparazioneId);
+  if (!target) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      data: toDettaglioPayload(target),
+    },
+  };
+}
+
+async function getRiparazioneDettaglioInDatabase(
+  payload: ParsedGetRiparazioneDettaglioInput,
+): Promise<GetRiparazioneDettaglioResult> {
+  try {
+    const row = await getPrismaClient().riparazione.findUnique({
+      where: { id: payload.riparazioneId },
+      select: {
+        id: true,
+        codiceRiparazione: true,
+        stato: true,
+        tecnicoId: true,
+        cliente: {
+          select: {
+            id: true,
+            nome: true,
+            telefono: true,
+            email: true,
+          },
+        },
+        tecnico: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+        statiHistory: {
+          orderBy: {
+            dataOra: "asc",
+          },
+          select: {
+            stato: true,
+            dataOra: true,
+            userId: true,
+            note: true,
+          },
+        },
+        preventivi: {
+          orderBy: {
+            id: "asc",
+          },
+          select: {
+            id: true,
+            numeroPreventivo: true,
+            stato: true,
+            totale: true,
+          },
+        },
+        ricambi: {
+          orderBy: {
+            id: "asc",
+          },
+          select: {
+            id: true,
+            codiceArticolo: true,
+            descrizione: true,
+            quantita: true,
+            prezzoUnitario: true,
+          },
+        },
+      },
+    });
+
+    if (!row) {
+      return {
+        ok: false,
+        code: "NOT_FOUND",
+      };
+    }
+
+    return {
+      ok: true,
+      data: {
+        data: {
+          id: row.id,
+          codiceRiparazione: row.codiceRiparazione,
+          stato: row.stato,
+          cliente: {
+            id: row.cliente.id,
+            nome: row.cliente.nome,
+            telefono: row.cliente.telefono ?? "",
+            email: row.cliente.email ?? "",
+          },
+          tecnico: row.tecnico
+            ? {
+                id: row.tecnico.id,
+                username: row.tecnico.username,
+              }
+            : {
+                id: row.tecnicoId ?? 0,
+                username: row.tecnicoId
+                  ? `tecnico-${row.tecnicoId}`
+                  : "tecnico-0",
+              },
+          statiHistory: row.statiHistory.map((entry) => ({
+            stato: entry.stato,
+            dataOra: entry.dataOra.toISOString(),
+            userId: entry.userId ?? 0,
+            note: entry.note ?? "",
+          })),
+          preventivi: row.preventivi.map((entry) => ({
+            id: entry.id,
+            numeroPreventivo: entry.numeroPreventivo,
+            stato: entry.stato,
+            totale: entry.totale,
+          })),
+          ricambi: row.ricambi.map((entry) => ({
+            id: entry.id,
+            codiceArticolo: entry.codiceArticolo,
+            descrizione: entry.descrizione,
+            quantita: entry.quantita,
+            prezzoUnitario: entry.prezzoUnitario,
+          })),
+        },
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
 async function createRiparazione(
   input: CreateRiparazioneInput,
 ): Promise<CreateRiparazioneResult> {
@@ -914,6 +1252,21 @@ async function listRiparazioni(
   return listRiparazioniInDatabase(parsed.data);
 }
 
+async function getRiparazioneDettaglio(
+  input: GetRiparazioneDettaglioInput,
+): Promise<GetRiparazioneDettaglioResult> {
+  const parsed = parseGetRiparazioneDettaglioInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return getRiparazioneDettaglioInTestStore(parsed.data);
+  }
+
+  return getRiparazioneDettaglioInDatabase(parsed.data);
+}
+
 function ensureTestEnvironment(): void {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
@@ -942,15 +1295,25 @@ function setRiparazioneStatoForTests(
   }
 
   target.stato = stato;
+  const historyTimestamp = new Date(Date.now() + target.statiHistory.length);
+  target.statiHistory.push({
+    stato,
+    dataOra: historyTimestamp.toISOString(),
+    userId: target.tecnicoId ?? 0,
+    note: "",
+  });
 }
 
 export {
   createRiparazione,
+  getRiparazioneDettaglio,
   listRiparazioni,
   resetRiparazioniStoreForTests,
   setRiparazioneStatoForTests,
   type CreateRiparazioneInput,
   type CreateRiparazioneResult,
+  type GetRiparazioneDettaglioInput,
+  type GetRiparazioneDettaglioResult,
   type ListRiparazioniInput,
   type ListRiparazioniResult,
 };

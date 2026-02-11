@@ -36,6 +36,7 @@ model User {
 
   auditLogs              AuditLog[]
   riparazioniAssegnate   Riparazione[] @relation("RiparazioneTecnico")
+  statiHistoryChanges    RiparazioneStatoHistory[] @relation("RiparazioneStatoHistoryUser")
 }
 
 model Cliente {
@@ -126,7 +127,53 @@ model Riparazione {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  statiHistory     RiparazioneStatoHistory[]
+  preventivi       RiparazionePreventivo[]
+  ricambi          RiparazioneRicambio[]
+
   @@index([clienteId])
   @@index([tecnicoId])
   @@index([dataRicezione])
+}
+
+model RiparazioneStatoHistory {
+  id            Int         @id @default(autoincrement())
+  riparazioneId Int
+  riparazione   Riparazione @relation(fields: [riparazioneId], references: [id])
+  stato         String
+  dataOra       DateTime    @default(now())
+  userId        Int?
+  user          User?       @relation("RiparazioneStatoHistoryUser", fields: [userId], references: [id])
+  note          String?
+
+  @@index([riparazioneId])
+  @@index([userId])
+  @@index([dataOra])
+}
+
+model RiparazionePreventivo {
+  id               Int         @id @default(autoincrement())
+  riparazioneId    Int
+  riparazione      Riparazione @relation(fields: [riparazioneId], references: [id])
+  numeroPreventivo String      @unique
+  stato            String
+  totale           Float
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([riparazioneId])
+}
+
+model RiparazioneRicambio {
+  id            Int         @id @default(autoincrement())
+  riparazioneId Int
+  riparazione   Riparazione @relation(fields: [riparazioneId], references: [id])
+  codiceArticolo String
+  descrizione   String
+  quantita      Int
+  prezzoUnitario Float
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([riparazioneId])
 }

@@ -1,0 +1,62 @@
+target_modules:
+  - path: packages/backend/src/routes/riparazioni.ts
+    reason: Add GET /api/riparazioni/:id handler and error mapping for detail response.
+    evidence: packages/backend/src/routes/riparazioni.ts:86
+  - path: packages/backend/src/services/riparazioni-service.ts
+    reason: Implement riparazione detail fetch with cliente/tecnico joins, history, preventivi, ricambi, and test-store support.
+    evidence: packages/backend/src/services/riparazioni-service.ts:75
+  - path: packages/backend/prisma/schema.prisma
+    reason: Extend Riparazione relations to support stato history, preventivi, and ricambi needed by detail response.
+    evidence: packages/backend/prisma/schema.prisma:110
+  - path: no existing files found
+    reason: Preventivi/ricambi/stato-history modules are not present; new modules may be required if not embedded in riparazioni-service.
+    evidence: packages/backend/prisma/schema.prisma:110
+
+patterns_to_follow:
+  - name: detail_route_payload_from_params
+    pattern: Build payload from req.params id, call service, map not-found/validation errors, and return 200 with data envelope.
+    examples:
+      - packages/backend/src/routes/clienti.ts:189
+      - packages/backend/src/routes/fornitori.ts:260
+  - name: detail_service_findUnique_select
+    pattern: Use findUnique with explicit select projection, return NOT_FOUND when missing, and map DB rows to response payload.
+    examples:
+      - packages/backend/src/services/anagrafiche-service.ts:2292
+      - packages/backend/src/services/anagrafiche-service.ts:2111
+  - name: riparazioni_cliente_query_projection
+    pattern: Query riparazioni with select + orderBy and map Date to ISO strings in response.
+    examples:
+      - packages/backend/src/services/anagrafiche-service.ts:2560
+
+dependencies:
+  - path: packages/backend/src/index.ts
+    usage: Mounts riparazioni router for /api/riparazioni.
+    evidence: packages/backend/src/index.ts:24
+  - path: packages/backend/src/routes/riparazioni.ts
+    usage: Imports service functions from riparazioni-service.
+    evidence: packages/backend/src/routes/riparazioni.ts:11
+  - path: packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts
+    usage: Imports resetRiparazioniStoreForTests from riparazioni-service.
+    evidence: packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts:6
+  - path: packages/backend/src/__tests__/riparazioni-list-filter-atdd.spec.ts
+    usage: Imports resetRiparazioniStoreForTests from riparazioni-service.
+    evidence: packages/backend/src/__tests__/riparazioni-list-filter-atdd.spec.ts:7
+
+risks:
+  - risk: Prisma schema lacks models/relations for riparazione stato history, preventivi, and ricambi; AC-2/AC-3 need these relationships.
+    evidence: packages/backend/prisma/schema.prisma:110
+  - risk: Test-store records only include CreatedRiparazionePayload fields, so detail responses cannot include history/preventivi/ricambi without extending test store.
+    evidence: packages/backend/src/services/riparazioni-service.ts:75
+  - risk: Current riparazioni queries select only flat fields; detail endpoint must add nested cliente/tecnico joins without breaking list projections.
+    evidence: packages/backend/src/services/riparazioni-service.ts:841
+
+existing_tests:
+  - path: packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts
+    coverage: Riparazioni create flow, error envelope patterns, and auth scaffolding.
+    evidence: packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts:50
+  - path: packages/backend/src/__tests__/riparazioni-list-filter-atdd.spec.ts
+    coverage: Riparazioni list response shape and filters for projection parity.
+    evidence: packages/backend/src/__tests__/riparazioni-list-filter-atdd.spec.ts:76
+  - path: packages/backend/src/__tests__/clienti-detail-update-atdd.spec.ts
+    coverage: Detail endpoints with nested data and riparazioni list projections.
+    evidence: packages/backend/src/__tests__/clienti-detail-update-atdd.spec.ts:148

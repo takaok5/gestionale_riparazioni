@@ -5,6 +5,9 @@ import {
   createRiparazione,
   type CreateRiparazioneInput,
   type CreateRiparazioneResult,
+  getRiparazioneDettaglio,
+  type GetRiparazioneDettaglioInput,
+  type GetRiparazioneDettaglioResult,
   listRiparazioni,
   type ListRiparazioniInput,
   type ListRiparazioniResult,
@@ -19,6 +22,11 @@ type CreateRiparazioneFailure = Exclude<
 
 type ListRiparazioniFailure = Exclude<
   ListRiparazioniResult,
+  { ok: true; data: unknown }
+>;
+
+type GetRiparazioneDettaglioFailure = Exclude<
+  GetRiparazioneDettaglioResult,
   { ok: true; data: unknown }
 >;
 
@@ -83,6 +91,42 @@ function respondListRiparazioniFailure(
     );
 }
 
+function respondGetRiparazioneDettaglioFailure(
+  res: Response,
+  result: GetRiparazioneDettaglioFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Parametri non validi",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "NOT_FOUND") {
+    res
+      .status(404)
+      .json(
+        buildErrorResponse("RIPARAZIONE_NOT_FOUND", "Riparazione non trovata"),
+      );
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "RIPARAZIONI_SERVICE_UNAVAILABLE",
+        "Servizio riparazioni non disponibile",
+      ),
+    );
+}
+
 riparazioniRouter.get("/", authenticate, async (req, res) => {
   const payload: ListRiparazioniInput = {
     page: req.query.page,
@@ -98,6 +142,20 @@ riparazioniRouter.get("/", authenticate, async (req, res) => {
   const result = await listRiparazioni(payload);
   if (!result.ok) {
     respondListRiparazioniFailure(res, result);
+    return;
+  }
+
+  res.status(200).json(result.data);
+});
+
+riparazioniRouter.get("/:id", authenticate, async (req, res) => {
+  const payload: GetRiparazioneDettaglioInput = {
+    riparazioneId: req.params.id,
+  };
+
+  const result = await getRiparazioneDettaglio(payload);
+  if (!result.ok) {
+    respondGetRiparazioneDettaglioFailure(res, result);
     return;
   }
 
