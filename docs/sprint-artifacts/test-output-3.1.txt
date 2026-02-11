@@ -1,0 +1,216 @@
+
+> gestionale-riparazioni@0.1.0 test
+> npm run test --workspaces --if-present --run
+
+npm warn Unknown cli config "--run". This will stop working in the next major version of npm.
+
+> @gestionale/backend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend[39m
+
+ [32m✓[39m src/__tests__/fornitori-detail-update-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 252[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-create-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 290[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-update-deactivate.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 298[2mms[22m[39m
+ [32m✓[39m src/__tests__/fornitori-create-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 302[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-create.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 321[2mms[22m[39m
+ [31m❯[39m src/__tests__/riparazioni-create-atdd.spec.ts [2m([22m[2m8 tests[22m[2m | [22m[31m7 failed[39m[2m)[22m[33m 316[2mms[22m[39m
+[31m   [31m×[31m AC-1 - Creazione riparazione con stato iniziale RICEVUTA[2m > [22mTests AC-1: Given cliente id=5 exists When POST /api/riparazioni with full payload Then 201 with codiceRiparazione RIP-20260209-0001 and stato RICEVUTA[39m[32m 226[2mms[22m[39m
+[31m     → expected 404 to be 201 // Object.is equality[39m
+[31m   [31m×[31m AC-1 - Creazione riparazione con stato iniziale RICEVUTA[2m > [22mTests AC-1: Given payload has specific device fields When create succeeds Then response persists same values[39m[32m 6[2mms[22m[39m
+[31m     → expected 404 to be 201 // Object.is equality[39m
+[31m   [31m×[31m AC-2 - Progressivo giornaliero codice riparazione[2m > [22mTests AC-2: Given 5 repairs already created on 2026-02-09 When create next repair Then code is RIP-20260209-0006[39m[32m 42[2mms[22m[39m
+[31m     → expected 404 to be 201 // Object.is equality[39m
+[31m   [31m×[31m AC-2 - Progressivo giornaliero codice riparazione[2m > [22mTests AC-2: Given daily sequence is active When creating two consecutive repairs Then second code increments by one[39m[32m 17[2mms[22m[39m
+[31m     → expected 404 to be 201 // Object.is equality[39m
+[31m   [31m×[31m AC-3 - Cliente inesistente[2m > [22mTests AC-3: Given clienteId=999 does not exist When POST /api/riparazioni Then returns 404 CLIENTE_NOT_FOUND[39m[32m 6[2mms[22m[39m
+[31m     → Cannot read properties of undefined (reading 'code')[39m
+   [32m✓[39m AC-3 - Cliente inesistente[2m > [22mTests AC-3: Given clienteId=999 does not exist When request fails Then response has no creation fields[32m 7[2mms[22m[39m
+[31m   [31m×[31m AC-4 - Validazione campo tipoDispositivo[2m > [22mTests AC-4: Given tipoDispositivo is missing When POST /api/riparazioni Then returns 400 VALIDATION_ERROR with message[39m[32m 6[2mms[22m[39m
+[31m     → expected 404 to be 400 // Object.is equality[39m
+[31m   [31m×[31m AC-4 - Validazione campo tipoDispositivo[2m > [22mTests AC-4: Given tipoDispositivo is missing When validation fails Then error details reference tipoDispositivo[39m[32m 6[2mms[22m[39m
+[31m     → expected 404 to be 400 // Object.is equality[39m
+ [32m✓[39m src/__tests__/fornitori-list-search-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 376[2mms[22m[39m
+ [32m✓[39m src/__tests__/audit-trail.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 359[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-detail-update-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 390[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-list-search-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 499[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista clienti paginata[2m > [22mtests AC-1: should return 200 with data[10] and meta {page:1,limit:10,total:25,totalPages:3} [33m 340[2mms[22m[39m
+ [32m✓[39m src/__tests__/auth-refresh.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 935[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Rinnovo con refresh token valido[2m > [22mreturns 200 with new accessToken and refreshToken [33m 595[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Rinnovo con refresh token valido[2m > [22mreturns user payload with id, username, email and role [33m 309[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-change-password.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 950[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Current password errata[2m > [22mkeeps old password valid when change fails [33m 682[2mms[22m[39m
+ [32m✓[39m src/__tests__/auth-login.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1555[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login Utente valido[2m > [22mreturns 200 with accessToken and refreshToken when credentials are valid [33m 587[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login Utente valido[2m > [22mreturns user payload with id, username, email, role [33m 306[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Account disabilitato[2m > [22mreturns 401 ACCOUNT_DISABLED for mario.disabilitato [33m 338[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 7 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-create-atdd.spec.ts[2m > [22mAC-1 - Creazione riparazione con stato iniziale RICEVUTA[2m > [22mTests AC-1: Given cliente id=5 exists When POST /api/riparazioni with full payload Then 201 with codiceRiparazione RIP-20260209-0001 and stato RICEVUTA
+[31m[1mAssertionError[22m: expected 404 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-create-atdd.spec.ts:[2m48:29[22m[39m
+    [90m 46| [39m      [33m.[39m[34msend[39m([34mbuildValidPayload[39m())[33m;[39m
+    [90m 47| [39m
+    [90m 48| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m 49| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mcodiceRiparazione)[33m.[39m[34mtoBe[39m([32m"RIP-20260209-0001"[39m)[33m;[39m
+    [90m 50| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mstato)[33m.[39m[34mtoBe[39m([32m"RICEVUTA"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-create-atdd.spec.ts[2m > [22mAC-1 - Creazione riparazione con stato iniziale RICEVUTA[2m > [22mTests AC-1: Given payload has specific device fields When create succeeds Then response persists same values
+[31m[1mAssertionError[22m: expected 404 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-create-atdd.spec.ts:[2m59:29[22m[39m
+    [90m 57| [39m      [33m.[39m[34msend[39m([34mbuildValidPayload[39m())[33m;[39m
+    [90m 58| [39m
+    [90m 59| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m 60| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mclienteId)[33m.[39m[34mtoBe[39m([34m5[39m)[33m;[39m
+    [90m 61| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mtipoDispositivo)[33m.[39m[34mtoBe[39m([32m"Smartphone"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-create-atdd.spec.ts[2m > [22mAC-2 - Progressivo giornaliero codice riparazione[2m > [22mTests AC-2: Given 5 repairs already created on 2026-02-09 When create next repair Then code is RIP-20260209-0006
+[31m[1mAssertionError[22m: expected 404 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-create-atdd.spec.ts:[2m84:29[22m[39m
+    [90m 82| [39m      [33m.[39m[34msend[39m([34mbuildValidPayload[39m({ serialeDispositivo[33m:[39m [32m"SN-SEED-6"[39m }))[33m;[39m
+    [90m 83| [39m
+    [90m 84| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m 85| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mcodiceRiparazione)[33m.[39m[34mtoBe[39m([32m"RIP-20260209-0006"[39m)[33m;[39m
+    [90m 86| [39m    expect(response.body.codiceRiparazione.startsWith("RIP-20260209-")…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-create-atdd.spec.ts[2m > [22mAC-2 - Progressivo giornaliero codice riparazione[2m > [22mTests AC-2: Given daily sequence is active When creating two consecutive repairs Then second code increments by one
+[31m[1mAssertionError[22m: expected 404 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 404[39m
+
+
+[36m [2m❯[22m src/__tests__/riparazioni-create-atdd.spec.ts:[2m100:26[22m[39m
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m12 passed[39m[22m[90m (13)[39m
+    [90m 98| [39m      [33m.[39m[34msend[39m([34mbuildValidPayload[39m({ serialeDispositivo[33m:[39m [32m"SN-SEQ-2"[39m }))[33m;[39m
+    [90m 99| [39m
+    [90m100| [39m    [34mexpect[39m(first[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                         [31m^[39m
+    [90m101| [39m    [34mexpect[39m(second[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m102| [39m    [34mexpect[39m(second[33m.[39mbody[33m.[39mcodiceRiparazione)[33m.[39m[34mtoBe[39m([32m"RIP-20260209-0002"[39m)[33m;[39m
+[2m      Tests [22m [1m[31m7 failed[39m[22m[2m | [22m[1m[32m112 passed[39m[22m[90m (119)[39m
+
+[2m   Start at [22m 17:28:39
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯[22m[39m
+
+[2m   Duration [22m 7.47s[2m (transform 1.65s, setup 0ms, collect 63.11s, tests 6.84s, environment 3ms, prepare 9.33s)[22m
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-create-atdd.spec.ts[2m > [22mAC-3 - Cliente inesistente[2m > [22mTests AC-3: Given clienteId=999 does not exist When POST /api/riparazioni Then returns 404 CLIENTE_NOT_FOUND
+
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'code')[39m
+[36m [2m❯[22m src/__tests__/riparazioni-create-atdd.spec.ts:[2m114:32[22m[39m
+    [90m112| [39m
+    [90m113| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m404[39m)[33m;[39m
+    [90m114| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mcode)[33m.[39m[34mtoBe[39m([32m"CLIENTE_NOT_FOUND"[39m)[33m;[39m
+    [90m   | [39m                               [31m^[39m
+    [90m115| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mmessage)[33m.[39m[34mtoBe[39m([32m"Cliente non trovato"[39m)[33m;[39m
+    [90m116| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-create-atdd.spec.ts[2m > [22mAC-4 - Validazione campo tipoDispositivo[2m > [22mTests AC-4: Given tipoDispositivo is missing When POST /api/riparazioni Then returns 400 VALIDATION_ERROR with message
+[31m[1mAssertionError[22m: expected 404 to be 400 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 400[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-create-atdd.spec.ts:[2m140:29[22m[39m
+    [90m138| [39m      [33m.[39m[34msend[39m(payload)[33m;[39m
+    [90m139| [39m
+    [90m140| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m400[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m141| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mcode)[33m.[39m[34mtoBe[39m([32m"VALIDATION_ERROR"[39m)[33m;[39m
+    [90m142| [39m    expect(response.body.error.message).toBe("tipoDispositivo is requi…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/riparazioni-create-atdd.spec.ts[2m > [22mAC-4 - Validazione campo tipoDispositivo[2m > [22mTests AC-4: Given tipoDispositivo is missing When validation fails Then error details reference tipoDispositivo
+[31m[1mAssertionError[22m: expected 404 to be 400 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 400[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/riparazioni-create-atdd.spec.ts:[2m154:29[22m[39m
+    [90m152| [39m      [33m.[39m[34msend[39m(payload)[33m;[39m
+    [90m153| [39m
+    [90m154| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m400[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m155| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mdetails[33m.[39mfield)[33m.[39m[34mtoBe[39m([32m"tipoDispositivo"[39m)[33m;[39m
+    [90m156| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mdetails[33m.[39mrule)[33m.[39m[34mtoBe[39m([32m"required"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯[22m[39m
+
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error workspace @gestionale/backend@0.1.0
+npm error location C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c vitest run
+
+
+> @gestionale/frontend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/frontend[39m
+
+No test files found, exiting with code 0
+
+[2minclude: [22m[33msrc/**/*.test.ts[2m, [22msrc/**/*.spec.ts[39m
+[2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+
+
+> @gestionale/shared@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/shared[39m
+
+ [32m✓[39m src/validators/index.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 17:28:57
+[2m   Duration [22m 587ms[2m (transform 41ms, setup 0ms, collect 75ms, tests 3ms, environment 0ms, prepare 160ms)[22m
+

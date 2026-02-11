@@ -111,11 +111,18 @@ model Riparazione {
   clienteId        Int
   cliente          Cliente  @relation(fields: [clienteId], references: [id])
   codiceRiparazione String  @unique
-  stato            String
-  dataRicezione    DateTime
+  stato            String   @default("RICEVUTA")
+  dataRicezione    DateTime @default(now())
   tipoDispositivo  String
+  marcaDispositivo String
+  modelloDispositivo String
+  serialeDispositivo String
+  descrizioneProblema String
+  accessoriConsegnati String
+  priorita         String
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   @@index([clienteId])
+  @@index([dataRicezione])
 }

@@ -1,0 +1,26 @@
+﻿target_modules:
+  - packages/backend/src/index.ts
+  - packages/backend/prisma/schema.prisma
+  - packages/shared/src/types/index.ts
+
+patterns_to_follow:
+  - packages/backend/src/routes/clienti.ts:234 - Authenticated POST route with payload mapping and 201 response.
+  - packages/backend/src/routes/clienti.ts:37 - Validation failures mapped to 400 via buildErrorResponse.
+  - packages/backend/src/services/anagrafiche-service.ts:854 - parse input functions enforce required fields via buildValidationFailure.
+  - packages/backend/src/services/anagrafiche-service.ts:1661 - Transactional create flow with generated code and audit logging.
+
+dependencies:
+  - packages/backend/src/routes/clienti.ts
+  - packages/backend/src/services/anagrafiche-service.ts
+  - packages/backend/src/__tests__/clienti-create-atdd.spec.ts
+  - packages/backend/src/__tests__/clienti-detail-update-atdd.spec.ts
+
+risks:
+  - No dedicated riparazioni route/service exists yet; wiring and module boundaries may regress if created ad hoc.
+  - Riparazione model currently lacks AC-required fields (marca/modello/seriale/descrizione/accessori/priorita/stato) and needs a Prisma migration.
+  - Daily progressive codiceRiparazione (RIP-YYYYMMDD-####) can race under concurrent creates unless generation is transactional.
+  - Exact error contracts (CLIENTE_NOT_FOUND and validation message) must remain consistent with backend error envelope.
+
+existing_tests:
+  - packages/backend/src/__tests__/clienti-create-atdd.spec.ts
+  - packages/backend/src/__tests__/clienti-detail-update-atdd.spec.ts

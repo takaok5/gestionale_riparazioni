@@ -19,6 +19,14 @@ export const CategoriaFornitore = {
 export type CategoriaFornitore =
   (typeof CategoriaFornitore)[keyof typeof CategoriaFornitore];
 
+export const PrioritaRiparazione = {
+  BASSA: "BASSA",
+  NORMALE: "NORMALE",
+  ALTA: "ALTA",
+} as const;
+export type PrioritaRiparazione =
+  (typeof PrioritaRiparazione)[keyof typeof PrioritaRiparazione];
+
 export interface User {
   id: number;
   username: string;
@@ -121,4 +129,30 @@ export interface AuditLogListResponse {
     pageSize: number;
     total: number;
   };
+}
+
+export interface CreateRiparazioneRequest {
+  clienteId: number;
+  tipoDispositivo: string;
+  marcaDispositivo: string;
+  modelloDispositivo: string;
+  serialeDispositivo: string;
+  descrizioneProblema: string;
+  accessoriConsegnati: string;
+  priorita: PrioritaRiparazione;
+}
+
+export interface CreateRiparazioneResponse {
+  id: number;
+  clienteId: number;
+  codiceRiparazione: string;
+  stato: string;
+  dataRicezione: string;
+  tipoDispositivo: string;
+  marcaDispositivo: string;
+  modelloDispositivo: string;
+  serialeDispositivo: string;
+  descrizioneProblema: string;
+  accessoriConsegnati: string;
+  priorita: PrioritaRiparazione;
 }
