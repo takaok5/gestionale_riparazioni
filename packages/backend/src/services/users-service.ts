@@ -751,6 +751,16 @@ function setUserIsActiveForTests(userId: number, isActive: boolean): void {
   };
 }
 
+function getUserRoleForTests(userId: number): Role | null {
+  ensureTestEnvironment();
+  const user = testUsers.find((record) => record.id === userId);
+  if (!user || !user.isActive) {
+    return null;
+  }
+
+  return user.role;
+}
+
 function ensureTestEnvironment(): void {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
@@ -765,6 +775,7 @@ export {
   resetUsersStoreForTests,
   setUserRoleForTests,
   setUserIsActiveForTests,
+  getUserRoleForTests,
   type CreateUserInput,
   type CreateUserResult,
   type UpdateUserRoleInput,

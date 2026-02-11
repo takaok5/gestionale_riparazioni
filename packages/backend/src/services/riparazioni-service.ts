@@ -1,4 +1,5 @@
 import { PrismaClient, type Prisma } from "@prisma/client";
+import { getUserRoleForTests } from "./users-service.js";
 
 type Priorita = "BASSA" | "NORMALE" | "ALTA";
 
@@ -34,6 +35,11 @@ interface ListRiparazioniInput {
 
 interface GetRiparazioneDettaglioInput {
   riparazioneId: unknown;
+}
+
+interface AssegnaRiparazioneTecnicoInput {
+  riparazioneId: unknown;
+  tecnicoId: unknown;
 }
 
 interface ValidationDetails extends Record<string, unknown> {
@@ -125,6 +131,11 @@ interface GetRiparazioneDettaglioResponsePayload {
   data: RiparazioneDettaglioPayload;
 }
 
+interface AssegnaRiparazioneTecnicoPayload {
+  id: number;
+  tecnicoId: number;
+}
+
 interface TestRiparazioneRecord extends CreatedRiparazionePayload {
   statiHistory: RiparazioneStatoHistoryPayload[];
   preventivi: RiparazionePreventivoPayload[];
@@ -148,6 +159,11 @@ type NotFoundFailure = {
   code: "NOT_FOUND";
 };
 
+type UserNotFoundFailure = {
+  ok: false;
+  code: "USER_NOT_FOUND";
+};
+
 type ServiceUnavailableFailure = {
   ok: false;
   code: "SERVICE_UNAVAILABLE";
@@ -167,6 +183,13 @@ type GetRiparazioneDettaglioResult =
   | { ok: true; data: GetRiparazioneDettaglioResponsePayload }
   | ValidationFailure
   | NotFoundFailure
+  | ServiceUnavailableFailure;
+
+type AssegnaRiparazioneTecnicoResult =
+  | { ok: true; data: AssegnaRiparazioneTecnicoPayload }
+  | ValidationFailure
+  | NotFoundFailure
+  | UserNotFoundFailure
   | ServiceUnavailableFailure;
 
 interface ParsedCreateRiparazioneInput {
@@ -194,6 +217,11 @@ interface ParsedListRiparazioniInput {
 
 interface ParsedGetRiparazioneDettaglioInput {
   riparazioneId: number;
+}
+
+interface ParsedAssegnaRiparazioneTecnicoInput {
+  riparazioneId: number;
+  tecnicoId: number;
 }
 
 const ALLOWED_PRIORITA: Priorita[] = ["BASSA", "NORMALE", "ALTA"];
@@ -586,6 +614,36 @@ function parseGetRiparazioneDettaglioInput(
     ok: true,
     data: {
       riparazioneId,
+    },
+  };
+}
+
+function parseAssegnaRiparazioneTecnicoInput(
+  input: AssegnaRiparazioneTecnicoInput,
+):
+  | { ok: true; data: ParsedAssegnaRiparazioneTecnicoInput }
+  | ValidationFailure {
+  const riparazioneId = asPositiveInteger(input.riparazioneId);
+  if (riparazioneId === null) {
+    return buildValidationFailure({
+      field: "riparazioneId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const tecnicoId = asPositiveInteger(input.tecnicoId);
+  if (tecnicoId === null) {
+    return buildValidationFailure({
+      field: "tecnicoId",
+      rule: "invalid_integer",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      riparazioneId,
+      tecnicoId,
     },
   };
 }
@@ -1222,6 +1280,117 @@ async function getRiparazioneDettaglioInDatabase(
   }
 }
 
+async function assegnaRiparazioneTecnicoInTestStore(
+  payload: ParsedAssegnaRiparazioneTecnicoInput,
+): Promise<AssegnaRiparazioneTecnicoResult> {
+  const target = testRiparazioni.find((row) => row.id === payload.riparazioneId);
+  if (!target) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  const targetRole = getUserRoleForTests(payload.tecnicoId);
+  if (!targetRole) {
+    return {
+      ok: false,
+      code: "USER_NOT_FOUND",
+    };
+  }
+
+  if (targetRole !== "TECNICO") {
+    return buildValidationFailure(
+      {
+        field: "tecnicoId",
+        rule: "invalid_role",
+      },
+      "User must have TECNICO role",
+    );
+  }
+
+  target.tecnicoId = payload.tecnicoId;
+  return {
+    ok: true,
+    data: {
+      id: target.id,
+      tecnicoId: payload.tecnicoId,
+    },
+  };
+}
+
+async function assegnaRiparazioneTecnicoInDatabase(
+  payload: ParsedAssegnaRiparazioneTecnicoInput,
+): Promise<AssegnaRiparazioneTecnicoResult> {
+  try {
+    return await getPrismaClient().$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const targetRiparazione = await tx.riparazione.findUnique({
+          where: { id: payload.riparazioneId },
+          select: { id: true },
+        });
+
+        if (!targetRiparazione) {
+          return {
+            ok: false as const,
+            code: "NOT_FOUND" as const,
+          };
+        }
+
+        const targetUser = await tx.user.findUnique({
+          where: { id: payload.tecnicoId },
+          select: {
+            id: true,
+            role: true,
+            isActive: true,
+          },
+        });
+
+        if (!targetUser || !targetUser.isActive) {
+          return {
+            ok: false as const,
+            code: "USER_NOT_FOUND" as const,
+          };
+        }
+
+        if (targetUser.role !== "TECNICO") {
+          return buildValidationFailure(
+            {
+              field: "tecnicoId",
+              rule: "invalid_role",
+            },
+            "User must have TECNICO role",
+          );
+        }
+
+        const updated = await tx.riparazione.update({
+          where: { id: payload.riparazioneId },
+          data: {
+            tecnicoId: payload.tecnicoId,
+          },
+          select: {
+            id: true,
+            tecnicoId: true,
+          },
+        });
+
+        return {
+          ok: true as const,
+          data: {
+            id: updated.id,
+            tecnicoId: updated.tecnicoId ?? payload.tecnicoId,
+          },
+        };
+      },
+    );
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
 async function createRiparazione(
   input: CreateRiparazioneInput,
 ): Promise<CreateRiparazioneResult> {
@@ -1267,6 +1436,21 @@ async function getRiparazioneDettaglio(
   return getRiparazioneDettaglioInDatabase(parsed.data);
 }
 
+async function assegnaRiparazioneTecnico(
+  input: AssegnaRiparazioneTecnicoInput,
+): Promise<AssegnaRiparazioneTecnicoResult> {
+  const parsed = parseAssegnaRiparazioneTecnicoInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return assegnaRiparazioneTecnicoInTestStore(parsed.data);
+  }
+
+  return assegnaRiparazioneTecnicoInDatabase(parsed.data);
+}
+
 function ensureTestEnvironment(): void {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
@@ -1305,11 +1489,14 @@ function setRiparazioneStatoForTests(
 }
 
 export {
+  assegnaRiparazioneTecnico,
   createRiparazione,
   getRiparazioneDettaglio,
   listRiparazioni,
   resetRiparazioniStoreForTests,
   setRiparazioneStatoForTests,
+  type AssegnaRiparazioneTecnicoInput,
+  type AssegnaRiparazioneTecnicoResult,
   type CreateRiparazioneInput,
   type CreateRiparazioneResult,
   type GetRiparazioneDettaglioInput,

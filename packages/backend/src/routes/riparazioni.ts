@@ -1,7 +1,10 @@
 import { Router, type Response } from "express";
 import { buildErrorResponse } from "../lib/errors.js";
-import { authenticate } from "../middleware/auth.js";
+import { authenticate, authorize } from "../middleware/auth.js";
 import {
+  assegnaRiparazioneTecnico,
+  type AssegnaRiparazioneTecnicoInput,
+  type AssegnaRiparazioneTecnicoResult,
   createRiparazione,
   type CreateRiparazioneInput,
   type CreateRiparazioneResult,
@@ -27,6 +30,11 @@ type ListRiparazioniFailure = Exclude<
 
 type GetRiparazioneDettaglioFailure = Exclude<
   GetRiparazioneDettaglioResult,
+  { ok: true; data: unknown }
+>;
+
+type AssegnaRiparazioneTecnicoFailure = Exclude<
+  AssegnaRiparazioneTecnicoResult,
   { ok: true; data: unknown }
 >;
 
@@ -127,6 +135,49 @@ function respondGetRiparazioneDettaglioFailure(
     );
 }
 
+function respondAssegnaRiparazioneTecnicoFailure(
+  res: Response,
+  result: AssegnaRiparazioneTecnicoFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Payload non valido",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "NOT_FOUND") {
+    res
+      .status(404)
+      .json(
+        buildErrorResponse("RIPARAZIONE_NOT_FOUND", "Riparazione non trovata"),
+      );
+    return;
+  }
+
+  if (result.code === "USER_NOT_FOUND") {
+    res
+      .status(404)
+      .json(buildErrorResponse("USER_NOT_FOUND", "Utente non trovato"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "RIPARAZIONI_SERVICE_UNAVAILABLE",
+        "Servizio riparazioni non disponibile",
+      ),
+    );
+}
+
 riparazioniRouter.get("/", authenticate, async (req, res) => {
   const payload: ListRiparazioniInput = {
     page: req.query.page,
@@ -161,6 +212,26 @@ riparazioniRouter.get("/:id", authenticate, async (req, res) => {
 
   res.status(200).json(result.data);
 });
+
+riparazioniRouter.patch(
+  "/:id/assegna",
+  authenticate,
+  authorize("ADMIN"),
+  async (req, res) => {
+    const payload: AssegnaRiparazioneTecnicoInput = {
+      riparazioneId: req.params.id,
+      tecnicoId: req.body?.tecnicoId,
+    };
+
+    const result = await assegnaRiparazioneTecnico(payload);
+    if (!result.ok) {
+      respondAssegnaRiparazioneTecnicoFailure(res, result);
+      return;
+    }
+
+    res.status(200).json({ data: result.data });
+  },
+);
 
 riparazioniRouter.post("/", authenticate, async (req, res) => {
   const payload: CreateRiparazioneInput = {
