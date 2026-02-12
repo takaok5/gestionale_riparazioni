@@ -8,6 +8,9 @@ import {
   getPreventivoDettaglio,
   type GetPreventivoDettaglioInput,
   type GetPreventivoDettaglioResult,
+  inviaPreventivo,
+  type InviaPreventivoInput,
+  type InviaPreventivoResult,
   updatePreventivo,
   type UpdatePreventivoInput,
   type UpdatePreventivoResult,
@@ -27,6 +30,11 @@ type GetPreventivoDettaglioFailure = Exclude<
 
 type UpdatePreventivoFailure = Exclude<
   UpdatePreventivoResult,
+  { ok: true; data: unknown }
+>;
+
+type InviaPreventivoFailure = Exclude<
+  InviaPreventivoResult,
   { ok: true; data: unknown }
 >;
 
@@ -134,6 +142,47 @@ function respondUpdatePreventivoFailure(
     );
 }
 
+function respondInviaPreventivoFailure(
+  res: Response,
+  result: InviaPreventivoFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Payload non valido",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "NOT_FOUND") {
+    res
+      .status(404)
+      .json(buildErrorResponse("PREVENTIVO_NOT_FOUND", "Preventivo non trovato"));
+    return;
+  }
+
+  if (result.code === "EMAIL_SEND_FAILED") {
+    res
+      .status(500)
+      .json(buildErrorResponse("EMAIL_SEND_FAILED", result.message));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "PREVENTIVI_SERVICE_UNAVAILABLE",
+        "Servizio preventivi non disponibile",
+      ),
+    );
+}
+
 preventiviRouter.post("/", authenticate, async (req, res) => {
   const payload: CreatePreventivoInput = {
     riparazioneId: req.body?.riparazioneId,
@@ -172,6 +221,20 @@ preventiviRouter.put("/:id", authenticate, async (req, res) => {
   const result = await updatePreventivo(payload);
   if (!result.ok) {
     respondUpdatePreventivoFailure(res, result);
+    return;
+  }
+
+  res.status(200).json(result.data);
+});
+
+preventiviRouter.post("/:id/invia", authenticate, async (req, res) => {
+  const payload: InviaPreventivoInput = {
+    preventivoId: req.params.id,
+  };
+
+  const result = await inviaPreventivo(payload);
+  if (!result.ok) {
+    respondInviaPreventivoFailure(res, result);
     return;
   }
 

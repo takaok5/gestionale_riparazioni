@@ -157,6 +157,7 @@ model RiparazionePreventivo {
   riparazione      Riparazione @relation(fields: [riparazioneId], references: [id])
   numeroPreventivo String      @unique
   stato            String
+  dataInvio        DateTime?
   subtotale        Float?
   iva              Float?
   totale           Float

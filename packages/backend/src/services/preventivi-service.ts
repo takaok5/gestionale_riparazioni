@@ -15,6 +15,10 @@ interface UpdatePreventivoInput {
   voci: unknown;
 }
 
+interface InviaPreventivoInput {
+  preventivoId: unknown;
+}
+
 interface PreventivoVocePayload {
   tipo: string;
   descrizione: string;
@@ -28,6 +32,7 @@ interface PreventivoPayload {
   riparazioneId: number;
   numeroPreventivo: string;
   stato: string;
+  dataInvio: string | null;
   voci: PreventivoVocePayload[];
   subtotale: number;
   iva: number;
@@ -77,6 +82,23 @@ type UpdatePreventivoResult =
   | NotFoundFailure
   | ServiceUnavailableFailure;
 
+type EmailSendFailure = {
+  ok: false;
+  code: "EMAIL_SEND_FAILED";
+  message: string;
+};
+
+interface InviaPreventivoSuccessPayload extends PreventivoPayload {
+  riparazioneStato: string;
+}
+
+type InviaPreventivoResult =
+  | { ok: true; data: InviaPreventivoSuccessPayload }
+  | ValidationFailure
+  | NotFoundFailure
+  | EmailSendFailure
+  | ServiceUnavailableFailure;
+
 interface ParsedCreatePreventivoInput {
   riparazioneId: number;
   voci: PreventivoVocePayload[];
@@ -91,9 +113,16 @@ interface ParsedUpdatePreventivoInput {
   voci: PreventivoVocePayload[];
 }
 
+interface ParsedInviaPreventivoInput {
+  preventivoId: number;
+}
+
 let prismaClient: PrismaClient | null = null;
 let nextTestPreventivoId = 22;
 let testPreventivi: PreventivoPayload[] = [];
+const testClienteEmailByRiparazioneId = new Map<number, string | null>();
+const testRiparazioneStatoById = new Map<number, string>();
+const testEmailFailureByPreventivoId = new Map<number, boolean>();
 
 function getPrismaClient(): PrismaClient {
   if (prismaClient) {
@@ -316,6 +345,20 @@ function parseUpdatePreventivoInput(
   };
 }
 
+function parseInviaPreventivoInput(
+  input: InviaPreventivoInput,
+): { ok: true; data: ParsedInviaPreventivoInput } | ValidationFailure {
+  const preventivoId = asPositiveInteger(input.preventivoId);
+  if (preventivoId === null) {
+    return buildValidationFailure("id", "required");
+  }
+
+  return {
+    ok: true,
+    data: { preventivoId },
+  };
+}
+
 function toNumeroPreventivo(id: number): string {
   const padded = String(id).padStart(6, "0");
   return `PREV-${padded}`;
@@ -337,6 +380,7 @@ async function createPreventivoInTestStore(
     riparazioneId: payload.riparazioneId,
     numeroPreventivo: toNumeroPreventivo(nextTestPreventivoId),
     stato: "BOZZA",
+    dataInvio: null,
     voci: payload.voci.map((voce) => ({ ...voce })),
     subtotale: totals.subtotale,
     iva: totals.iva,
@@ -400,6 +444,7 @@ async function createPreventivoInDatabase(
             riparazioneId: payload.riparazioneId,
             numeroPreventivo: temporaryNumeroPreventivo,
             stato: "BOZZA",
+            dataInvio: null,
             subtotale: totals.subtotale,
             iva: totals.iva,
             totale: totals.totale,
@@ -418,6 +463,7 @@ async function createPreventivoInDatabase(
             riparazioneId: true,
             numeroPreventivo: true,
             stato: true,
+            dataInvio: true,
             subtotale: true,
             iva: true,
             totale: true,
@@ -444,6 +490,7 @@ async function createPreventivoInDatabase(
             riparazioneId: true,
             numeroPreventivo: true,
             stato: true,
+            dataInvio: true,
             subtotale: true,
             iva: true,
             totale: true,
@@ -467,6 +514,9 @@ async function createPreventivoInDatabase(
             riparazioneId: numbered.riparazioneId,
             numeroPreventivo: numbered.numeroPreventivo,
             stato: numbered.stato,
+            dataInvio: numbered.dataInvio
+              ? numbered.dataInvio.toISOString()
+              : null,
             voci: numbered.voci.map((voce) => ({
               tipo: voce.tipo,
               descrizione: voce.descrizione,
@@ -500,6 +550,7 @@ async function getPreventivoDettaglioInDatabase(
         riparazioneId: true,
         numeroPreventivo: true,
         stato: true,
+        dataInvio: true,
         subtotale: true,
         iva: true,
         totale: true,
@@ -535,6 +586,7 @@ async function getPreventivoDettaglioInDatabase(
           riparazioneId: row.riparazioneId,
           numeroPreventivo: row.numeroPreventivo,
           stato: row.stato,
+          dataInvio: row.dataInvio ? row.dataInvio.toISOString() : null,
           voci: row.voci.map((voce) => ({
             tipo: voce.tipo,
             descrizione: voce.descrizione,
@@ -639,6 +691,7 @@ async function updatePreventivoInDatabase(
             riparazioneId: true,
             numeroPreventivo: true,
             stato: true,
+            dataInvio: true,
             subtotale: true,
             iva: true,
             totale: true,
@@ -662,6 +715,9 @@ async function updatePreventivoInDatabase(
             riparazioneId: updated.riparazioneId,
             numeroPreventivo: updated.numeroPreventivo,
             stato: updated.stato,
+            dataInvio: updated.dataInvio
+              ? updated.dataInvio.toISOString()
+              : null,
             voci: updated.voci.map((voce) => ({
               tipo: voce.tipo,
               descrizione: voce.descrizione,
@@ -672,6 +728,289 @@ async function updatePreventivoInDatabase(
             subtotale: updated.subtotale ?? totals.subtotale,
             iva: updated.iva ?? totals.iva,
             totale: updated.totale,
+          },
+        };
+      },
+    );
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+function getTestClienteEmail(riparazioneId: number): string | null {
+  const email = testClienteEmailByRiparazioneId.get(riparazioneId);
+  if (email !== undefined) {
+    return email;
+  }
+
+  if (riparazioneId === 10) {
+    return "cliente@test.it";
+  }
+
+  return `cliente${riparazioneId}@test.local`;
+}
+
+function getTestRiparazioneStato(riparazioneId: number): string {
+  const stato = testRiparazioneStatoById.get(riparazioneId);
+  if (stato) {
+    return stato;
+  }
+
+  if (riparazioneId === 10) {
+    return "PREVENTIVO_EMESSO";
+  }
+
+  return "IN_DIAGNOSI";
+}
+
+function shouldFailTestEmail(preventivoId: number): boolean {
+  return testEmailFailureByPreventivoId.get(preventivoId) === true;
+}
+
+function generatePreventivoPdfDocument(preventivoId: number): string {
+  return `preventivo-${preventivoId}.pdf`;
+}
+
+async function sendPreventivoEmail(input: {
+  preventivoId: number;
+  to: string;
+  pdfDocument: string;
+}): Promise<void> {
+  if (process.env.NODE_ENV === "test" && shouldFailTestEmail(input.preventivoId)) {
+    throw new Error("EMAIL_SEND_FAILED");
+  }
+
+  void input.to;
+  void input.pdfDocument;
+}
+
+async function inviaPreventivoInTestStore(
+  payload: ParsedInviaPreventivoInput,
+): Promise<InviaPreventivoResult> {
+  const target = testPreventivi.find((row) => row.id === payload.preventivoId);
+  if (!target) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  if (target.stato === "INVIATO") {
+    return buildValidationFailure(
+      "stato",
+      "immutable",
+      "Preventivo already sent",
+    );
+  }
+
+  const customerEmail = getTestClienteEmail(target.riparazioneId);
+  if (!customerEmail) {
+    return buildValidationFailure(
+      "cliente.email",
+      "required",
+      "Customer email is required to send quotation",
+    );
+  }
+
+  const riparazioneStato = getTestRiparazioneStato(target.riparazioneId);
+  if (riparazioneStato !== "PREVENTIVO_EMESSO") {
+    return buildValidationFailure(
+      "riparazione.stato",
+      "invalid_transition",
+      "Riparazione must be PREVENTIVO_EMESSO before sending quotation",
+    );
+  }
+
+  try {
+    const pdfDocument = generatePreventivoPdfDocument(target.id);
+    await sendPreventivoEmail({
+      preventivoId: target.id,
+      to: customerEmail,
+      pdfDocument,
+    });
+  } catch {
+    return {
+      ok: false,
+      code: "EMAIL_SEND_FAILED",
+      message: "Failed to send email",
+    };
+  }
+
+  const sentAt = new Date().toISOString();
+  target.stato = "INVIATO";
+  target.dataInvio = sentAt;
+  testRiparazioneStatoById.set(target.riparazioneId, "IN_ATTESA_APPROVAZIONE");
+
+  return {
+    ok: true,
+    data: {
+      ...target,
+      voci: target.voci.map((voce) => ({ ...voce })),
+      riparazioneStato: "IN_ATTESA_APPROVAZIONE",
+    },
+  };
+}
+
+async function inviaPreventivoInDatabase(
+  payload: ParsedInviaPreventivoInput,
+): Promise<InviaPreventivoResult> {
+  try {
+    return await getPrismaClient().$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const row = await tx.riparazionePreventivo.findUnique({
+          where: { id: payload.preventivoId },
+          select: {
+            id: true,
+            riparazioneId: true,
+            numeroPreventivo: true,
+            stato: true,
+            dataInvio: true,
+            subtotale: true,
+            iva: true,
+            totale: true,
+            voci: {
+              orderBy: { id: "asc" },
+              select: {
+                tipo: true,
+                descrizione: true,
+                articoloId: true,
+                quantita: true,
+                prezzoUnitario: true,
+              },
+            },
+            riparazione: {
+              select: {
+                id: true,
+                stato: true,
+                cliente: {
+                  select: {
+                    email: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (!row) {
+          return {
+            ok: false as const,
+            code: "NOT_FOUND" as const,
+          };
+        }
+
+        if (row.stato === "INVIATO") {
+          return buildValidationFailure(
+            "stato",
+            "immutable",
+            "Preventivo already sent",
+          );
+        }
+
+        const customerEmail = row.riparazione.cliente.email?.trim() ?? "";
+        if (!customerEmail) {
+          return buildValidationFailure(
+            "cliente.email",
+            "required",
+            "Customer email is required to send quotation",
+          );
+        }
+
+        if (row.riparazione.stato !== "PREVENTIVO_EMESSO") {
+          return buildValidationFailure(
+            "riparazione.stato",
+            "invalid_transition",
+            "Riparazione must be PREVENTIVO_EMESSO before sending quotation",
+          );
+        }
+
+        try {
+          const pdfDocument = generatePreventivoPdfDocument(row.id);
+          await sendPreventivoEmail({
+            preventivoId: row.id,
+            to: customerEmail,
+            pdfDocument,
+          });
+        } catch {
+          return {
+            ok: false as const,
+            code: "EMAIL_SEND_FAILED" as const,
+            message: "Failed to send email",
+          };
+        }
+
+        const sentAt = new Date();
+        const updatedPreventivo = await tx.riparazionePreventivo.update({
+          where: { id: row.id },
+          data: {
+            stato: "INVIATO",
+            dataInvio: sentAt,
+          },
+          select: {
+            id: true,
+            riparazioneId: true,
+            numeroPreventivo: true,
+            stato: true,
+            dataInvio: true,
+            subtotale: true,
+            iva: true,
+            totale: true,
+            voci: {
+              orderBy: { id: "asc" },
+              select: {
+                tipo: true,
+                descrizione: true,
+                articoloId: true,
+                quantita: true,
+                prezzoUnitario: true,
+              },
+            },
+          },
+        });
+
+        const updatedRiparazione = await tx.riparazione.update({
+          where: { id: row.riparazioneId },
+          data: {
+            stato: "IN_ATTESA_APPROVAZIONE",
+          },
+          select: {
+            stato: true,
+          },
+        });
+
+        return {
+          ok: true as const,
+          data: {
+            id: updatedPreventivo.id,
+            riparazioneId: updatedPreventivo.riparazioneId,
+            numeroPreventivo: updatedPreventivo.numeroPreventivo,
+            stato: updatedPreventivo.stato,
+            dataInvio: updatedPreventivo.dataInvio
+              ? updatedPreventivo.dataInvio.toISOString()
+              : null,
+            voci: updatedPreventivo.voci.map((voce) => ({
+              tipo: voce.tipo,
+              descrizione: voce.descrizione,
+              ...(voce.articoloId ? { articoloId: voce.articoloId } : {}),
+              quantita: voce.quantita,
+              prezzoUnitario: voce.prezzoUnitario,
+            })),
+            subtotale:
+              updatedPreventivo.subtotale !== null
+                ? updatedPreventivo.subtotale
+                : roundCurrency(updatedPreventivo.totale / 1.22),
+            iva:
+              updatedPreventivo.iva !== null
+                ? updatedPreventivo.iva
+                : roundCurrency(
+                    updatedPreventivo.totale -
+                      roundCurrency(updatedPreventivo.totale / 1.22),
+                  ),
+            totale: updatedPreventivo.totale,
+            riparazioneStato: updatedRiparazione.stato,
           },
         };
       },
@@ -729,6 +1068,21 @@ async function updatePreventivo(
   return updatePreventivoInDatabase(parsed.data);
 }
 
+async function inviaPreventivo(
+  input: InviaPreventivoInput,
+): Promise<InviaPreventivoResult> {
+  const parsed = parseInviaPreventivoInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return inviaPreventivoInTestStore(parsed.data);
+  }
+
+  return inviaPreventivoInDatabase(parsed.data);
+}
+
 function ensureTestEnvironment(): void {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
@@ -742,6 +1096,7 @@ function seedDefaultTestPreventivi(): PreventivoPayload[] {
       riparazioneId: 10,
       numeroPreventivo: "PREV-000005",
       stato: "BOZZA",
+      dataInvio: null,
       voci: [
         {
           tipo: "MANODOPERA",
@@ -759,6 +1114,7 @@ function seedDefaultTestPreventivi(): PreventivoPayload[] {
       riparazioneId: 10,
       numeroPreventivo: "PREV-000021",
       stato: "BOZZA",
+      dataInvio: null,
       voci: [
         {
           tipo: "MANODOPERA",
@@ -792,6 +1148,9 @@ function resetPreventiviStoreForTests(): void {
   ensureTestEnvironment();
   testPreventivi = seedDefaultTestPreventivi();
   nextTestPreventivoId = 22;
+  testClienteEmailByRiparazioneId.clear();
+  testRiparazioneStatoById.clear();
+  testEmailFailureByPreventivoId.clear();
 }
 
 function setPreventivoStatoForTests(preventivoId: number, stato: string): void {
@@ -805,18 +1164,55 @@ function setPreventivoStatoForTests(preventivoId: number, stato: string): void {
     throw new Error("PREVENTIVO_NOT_FOUND_FOR_TESTS");
   }
   target.stato = stato;
+  if (stato !== "INVIATO") {
+    target.dataInvio = null;
+    return;
+  }
+  target.dataInvio = new Date().toISOString();
+}
+
+function setPreventivoClienteEmailForTests(
+  preventivoId: number,
+  email: string | null,
+): void {
+  ensureTestEnvironment();
+  const target = testPreventivi.find((row) => row.id === preventivoId);
+  if (!target) {
+    throw new Error("PREVENTIVO_NOT_FOUND_FOR_TESTS");
+  }
+
+  const normalizedEmail = typeof email === "string" ? email.trim() : null;
+  testClienteEmailByRiparazioneId.set(target.riparazioneId, normalizedEmail);
+}
+
+function setPreventivoEmailFailureForTests(
+  preventivoId: number,
+  fail: boolean,
+): void {
+  ensureTestEnvironment();
+  const target = testPreventivi.find((row) => row.id === preventivoId);
+  if (!target) {
+    throw new Error("PREVENTIVO_NOT_FOUND_FOR_TESTS");
+  }
+
+  testEmailFailureByPreventivoId.set(preventivoId, fail);
 }
 
 export {
   createPreventivo,
   getPreventivoDettaglio,
+  inviaPreventivo,
   updatePreventivo,
   resetPreventiviStoreForTests,
+  setPreventivoClienteEmailForTests,
+  setPreventivoEmailFailureForTests,
   setPreventivoStatoForTests,
   type CreatePreventivoInput,
   type CreatePreventivoResult,
   type GetPreventivoDettaglioInput,
   type GetPreventivoDettaglioResult,
+  type InviaPreventivoInput,
+  type InviaPreventivoResult,
   type UpdatePreventivoInput,
   type UpdatePreventivoResult,
 };

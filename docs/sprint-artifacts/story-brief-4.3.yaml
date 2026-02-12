@@ -1,0 +1,45 @@
+﻿story_id: "4.3"
+story_title: "Invio Preventivo al Cliente"
+source_story: "docs/epics/epic-4-preventivi-fatturazione.md:37"
+acceptance_criteria:
+  - "AC-1: POST /api/preventivi/5/invia imposta stato INVIATO, dataInvio corrente, genera PDF, invia email, porta riparazione a IN_ATTESA_APPROVAZIONE, HTTP 200"
+  - "AC-2: se preventivo gia' INVIATO => HTTP 400 errore Preventivo already sent"
+  - "AC-3: se email cliente assente => HTTP 400 errore Customer email is required to send quotation"
+  - "AC-4: se invio email fallisce => stato preventivo resta BOZZA e HTTP 500 errore Failed to send email"
+
+target_modules:
+  - "packages/backend/src/routes/preventivi.ts"
+  - "packages/backend/src/services/preventivi-service.ts"
+  - "packages/backend/src/services/riparazioni-service.ts"
+  - "packages/backend/src/routes/riparazioni.ts"
+  - "packages/backend/prisma/schema.prisma"
+
+patterns_to_follow:
+  - "Route handler pattern with typed payload + service call + centralized error mapping: packages/backend/src/routes/preventivi.ts:166"
+  - "Validation and business rule guard for preventivo state editability before update: packages/backend/src/services/preventivi-service.ts:570"
+  - "Consistent validation failure message for non-editable preventivi: packages/backend/src/services/preventivi-service.ts:574"
+  - "Repair status transition matrix includes PREVENTIVO_EMESSO -> IN_ATTESA_APPROVAZIONE: packages/backend/src/services/riparazioni-service.ts:278"
+  - "PATCH stato endpoint delegates to cambiaStatoRiparazione service with auth context: packages/backend/src/routes/riparazioni.ts:288"
+  - "Router mounted in application under /api/preventivi: packages/backend/src/index.ts:26"
+
+dependencies:
+  - "packages/backend/src/index.ts imports and mounts packages/backend/src/routes/preventivi.ts"
+  - "packages/backend/src/routes/preventivi.ts imports packages/backend/src/services/preventivi-service.ts"
+  - "packages/backend/src/services/preventivi-service.ts imports riparazioneExistsForTests from packages/backend/src/services/riparazioni-service.ts"
+  - "packages/backend/src/routes/riparazioni.ts imports cambiaStatoRiparazione from packages/backend/src/services/riparazioni-service.ts"
+  - "packages/backend/src/__tests__/preventivi-create-atdd.spec.ts imports resetPreventiviStoreForTests from packages/backend/src/services/preventivi-service.ts"
+  - "packages/backend/src/__tests__/preventivi-detail-atdd.spec.ts imports resetPreventiviStoreForTests from packages/backend/src/services/preventivi-service.ts"
+  - "packages/backend/src/__tests__/preventivi-update-atdd.spec.ts imports setPreventivoStatoForTests/resetPreventiviStoreForTests from packages/backend/src/services/preventivi-service.ts"
+
+risks:
+  - "No existing endpoint /api/preventivi/:id/invia in routes; adding it without coherent error mapping can break API contract consistency with existing handlers."
+  - "No email/PDF infrastructure dependency in backend package.json; implementing AC-1/AC-4 may require introducing new adapters or stubs and careful test doubles."
+  - "Current Prisma model RiparazionePreventivo has no dataInvio field (packages/backend/prisma/schema.prisma:154), so AC-1 requires schema change + migration + test-store alignment."
+  - "AC-1 spans multiple side effects (preventivo update, riparazione stato update, email send); missing transaction boundaries can leave inconsistent states on partial failures."
+  - "Riparazione transition rules currently managed in riparazioni-service; bypassing existing transition logic when setting IN_ATTESA_APPROVAZIONE may violate domain invariants."
+
+existing_tests:
+  - "packages/backend/src/__tests__/preventivi-create-atdd.spec.ts"
+  - "packages/backend/src/__tests__/preventivi-detail-atdd.spec.ts"
+  - "packages/backend/src/__tests__/preventivi-update-atdd.spec.ts"
+  - "packages/backend/src/__tests__/riparazioni-stato-preventivo-atdd.spec.ts"
