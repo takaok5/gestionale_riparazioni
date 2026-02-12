@@ -1,0 +1,45 @@
+story_id: "5.6"
+story_title: "Gestione Stato Ordine"
+source_story: "docs/epics/epic-5-magazzino-ordini.md:86"
+acceptance_criteria:
+  - "AC-1: Given ordine BOZZA, PATCH /api/ordini/:id/stato a EMESSO -> stato EMESSO, dataEmissione valorizzata, HTTP 200"
+  - "AC-2: Given ordine EMESSO, PATCH /api/ordini/:id/stato a CONFERMATO -> stato CONFERMATO"
+  - "AC-3: Given ordine CONFERMATO, PATCH /api/ordini/:id/stato a SPEDITO -> stato SPEDITO"
+  - "AC-4: Given ordine SPEDITO, PATCH /api/ordini/:id/stato a RICEVUTO -> stato RICEVUTO, dataRicezione valorizzata"
+  - "AC-5: Given ordine BOZZA, PATCH /api/ordini/:id/stato a ANNULLATO -> stato ANNULLATO"
+  - "AC-6: Given ordine CONFERMATO e actor ADMIN, PATCH /api/ordini/:id/stato a ANNULLATO -> stato ANNULLATO (admin override)"
+  - "AC-7: Given ordine SPEDITO e actor non ADMIN, PATCH /api/ordini/:id/stato a ANNULLATO -> HTTP 400 con errore Cannot cancel order in SPEDITO state"
+
+target_modules:
+  - "packages/backend/src/routes/ordini.ts"
+  - "packages/backend/src/services/anagrafiche-service.ts"
+  - "packages/backend/prisma/schema.prisma"
+  - "packages/backend/src/__tests__/ordini-create-atdd.spec.ts"
+  - "packages/backend/src/index.ts"
+
+patterns_to_follow:
+  - "PATCH stato route pattern delega al service con actor context e mappa errori dominio: packages/backend/src/routes/riparazioni.ts:346"
+  - "Route-level error mapping centralizzato con buildErrorResponse per codici noti: packages/backend/src/routes/ordini.ts:17"
+  - "Matrice transizioni + messaggio errore consistente per transizione invalida: packages/backend/src/services/riparazioni-service.ts:321"
+  - "Validazione transizione isolata in helper riusabile (guard prima della mutazione): packages/backend/src/services/riparazioni-service.ts:890"
+  - "ATDD naming Given/When/Then e assert su codice+payload error: packages/backend/src/__tests__/riparazioni-stato-base-atdd.spec.ts:248"
+  - "Ordini create flow usa doppio path test-store/database con payload parse + adapter unificato: packages/backend/src/services/anagrafiche-service.ts:4691"
+
+dependencies:
+  - "packages/backend/src/index.ts:28 monta ordiniRouter su /api/ordini e propaga il nuovo endpoint PATCH"
+  - "packages/backend/src/routes/ordini.ts:5 importa funzioni da anagrafiche-service; il nuovo use-case stato verra' cablato nello stesso modulo"
+  - "packages/backend/src/services/anagrafiche-service.ts:4896 resetAnagraficheStoreForTests riallinea fixture test-store usate dagli ATDD"
+  - "packages/backend/src/__tests__/ordini-create-atdd.spec.ts:5 dipende da resetAnagraficheStoreForTests e rappresenta suite ordini esistente da estendere"
+  - "packages/backend/prisma/schema.prisma:107 definisce OrdineFornitore; eventuali campi dataEmissione/dataRicezione impattano query e mapping service"
+
+risks:
+  - "Il modello OrdineFornitore non ha dataEmissione/dataRicezione (schema.prisma:107), quindi AC-1/AC-4 richiedono modifica schema + allineamento test-store/database"
+  - "Senza matrice transizioni esplicita, e' facile accettare salti stato non previsti o rifiutare transizioni valide (es. CONFERMATO -> SPEDITO)"
+  - "La regola AC-6 (admin override su ANNULLATO da CONFERMATO) combina stato + ruolo: una guardia incompleta puo' introdurre escalation permessi"
+  - "AC-7 richiede messaggio errore esatto; mismatch testo/codice HTTP romperebbe ATDD anche con logica corretta"
+  - "La duplicazione logica tra test-store e database in anagrafiche-service puo' causare divergenze comportamentali tra test e runtime"
+
+existing_tests:
+  - "packages/backend/src/__tests__/ordini-create-atdd.spec.ts"
+  - "packages/backend/src/__tests__/riparazioni-stato-base-atdd.spec.ts"
+  - "packages/backend/src/__tests__/riparazioni-stato-preventivo-atdd.spec.ts"
