@@ -1,0 +1,45 @@
+story_id: '4.6'
+title: 'Registrazione Pagamento'
+acceptance_criteria:
+  - id: 'AC-1'
+    given: 'fattura id=8 has totale 244.00 and no pagamenti'
+    when: 'I POST /api/fatture/8/pagamenti with { importo: 244.00, metodo: "CONTANTE", dataPagamento: "2026-02-09" }'
+    then: 'pagamento is created, fattura.stato becomes PAGATA, I receive 201'
+  - id: 'AC-2'
+    given: 'fattura id=8 has totale 244.00 and existing pagamento of 100.00'
+    when: 'I POST /api/fatture/8/pagamenti with { importo: 144.00, metodo: "BONIFICO" }'
+    then: 'second pagamento is created, sum reaches 244.00, fattura.stato becomes PAGATA'
+  - id: 'AC-3'
+    given: 'fattura id=8 has totale 244.00 and pagamenti totaling 244.00'
+    when: 'I POST /api/fatture/8/pagamenti with { importo: 10.00 }'
+    then: 'I receive 400 with error "Total payments would exceed invoice total"'
+  - id: 'AC-4'
+    given: 'fattura id=8 has totale 244.00 and pagamento of 100.00 exists'
+    when: 'I GET /api/fatture/8'
+    then: 'response includes pagamenti array showing 100.00 paid, 144.00 remaining'
+
+target_modules:
+  - 'packages/backend/src/routes/fatture.ts'
+  - 'packages/backend/src/services/fatture-service.ts'
+  - 'no existing frontend components found under packages/frontend/src for fatture/pagamenti'
+
+patterns_to_follow:
+  - 'Error mapping for service failures: packages/backend/src/routes/fatture.ts:14'
+  - 'Role guard for COMMERCIALE before route logic: packages/backend/src/routes/fatture.ts:77'
+  - 'Test-store pattern with in-memory array and helpers: packages/backend/src/services/fatture-service.ts:70'
+  - 'Input parsing + validation helper: packages/backend/src/services/fatture-service.ts:100'
+
+dependencies:
+  - 'packages/backend/src/index.ts imports and mounts fattureRouter from packages/backend/src/routes/fatture.ts'
+  - 'packages/backend/src/routes/fatture.ts imports createFattura from packages/backend/src/services/fatture-service.ts'
+  - 'packages/backend/src/__tests__/fatture-create-atdd.spec.ts imports helpers from packages/backend/src/services/fatture-service.ts'
+
+risks:
+  - 'Payment sum validation must prevent totals exceeding fattura.totale, including partial payments and rounding edge cases.'
+  - 'No Pagamento storage exists yet (test-store or Prisma), so introducing it risks inconsistent in-memory vs persistence behavior.'
+  - 'Concurrent payment registration can race and allow overpayment if totals are not updated atomically.'
+  - 'GET /api/fatture/:id currently has no route implementation, so adding pagamenti exposure may require new response shape and tests.'
+
+existing_tests:
+  - 'packages/backend/src/__tests__/fatture-create-atdd.spec.ts'
+  - 'no existing tests found for payment registration or fatture detail (GET /api/fatture/:id)'

@@ -5,6 +5,17 @@ interface CreateFatturaInput {
   riparazioneId: unknown;
 }
 
+interface CreatePagamentoInput {
+  fatturaId: unknown;
+  importo: unknown;
+  metodo: unknown;
+  dataPagamento?: unknown;
+}
+
+interface GetFatturaDetailInput {
+  fatturaId: unknown;
+}
+
 interface FatturaVocePayload {
   tipo: string;
   descrizione: string;
@@ -13,16 +24,44 @@ interface FatturaVocePayload {
   prezzoUnitario: number;
 }
 
+interface PagamentoPayload {
+  id: number;
+  fatturaId: number;
+  importo: number;
+  metodo: string;
+  dataPagamento: string;
+}
+
+type FatturaStato = "EMESSA" | "PAGATA";
+
 interface FatturaPayload {
   id: number;
   riparazioneId: number;
   numeroFattura: string;
-  stato: "EMESSA";
+  stato: FatturaStato;
   subtotale: number;
   iva: number;
   totale: number;
+  totalePagato: number;
+  residuo: number;
   pdfPath: string;
   voci: FatturaVocePayload[];
+  pagamenti: PagamentoPayload[];
+}
+
+interface CreatePagamentoPayload {
+  id: number;
+  fatturaId: number;
+  importo: number;
+  metodo: string;
+  dataPagamento: string;
+  fattura: {
+    id: number;
+    stato: FatturaStato;
+    totale: number;
+    totalePagato: number;
+    residuo: number;
+  };
 }
 
 type ValidationFailure = {
@@ -55,6 +94,16 @@ type InvalidApprovedPreventivoFailure = {
   code: "INVALID_APPROVED_PREVENTIVO";
 };
 
+type FatturaNotFoundFailure = {
+  ok: false;
+  code: "FATTURA_NOT_FOUND";
+};
+
+type OverpaymentFailure = {
+  ok: false;
+  code: "OVERPAYMENT_NOT_ALLOWED";
+};
+
 type CreateFatturaResult =
   | { ok: true; data: FatturaPayload }
   | ValidationFailure
@@ -63,11 +112,36 @@ type CreateFatturaResult =
   | InvalidApprovedPreventivoFailure
   | ServiceUnavailableFailure;
 
+type CreatePagamentoResult =
+  | { ok: true; data: CreatePagamentoPayload }
+  | ValidationFailure
+  | FatturaNotFoundFailure
+  | OverpaymentFailure
+  | ServiceUnavailableFailure;
+
+type GetFatturaDetailResult =
+  | { ok: true; data: FatturaPayload }
+  | ValidationFailure
+  | FatturaNotFoundFailure
+  | ServiceUnavailableFailure;
+
 interface ParsedCreateFatturaInput {
   riparazioneId: number;
 }
 
+interface ParsedCreatePagamentoInput {
+  fatturaId: number;
+  importo: number;
+  metodo: string;
+  dataPagamento?: string;
+}
+
+interface ParsedGetFatturaDetailInput {
+  fatturaId: number;
+}
+
 let nextTestFatturaId = 1;
+let nextTestPagamentoId = 1;
 let testFatture: FatturaPayload[] = [];
 const testLastSequenceByYear = new Map<number, number>();
 
@@ -97,6 +171,36 @@ function asPositiveInteger(value: unknown): number | null {
   return parsed;
 }
 
+function asPositiveCurrency(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+
+  const rounded = roundCurrency(value);
+  return rounded > 0 ? rounded : null;
+}
+
+function asNonEmptyString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function toIsoDate(dateInput?: string): string {
+  if (!dateInput) {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  return dateInput;
+}
+
 function parseCreateFatturaInput(
   input: CreateFatturaInput,
 ): { ok: true; data: ParsedCreateFatturaInput } | ValidationFailure {
@@ -115,6 +219,89 @@ function parseCreateFatturaInput(
   return {
     ok: true,
     data: { riparazioneId },
+  };
+}
+
+function parseCreatePagamentoInput(
+  input: CreatePagamentoInput,
+): { ok: true; data: ParsedCreatePagamentoInput } | ValidationFailure {
+  const fatturaId = asPositiveInteger(input.fatturaId);
+  if (fatturaId === null) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: {
+        field: "fatturaId",
+        rule: "required",
+      },
+    };
+  }
+
+  const importo = asPositiveCurrency(input.importo);
+  if (importo === null) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: {
+        field: "importo",
+        rule: "required",
+      },
+    };
+  }
+
+  const metodo = asNonEmptyString(input.metodo);
+  if (!metodo) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: {
+        field: "metodo",
+        rule: "required",
+      },
+    };
+  }
+
+  let dataPagamento: string | undefined;
+  if (input.dataPagamento !== undefined) {
+    const rawData = asNonEmptyString(input.dataPagamento);
+    if (!rawData || !/^\d{4}-\d{2}-\d{2}$/.test(rawData)) {
+      return {
+        ok: false,
+        code: "VALIDATION_ERROR",
+        details: {
+          field: "dataPagamento",
+          rule: "invalid",
+        },
+      };
+    }
+
+    dataPagamento = rawData;
+  }
+
+  return {
+    ok: true,
+    data: { fatturaId, importo, metodo, dataPagamento },
+  };
+}
+
+function parseGetFatturaDetailInput(
+  input: GetFatturaDetailInput,
+): { ok: true; data: ParsedGetFatturaDetailInput } | ValidationFailure {
+  const fatturaId = asPositiveInteger(input.fatturaId);
+  if (fatturaId === null) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: {
+        field: "fatturaId",
+        rule: "required",
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    data: { fatturaId },
   };
 }
 
@@ -148,6 +335,14 @@ function getNextSequenceForYear(year: number): number {
   const next = Math.max(mapped, existingMax) + 1;
   testLastSequenceByYear.set(year, next);
   return next;
+}
+
+function cloneFattura(value: FatturaPayload): FatturaPayload {
+  return {
+    ...value,
+    voci: value.voci.map((voce) => ({ ...voce })),
+    pagamenti: value.pagamenti.map((pagamento) => ({ ...pagamento })),
+  };
 }
 
 async function createFatturaInTestStore(
@@ -190,6 +385,9 @@ async function createFatturaInTestStore(
   const numeroFattura = toNumeroFattura(year, nextSequence);
   const fatturaId = nextTestFatturaId;
   nextTestFatturaId += 1;
+
+  const totale = roundCurrency(approvedPreventivo.totale);
+
   const created: FatturaPayload = {
     id: fatturaId,
     riparazioneId: payload.riparazioneId,
@@ -197,18 +395,89 @@ async function createFatturaInTestStore(
     stato: "EMESSA",
     subtotale: approvedPreventivo.subtotale,
     iva: approvedPreventivo.iva,
-    totale: approvedPreventivo.totale,
+    totale,
+    totalePagato: 0,
+    residuo: totale,
     pdfPath: createFatturaPdfPath(numeroFattura, fatturaId),
     voci: approvedPreventivo.voci.map((voce) => ({ ...voce })),
+    pagamenti: [],
   };
   testFatture.push(created);
 
   return {
     ok: true,
+    data: cloneFattura(created),
+  };
+}
+
+async function createPagamentoInTestStore(
+  payload: ParsedCreatePagamentoInput,
+): Promise<CreatePagamentoResult> {
+  const fattura = testFatture.find((row) => row.id === payload.fatturaId);
+  if (!fattura) {
+    return {
+      ok: false,
+      code: "FATTURA_NOT_FOUND",
+    };
+  }
+
+  const newTotalePagato = roundCurrency(fattura.totalePagato + payload.importo);
+  if (newTotalePagato - fattura.totale > 0.0001) {
+    return {
+      ok: false,
+      code: "OVERPAYMENT_NOT_ALLOWED",
+    };
+  }
+
+  const pagamento: PagamentoPayload = {
+    id: nextTestPagamentoId,
+    fatturaId: fattura.id,
+    importo: payload.importo,
+    metodo: payload.metodo,
+    dataPagamento: toIsoDate(payload.dataPagamento),
+  };
+  nextTestPagamentoId += 1;
+
+  fattura.pagamenti.push(pagamento);
+  fattura.totalePagato = newTotalePagato;
+  fattura.residuo = roundCurrency(Math.max(0, fattura.totale - newTotalePagato));
+  if (fattura.residuo === 0) {
+    fattura.stato = "PAGATA";
+  }
+
+  return {
+    ok: true,
     data: {
-      ...created,
-      voci: created.voci.map((voce) => ({ ...voce })),
+      id: pagamento.id,
+      fatturaId: pagamento.fatturaId,
+      importo: pagamento.importo,
+      metodo: pagamento.metodo,
+      dataPagamento: pagamento.dataPagamento,
+      fattura: {
+        id: fattura.id,
+        stato: fattura.stato,
+        totale: fattura.totale,
+        totalePagato: fattura.totalePagato,
+        residuo: fattura.residuo,
+      },
     },
+  };
+}
+
+async function getFatturaDetailInTestStore(
+  payload: ParsedGetFatturaDetailInput,
+): Promise<GetFatturaDetailResult> {
+  const fattura = testFatture.find((row) => row.id === payload.fatturaId);
+  if (!fattura) {
+    return {
+      ok: false,
+      code: "FATTURA_NOT_FOUND",
+    };
+  }
+
+  return {
+    ok: true,
+    data: cloneFattura(fattura),
   };
 }
 
@@ -230,6 +499,42 @@ async function createFattura(
   };
 }
 
+async function createPagamento(
+  input: CreatePagamentoInput,
+): Promise<CreatePagamentoResult> {
+  const parsed = parseCreatePagamentoInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return createPagamentoInTestStore(parsed.data);
+  }
+
+  return {
+    ok: false,
+    code: "SERVICE_UNAVAILABLE",
+  };
+}
+
+async function getFatturaDetail(
+  input: GetFatturaDetailInput,
+): Promise<GetFatturaDetailResult> {
+  const parsed = parseGetFatturaDetailInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return getFatturaDetailInTestStore(parsed.data);
+  }
+
+  return {
+    ok: false,
+    code: "SERVICE_UNAVAILABLE",
+  };
+}
+
 function ensureTestEnvironment(): void {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
@@ -240,6 +545,7 @@ function resetFattureStoreForTests(): void {
   ensureTestEnvironment();
   testFatture = [];
   nextTestFatturaId = 1;
+  nextTestPagamentoId = 1;
   testLastSequenceByYear.clear();
 }
 
@@ -263,9 +569,15 @@ function countFattureByRiparazioneForTests(riparazioneId: number): number {
 
 export {
   createFattura,
+  createPagamento,
+  getFatturaDetail,
   countFattureByRiparazioneForTests,
   resetFattureStoreForTests,
   setFatturaSequenceForTests,
   type CreateFatturaInput,
   type CreateFatturaResult,
+  type CreatePagamentoInput,
+  type CreatePagamentoResult,
+  type GetFatturaDetailInput,
+  type GetFatturaDetailResult,
 };

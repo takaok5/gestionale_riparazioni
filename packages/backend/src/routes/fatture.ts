@@ -3,13 +3,21 @@ import { buildErrorResponse } from "../lib/errors.js";
 import { authenticate } from "../middleware/auth.js";
 import {
   createFattura,
+  createPagamento,
+  getFatturaDetail,
   type CreateFatturaInput,
   type CreateFatturaResult,
+  type CreatePagamentoInput,
+  type CreatePagamentoResult,
+  type GetFatturaDetailInput,
+  type GetFatturaDetailResult,
 } from "../services/fatture-service.js";
 
 const fattureRouter = Router();
 
 type CreateFatturaFailure = Exclude<CreateFatturaResult, { ok: true; data: unknown }>;
+type CreatePagamentoFailure = Exclude<CreatePagamentoResult, { ok: true; data: unknown }>;
+type GetFatturaDetailFailure = Exclude<GetFatturaDetailResult, { ok: true; data: unknown }>;
 
 function respondCreateFatturaFailure(
   res: Response,
@@ -74,16 +82,114 @@ function respondCreateFatturaFailure(
     );
 }
 
-fattureRouter.post("/", authenticate, async (req, res) => {
-  if (req.user?.role !== "COMMERCIALE") {
+function respondCreatePagamentoFailure(
+  res: Response,
+  result: CreatePagamentoFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
     res
-      .status(403)
+      .status(400)
       .json(
         buildErrorResponse(
-          "FORBIDDEN",
-          "Operazione consentita solo al ruolo COMMERCIALE",
+          "VALIDATION_ERROR",
+          result.message ?? "Payload non valido",
+          result.details,
         ),
       );
+    return;
+  }
+
+  if (result.code === "FATTURA_NOT_FOUND") {
+    res
+      .status(404)
+      .json(
+        buildErrorResponse(
+          "FATTURA_NOT_FOUND",
+          "Fattura non trovata",
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "OVERPAYMENT_NOT_ALLOWED") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "OVERPAYMENT_NOT_ALLOWED",
+          "Total payments would exceed invoice total",
+        ),
+      );
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "FATTURE_SERVICE_UNAVAILABLE",
+        "Servizio fatture non disponibile",
+      ),
+    );
+}
+
+function respondGetFatturaDetailFailure(
+  res: Response,
+  result: GetFatturaDetailFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Payload non valido",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "FATTURA_NOT_FOUND") {
+    res
+      .status(404)
+      .json(
+        buildErrorResponse(
+          "FATTURA_NOT_FOUND",
+          "Fattura non trovata",
+        ),
+      );
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "FATTURE_SERVICE_UNAVAILABLE",
+        "Servizio fatture non disponibile",
+      ),
+    );
+}
+
+function ensureCommercialeRole(res: Response, role: string | undefined): boolean {
+  if (role === "COMMERCIALE") {
+    return true;
+  }
+
+  res
+    .status(403)
+    .json(
+      buildErrorResponse(
+        "FORBIDDEN",
+        "Operazione consentita solo al ruolo COMMERCIALE",
+      ),
+    );
+  return false;
+}
+
+fattureRouter.post("/", authenticate, async (req, res) => {
+  if (!ensureCommercialeRole(res, req.user?.role)) {
     return;
   }
 
@@ -98,6 +204,45 @@ fattureRouter.post("/", authenticate, async (req, res) => {
   }
 
   res.status(201).json({ data: result.data });
+});
+
+fattureRouter.post("/:id/pagamenti", authenticate, async (req, res) => {
+  if (!ensureCommercialeRole(res, req.user?.role)) {
+    return;
+  }
+
+  const payload: CreatePagamentoInput = {
+    fatturaId: req.params.id,
+    importo: req.body?.importo,
+    metodo: req.body?.metodo,
+    dataPagamento: req.body?.dataPagamento,
+  };
+
+  const result = await createPagamento(payload);
+  if (!result.ok) {
+    respondCreatePagamentoFailure(res, result);
+    return;
+  }
+
+  res.status(201).json({ data: result.data });
+});
+
+fattureRouter.get("/:id", authenticate, async (req, res) => {
+  if (!ensureCommercialeRole(res, req.user?.role)) {
+    return;
+  }
+
+  const payload: GetFatturaDetailInput = {
+    fatturaId: req.params.id,
+  };
+
+  const result = await getFatturaDetail(payload);
+  if (!result.ok) {
+    respondGetFatturaDetailFailure(res, result);
+    return;
+  }
+
+  res.status(200).json({ data: result.data });
 });
 
 export { fattureRouter };
