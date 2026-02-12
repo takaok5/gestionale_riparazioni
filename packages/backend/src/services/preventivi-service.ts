@@ -1,0 +1,595 @@
+import { PrismaClient, type Prisma } from "@prisma/client";
+import { riparazioneExistsForTests } from "./riparazioni-service.js";
+
+interface CreatePreventivoInput {
+  riparazioneId: unknown;
+  voci: unknown;
+}
+
+interface GetPreventivoDettaglioInput {
+  preventivoId: unknown;
+}
+
+interface PreventivoVocePayload {
+  tipo: string;
+  descrizione: string;
+  articoloId?: number;
+  quantita: number;
+  prezzoUnitario: number;
+}
+
+interface PreventivoPayload {
+  id: number;
+  riparazioneId: number;
+  numeroPreventivo: string;
+  stato: string;
+  voci: PreventivoVocePayload[];
+  subtotale: number;
+  iva: number;
+  totale: number;
+}
+
+type ValidationFailure = {
+  ok: false;
+  code: "VALIDATION_ERROR";
+  details: {
+    field: string;
+    rule: string;
+  };
+  message?: string;
+};
+
+type RiparazioneNotFoundFailure = {
+  ok: false;
+  code: "RIPARAZIONE_NOT_FOUND";
+};
+
+type NotFoundFailure = {
+  ok: false;
+  code: "NOT_FOUND";
+};
+
+type ServiceUnavailableFailure = {
+  ok: false;
+  code: "SERVICE_UNAVAILABLE";
+};
+
+type CreatePreventivoResult =
+  | { ok: true; data: PreventivoPayload }
+  | ValidationFailure
+  | RiparazioneNotFoundFailure
+  | ServiceUnavailableFailure;
+
+type GetPreventivoDettaglioResult =
+  | { ok: true; data: { data: PreventivoPayload } }
+  | ValidationFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
+interface ParsedCreatePreventivoInput {
+  riparazioneId: number;
+  voci: PreventivoVocePayload[];
+}
+
+interface ParsedGetPreventivoDettaglioInput {
+  preventivoId: number;
+}
+
+let prismaClient: PrismaClient | null = null;
+let nextTestPreventivoId = 22;
+let testPreventivi: PreventivoPayload[] = [];
+
+function getPrismaClient(): PrismaClient {
+  if (prismaClient) {
+    return prismaClient;
+  }
+
+  prismaClient = new PrismaClient();
+  return prismaClient;
+}
+
+function asPositiveInteger(value: unknown): number | null {
+  if (typeof value === "number") {
+    if (!Number.isSafeInteger(value) || value <= 0) {
+      return null;
+    }
+
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!/^[1-9]\d*$/.test(trimmed)) {
+    return null;
+  }
+
+  const parsed = Number(trimmed);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function asNonEmptyString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+function asPositiveNumber(value: unknown): number | null {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || value <= 0) {
+      return null;
+    }
+
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function computeTotals(voci: PreventivoVocePayload[]): {
+  subtotale: number;
+  iva: number;
+  totale: number;
+} {
+  const subtotale = roundCurrency(
+    voci.reduce(
+      (sum, voce) => sum + voce.quantita * voce.prezzoUnitario,
+      0,
+    ),
+  );
+  const iva = roundCurrency(subtotale * 0.22);
+  const totale = roundCurrency(subtotale + iva);
+  return { subtotale, iva, totale };
+}
+
+function buildValidationFailure(
+  field: string,
+  rule: string,
+  message?: string,
+): ValidationFailure {
+  return {
+    ok: false,
+    code: "VALIDATION_ERROR",
+    details: { field, rule },
+    ...(message ? { message } : {}),
+  };
+}
+
+function parseCreatePreventivoInput(
+  input: CreatePreventivoInput,
+): { ok: true; data: ParsedCreatePreventivoInput } | ValidationFailure {
+  const riparazioneId = asPositiveInteger(input.riparazioneId);
+  if (riparazioneId === null) {
+    return buildValidationFailure("riparazioneId", "required");
+  }
+
+  if (!Array.isArray(input.voci) || input.voci.length === 0) {
+    return buildValidationFailure("voci", "required");
+  }
+
+  const parsedVoci: PreventivoVocePayload[] = [];
+  for (const voce of input.voci) {
+    if (typeof voce !== "object" || voce === null) {
+      return buildValidationFailure("voci", "invalid_type");
+    }
+
+    const tipo = asNonEmptyString((voce as Record<string, unknown>).tipo);
+    if (!tipo) {
+      return buildValidationFailure("tipo", "required");
+    }
+
+    const descrizione = asNonEmptyString(
+      (voce as Record<string, unknown>).descrizione,
+    );
+    if (!descrizione) {
+      return buildValidationFailure(
+        "descrizione",
+        "required",
+        "descrizione is required for each voce",
+      );
+    }
+
+    const quantita = asPositiveInteger((voce as Record<string, unknown>).quantita);
+    if (quantita === null) {
+      return buildValidationFailure("quantita", "required");
+    }
+
+    const prezzoUnitario = asPositiveNumber(
+      (voce as Record<string, unknown>).prezzoUnitario,
+    );
+    if (prezzoUnitario === null) {
+      return buildValidationFailure("prezzoUnitario", "required");
+    }
+
+    const articoloIdRaw = (voce as Record<string, unknown>).articoloId;
+    const articoloId =
+      articoloIdRaw === undefined ? undefined : asPositiveInteger(articoloIdRaw);
+    if (articoloIdRaw !== undefined && articoloId === null) {
+      return buildValidationFailure("articoloId", "invalid_type");
+    }
+
+    parsedVoci.push({
+      tipo,
+      descrizione,
+      ...(articoloId ? { articoloId } : {}),
+      quantita,
+      prezzoUnitario: roundCurrency(prezzoUnitario),
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      riparazioneId,
+      voci: parsedVoci,
+    },
+  };
+}
+
+function parseGetPreventivoDettaglioInput(
+  input: GetPreventivoDettaglioInput,
+): { ok: true; data: ParsedGetPreventivoDettaglioInput } | ValidationFailure {
+  const preventivoId = asPositiveInteger(input.preventivoId);
+  if (preventivoId === null) {
+    return buildValidationFailure("id", "required");
+  }
+
+  return {
+    ok: true,
+    data: { preventivoId },
+  };
+}
+
+function toNumeroPreventivo(id: number): string {
+  const padded = String(id).padStart(6, "0");
+  return `PREV-${padded}`;
+}
+
+async function createPreventivoInTestStore(
+  payload: ParsedCreatePreventivoInput,
+): Promise<CreatePreventivoResult> {
+  if (!riparazioneExistsForTests(payload.riparazioneId)) {
+    return {
+      ok: false,
+      code: "RIPARAZIONE_NOT_FOUND",
+    };
+  }
+
+  const totals = computeTotals(payload.voci);
+  const created: PreventivoPayload = {
+    id: nextTestPreventivoId,
+    riparazioneId: payload.riparazioneId,
+    numeroPreventivo: toNumeroPreventivo(nextTestPreventivoId),
+    stato: "BOZZA",
+    voci: payload.voci.map((voce) => ({ ...voce })),
+    subtotale: totals.subtotale,
+    iva: totals.iva,
+    totale: totals.totale,
+  };
+
+  nextTestPreventivoId += 1;
+  testPreventivi.push(created);
+
+  return {
+    ok: true,
+    data: created,
+  };
+}
+
+async function getPreventivoDettaglioInTestStore(
+  payload: ParsedGetPreventivoDettaglioInput,
+): Promise<GetPreventivoDettaglioResult> {
+  const target = testPreventivi.find((row) => row.id === payload.preventivoId);
+  if (!target) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      data: {
+        ...target,
+        voci: target.voci.map((voce) => ({ ...voce })),
+      },
+    },
+  };
+}
+
+async function createPreventivoInDatabase(
+  payload: ParsedCreatePreventivoInput,
+): Promise<CreatePreventivoResult> {
+  try {
+    return await getPrismaClient().$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const riparazione = await tx.riparazione.findUnique({
+          where: { id: payload.riparazioneId },
+          select: { id: true },
+        });
+        if (!riparazione) {
+          return {
+            ok: false as const,
+            code: "RIPARAZIONE_NOT_FOUND" as const,
+          };
+        }
+
+        const totals = computeTotals(payload.voci);
+        const temporaryNumeroPreventivo = `PENDING-${Date.now()}-${Math.floor(
+          Math.random() * 10000,
+        )}`;
+        const created = await tx.riparazionePreventivo.create({
+          data: {
+            riparazioneId: payload.riparazioneId,
+            numeroPreventivo: temporaryNumeroPreventivo,
+            stato: "BOZZA",
+            subtotale: totals.subtotale,
+            iva: totals.iva,
+            totale: totals.totale,
+            voci: {
+              create: payload.voci.map((voce) => ({
+                tipo: voce.tipo,
+                descrizione: voce.descrizione,
+                articoloId: voce.articoloId,
+                quantita: voce.quantita,
+                prezzoUnitario: voce.prezzoUnitario,
+              })),
+            },
+          },
+          select: {
+            id: true,
+            riparazioneId: true,
+            numeroPreventivo: true,
+            stato: true,
+            subtotale: true,
+            iva: true,
+            totale: true,
+            voci: {
+              orderBy: { id: "asc" },
+              select: {
+                tipo: true,
+                descrizione: true,
+                articoloId: true,
+                quantita: true,
+                prezzoUnitario: true,
+              },
+            },
+          },
+        });
+
+        const numbered = await tx.riparazionePreventivo.update({
+          where: { id: created.id },
+          data: {
+            numeroPreventivo: toNumeroPreventivo(created.id),
+          },
+          select: {
+            id: true,
+            riparazioneId: true,
+            numeroPreventivo: true,
+            stato: true,
+            subtotale: true,
+            iva: true,
+            totale: true,
+            voci: {
+              orderBy: { id: "asc" },
+              select: {
+                tipo: true,
+                descrizione: true,
+                articoloId: true,
+                quantita: true,
+                prezzoUnitario: true,
+              },
+            },
+          },
+        });
+
+        return {
+          ok: true as const,
+          data: {
+            id: numbered.id,
+            riparazioneId: numbered.riparazioneId,
+            numeroPreventivo: numbered.numeroPreventivo,
+            stato: numbered.stato,
+            voci: numbered.voci.map((voce) => ({
+              tipo: voce.tipo,
+              descrizione: voce.descrizione,
+              ...(voce.articoloId ? { articoloId: voce.articoloId } : {}),
+              quantita: voce.quantita,
+              prezzoUnitario: voce.prezzoUnitario,
+            })),
+            subtotale: numbered.subtotale ?? totals.subtotale,
+            iva: numbered.iva ?? totals.iva,
+            totale: numbered.totale,
+          },
+        };
+      },
+    );
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function getPreventivoDettaglioInDatabase(
+  payload: ParsedGetPreventivoDettaglioInput,
+): Promise<GetPreventivoDettaglioResult> {
+  try {
+    const row = await getPrismaClient().riparazionePreventivo.findUnique({
+      where: { id: payload.preventivoId },
+      select: {
+        id: true,
+        riparazioneId: true,
+        numeroPreventivo: true,
+        stato: true,
+        subtotale: true,
+        iva: true,
+        totale: true,
+        voci: {
+          orderBy: { id: "asc" },
+          select: {
+            tipo: true,
+            descrizione: true,
+            articoloId: true,
+            quantita: true,
+            prezzoUnitario: true,
+          },
+        },
+      },
+    });
+
+    if (!row) {
+      return {
+        ok: false,
+        code: "NOT_FOUND",
+      };
+    }
+
+    const subtotale =
+      row.subtotale !== null ? row.subtotale : roundCurrency(row.totale / 1.22);
+    const iva = row.iva !== null ? row.iva : roundCurrency(row.totale - subtotale);
+
+    return {
+      ok: true,
+      data: {
+        data: {
+          id: row.id,
+          riparazioneId: row.riparazioneId,
+          numeroPreventivo: row.numeroPreventivo,
+          stato: row.stato,
+          voci: row.voci.map((voce) => ({
+            tipo: voce.tipo,
+            descrizione: voce.descrizione,
+            ...(voce.articoloId ? { articoloId: voce.articoloId } : {}),
+            quantita: voce.quantita,
+            prezzoUnitario: voce.prezzoUnitario,
+          })),
+          subtotale,
+          iva,
+          totale: row.totale,
+        },
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function createPreventivo(
+  input: CreatePreventivoInput,
+): Promise<CreatePreventivoResult> {
+  const parsed = parseCreatePreventivoInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return createPreventivoInTestStore(parsed.data);
+  }
+
+  return createPreventivoInDatabase(parsed.data);
+}
+
+async function getPreventivoDettaglio(
+  input: GetPreventivoDettaglioInput,
+): Promise<GetPreventivoDettaglioResult> {
+  const parsed = parseGetPreventivoDettaglioInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return getPreventivoDettaglioInTestStore(parsed.data);
+  }
+
+  return getPreventivoDettaglioInDatabase(parsed.data);
+}
+
+function ensureTestEnvironment(): void {
+  if (process.env.NODE_ENV !== "test") {
+    throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
+  }
+}
+
+function seedDefaultTestPreventivi(): PreventivoPayload[] {
+  return [
+    {
+      id: 21,
+      riparazioneId: 10,
+      numeroPreventivo: "PREV-000021",
+      stato: "BOZZA",
+      voci: [
+        {
+          tipo: "MANODOPERA",
+          descrizione: "Diagnosi avanzata",
+          quantita: 1,
+          prezzoUnitario: 50,
+        },
+        {
+          tipo: "RICAMBIO",
+          descrizione: "Display LCD",
+          articoloId: 5,
+          quantita: 1,
+          prezzoUnitario: 120,
+        },
+        {
+          tipo: "RICAMBIO",
+          descrizione: "Batteria",
+          articoloId: 8,
+          quantita: 1,
+          prezzoUnitario: 90,
+        },
+      ],
+      subtotale: 260,
+      iva: 57.2,
+      totale: 317.2,
+    },
+  ];
+}
+
+function resetPreventiviStoreForTests(): void {
+  ensureTestEnvironment();
+  testPreventivi = seedDefaultTestPreventivi();
+  nextTestPreventivoId = 22;
+}
+
+export {
+  createPreventivo,
+  getPreventivoDettaglio,
+  resetPreventiviStoreForTests,
+  type CreatePreventivoInput,
+  type CreatePreventivoResult,
+  type GetPreventivoDettaglioInput,
+  type GetPreventivoDettaglioResult,
+};

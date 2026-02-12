@@ -1820,6 +1820,11 @@ function setRiparazioneStatoForTests(
   });
 }
 
+function riparazioneExistsForTests(riparazioneId: number): boolean {
+  ensureTestEnvironment();
+  return testRiparazioni.some((row) => row.id === riparazioneId);
+}
+
 export {
   assegnaRiparazioneTecnico,
   cambiaStatoRiparazione,
@@ -1827,6 +1832,7 @@ export {
   getRiparazioneDettaglio,
   listRiparazioni,
   resetRiparazioniStoreForTests,
+  riparazioneExistsForTests,
   setRiparazioneStatoForTests,
   type AssegnaRiparazioneTecnicoInput,
   type AssegnaRiparazioneTecnicoResult,

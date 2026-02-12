@@ -157,11 +157,29 @@ model RiparazionePreventivo {
   riparazione      Riparazione @relation(fields: [riparazioneId], references: [id])
   numeroPreventivo String      @unique
   stato            String
+  subtotale        Float?
+  iva              Float?
   totale           Float
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
+  voci             PreventivoVoce[]
 
   @@index([riparazioneId])
+}
+
+model PreventivoVoce {
+  id            Int                  @id @default(autoincrement())
+  preventivoId  Int
+  preventivo    RiparazionePreventivo @relation(fields: [preventivoId], references: [id], onDelete: Cascade)
+  tipo          String
+  descrizione   String
+  articoloId    Int?
+  quantita      Int
+  prezzoUnitario Float
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([preventivoId])
 }
 
 model RiparazioneRicambio {

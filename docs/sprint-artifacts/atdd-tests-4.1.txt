@@ -1,0 +1,2 @@
+packages/backend/src/__tests__/preventivi-create-atdd.spec.ts
+packages/backend/src/__tests__/preventivi-detail-atdd.spec.ts

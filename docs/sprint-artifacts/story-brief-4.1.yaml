@@ -1,0 +1,109 @@
+story_id: '4.1'
+story_title: 'Creazione Preventivo'
+acceptance_criteria:
+  - 'Given riparazione id=10 exists When I POST /api/preventivi with { riparazioneId: 10, voci: [{ tipo: "MANODOPERA", descrizione: "Sostituzione schermo", quantita: 1, prezzoUnitario: 80.00 }, { tipo: "RICAMBIO", descrizione: "Display LCD", articoloId: 5, quantita: 1, prezzoUnitario: 120.00 }] } Then preventivo is created with stato "BOZZA", subtotale 200.00, iva 44.00 (22%), totale 244.00, I receive 201'
+  - 'Given preventivo created with 3 voci When I GET /api/preventivi/:id Then response includes voci array with all 3 items and calculated totals'
+  - 'Given I POST /api/preventivi with riparazioneId=999 (non-existent) When request is made Then I receive 404 with error "RIPARAZIONE_NOT_FOUND"'
+  - 'Given I POST /api/preventivi with voce missing descrizione field When request is made Then I receive 400 with validation error "descrizione is required for each voce"'
+
+ac_entity_action_test_scan:
+  - ac: 'AC-1 POST /api/preventivi create BOZZA with totals'
+    relevant_entities_actions:
+      - 'No existing /api/preventivi route found in backend routes registration.'
+      - 'Riparazione has relation to preventivi in Prisma schema via RiparazionePreventivo.'
+      - 'Current details payload exposes only preventivo summary fields (id, numeroPreventivo, stato, totale), not voci/subtotale/iva.'
+    relevant_files:
+      - packages/backend/src/index.ts:19
+      - packages/backend/src/index.ts:24
+      - packages/backend/prisma/schema.prisma:131
+      - packages/backend/prisma/schema.prisma:154
+      - packages/backend/src/services/riparazioni-service.ts:112
+      - packages/backend/src/services/riparazioni-service.ts:1322
+    tests_found:
+      - 'No existing tests found for POST /api/preventivi.'
+  - ac: 'AC-2 GET /api/preventivi/:id includes 3 voci and totals'
+    relevant_entities_actions:
+      - 'No existing /api/preventivi/:id endpoint found.'
+      - 'Existing riparazione detail test checks preventivi projection, but only summary fields and no voci list.'
+    relevant_files:
+      - packages/backend/src/index.ts:24
+      - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts:177
+      - packages/backend/src/services/riparazioni-service.ts:1362
+    tests_found:
+      - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts:177
+  - ac: 'AC-3 POST /api/preventivi with riparazioneId=999 returns RIPARAZIONE_NOT_FOUND'
+    relevant_entities_actions:
+      - 'Error contract RIPARAZIONE_NOT_FOUND already implemented in riparazioni routes and tests (404 mapping from NOT_FOUND).'
+      - 'Service already has NOT_FOUND pattern for missing riparazione lookups.'
+    relevant_files:
+      - packages/backend/src/routes/riparazioni.ts:127
+      - packages/backend/src/routes/riparazioni.ts:131
+      - packages/backend/src/services/riparazioni-service.ts:1322
+      - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts:211
+      - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts:217
+    tests_found:
+      - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts:211
+  - ac: 'AC-4 POST /api/preventivi voce missing descrizione returns 400 validation error'
+    relevant_entities_actions:
+      - 'Validation+message pattern already used in service parser functions (required fields with explicit message).'
+      - 'ATDD asserts exact required-field message for riparazioni create endpoint.'
+    relevant_files:
+      - packages/backend/src/services/riparazioni-service.ts:419
+      - packages/backend/src/services/riparazioni-service.ts:442
+      - packages/backend/src/services/riparazioni-service.ts:447
+      - packages/backend/src/routes/riparazioni.ts:53
+      - packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts:139
+      - packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts:150
+    tests_found:
+      - packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts:139
+
+target_modules:
+  - packages/backend/src/index.ts
+  - packages/backend/prisma/schema.prisma
+  - packages/backend/src/services/riparazioni-service.ts
+  - packages/backend/src/routes/riparazioni.ts
+  - packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts
+
+patterns_to_follow:
+  - file: packages/backend/src/index.ts:24
+    pattern: 'Register API routers centrally with app.use("/api/...", router).'
+  - file: packages/backend/src/routes/riparazioni.ts:49
+    pattern: 'Map service failures to HTTP status + buildErrorResponse via dedicated respond*Failure helpers.'
+  - file: packages/backend/src/routes/riparazioni.ts:306
+    pattern: 'POST handler builds typed payload from req and returns 201 on success.'
+  - file: packages/backend/src/services/riparazioni-service.ts:407
+    pattern: 'Use buildValidationFailure helper with field/rule/message for deterministic validation errors.'
+  - file: packages/backend/src/services/riparazioni-service.ts:1015
+    pattern: 'Database path uses Prisma create/find inside typed service functions.'
+  - file: packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts:139
+    pattern: 'ATDD sad-path checks exact status, error.code and message for required fields.'
+
+dependencies:
+  - source: packages/backend/src/index.ts:10
+    depends_on: packages/backend/src/routes/riparazioni.ts
+    reason: 'Main Express bootstrap imports and mounts riparazioni router.'
+  - source: packages/backend/src/routes/riparazioni.ts:20
+    depends_on: packages/backend/src/services/riparazioni-service.ts
+    reason: 'Route layer delegates business logic to service functions.'
+  - source: packages/backend/src/services/riparazioni-service.ts:1
+    depends_on: packages/backend/prisma/schema.prisma
+    reason: 'Service uses Prisma models generated from schema definitions.'
+  - source: packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts:6
+    depends_on: packages/backend/src/services/riparazioni-service.ts
+    reason: 'Tests reset service test-store state directly.'
+  - source: packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts:7
+    depends_on: packages/backend/src/services/riparazioni-service.ts
+    reason: 'Tests use detail-related test helpers and verify response contracts.'
+
+risks:
+  - 'No existing preventivi router/service means AC-1/AC-2 require new modules; wiring mistakes in index.ts can leave endpoints unreachable.'
+  - 'Current Prisma model RiparazionePreventivo has no voci/subtotale/iva structure, so AC-1/AC-2 data model is incomplete and requires schema migration.'
+  - 'Reusing RIPARAZIONE_NOT_FOUND mapping from riparazioni routes without a shared preventivi error mapper may cause inconsistent error payloads.'
+  - 'Validation messaging is currently handwritten per parser; AC-4 exact text ("descrizione is required for each voce") can drift without dedicated tests.'
+  - 'Service has dual paths (test store vs Prisma DB); implementing preventivi only in one path will break ATDD reliability.'
+
+existing_tests:
+  - packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts
+  - 'No existing tests found for /api/preventivi endpoints.'
