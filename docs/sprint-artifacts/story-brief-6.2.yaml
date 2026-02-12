@@ -1,0 +1,32 @@
+story_id: '6.2'
+story_title: 'Dashboard Dettaglio Riparazioni per Stato'
+acceptance_criteria:
+  - 'AC-1: Given riparazioni with various stati exist When I GET /api/dashboard/riparazioni-per-stato Then I receive aggregated counts by stato'
+  - 'AC-2: Given today is 2026-02-09 When I GET /api/dashboard/riparazioni-per-stato?periodo=today Then I receive counts only for dataRicezione=2026-02-09'
+  - 'AC-3: Given week is 2026-02-03 to 2026-02-09 When I GET /api/dashboard/riparazioni-per-stato?periodo=week Then I receive counts within that week'
+  - 'AC-4: Given month is February 2026 When I GET /api/dashboard/riparazioni-per-stato?periodo=month Then I receive counts in February 2026'
+target_modules:
+  - 'C:\Users\FAT-E\progetti\gestionale_riparazioni-main/packages/backend/src/routes/dashboard.ts'
+  - 'C:\Users\FAT-E\progetti\gestionale_riparazioni-main/packages/backend/src/services/dashboard-service.ts'
+  - 'C:\Users\FAT-E\progetti\gestionale_riparazioni-main/packages/backend/src/__tests__/dashboard-operativa-atdd.spec.ts'
+patterns_to_follow:
+  - 'Authenticated dashboard route with service payload forwarding: packages/backend/src/routes/dashboard.ts:8'
+  - 'Error mapping via buildErrorResponse with explicit status codes: packages/backend/src/routes/dashboard.ts:19'
+  - 'Admin dashboard aggregation over paginated repairs: packages/backend/src/services/dashboard-service.ts:167'
+  - 'Status counter initialization pattern as Record<string, number>: packages/backend/src/services/dashboard-service.ts:173'
+  - 'Re-using listRiparazioni date filters dataRicezioneDa/dataRicezioneA: packages/backend/src/services/riparazioni-service.ts:1327'
+  - 'ATDD style with AC-labelled describe blocks and supertest calls: packages/backend/src/__tests__/dashboard-operativa-atdd.spec.ts:33'
+dependencies:
+  - 'packages/backend/src/index.ts:35 mounts dashboardRouter at /api/dashboard'
+  - 'packages/backend/src/routes/dashboard.ts:4 depends on getDashboard from dashboard-service'
+  - 'packages/backend/src/routes/dashboard.ts:3 depends on authenticate middleware'
+  - 'packages/backend/src/services/dashboard-service.ts:3 depends on listRiparazioni from riparazioni-service'
+  - 'packages/backend/src/services/dashboard-service.ts:1 depends on listArticoliAlert/listClienti from anagrafiche-service'
+  - 'packages/backend/src/services/dashboard-service.ts:2 depends on listFatture from fatture-service'
+risks:
+  - 'Period filtering can produce off-by-one errors at UTC boundaries (today/week/month) if date normalization is inconsistent with dataRicezione timezone.'
+  - 'Adding a new dashboard endpoint in the same router may regress existing /api/dashboard response shape if shared logic is coupled incorrectly.'
+  - 'Aggregating all repairs without efficient filtering may increase response time on large datasets; period filters must push filtering down before aggregation when possible.'
+existing_tests:
+  - 'C:\Users\FAT-E\progetti\gestionale_riparazioni-main/packages/backend/src/__tests__/dashboard-operativa-atdd.spec.ts'
+  - 'C:\Users\FAT-E\progetti\gestionale_riparazioni-main/packages/backend/src/__tests__/riparazioni-list-filter-atdd.spec.ts'

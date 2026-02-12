@@ -7,6 +7,12 @@ interface GetDashboardInput {
   actorRole: unknown;
 }
 
+interface GetDashboardRiparazioniPerStatoInput {
+  actorUserId: unknown;
+  actorRole: unknown;
+  periodo: unknown;
+}
+
 type DashboardFailure =
   | { ok: false; code: "VALIDATION_ERROR"; message: string }
   | { ok: false; code: "FORBIDDEN"; message: string }
@@ -49,6 +55,24 @@ type DashboardSuccess =
 type GetDashboardResult = DashboardSuccess | DashboardFailure;
 type ListedRiparazione = Extract<ListRiparazioniResult, { ok: true }>["data"]["data"][number];
 type ListedFattura = Extract<ListFattureResult, { ok: true }>["data"]["data"][number];
+type DashboardStatoKey =
+  | "RICEVUTA"
+  | "IN_DIAGNOSI"
+  | "IN_LAVORAZIONE"
+  | "PREVENTIVO_EMESSO"
+  | "COMPLETATA"
+  | "CONSEGNATA"
+  | "ANNULLATA";
+
+const DASHBOARD_STATI: DashboardStatoKey[] = [
+  "RICEVUTA",
+  "IN_DIAGNOSI",
+  "IN_LAVORAZIONE",
+  "PREVENTIVO_EMESSO",
+  "COMPLETATA",
+  "CONSEGNATA",
+  "ANNULLATA",
+];
 
 function asPositiveInteger(value: unknown): number | null {
   if (typeof value === "number" && Number.isInteger(value) && value > 0) {
@@ -96,6 +120,8 @@ function toDateOnly(isoDate: string): string {
 async function fetchAllRiparazioni(filters: {
   stato?: string;
   tecnicoId?: number;
+  dataRicezioneDa?: string;
+  dataRicezioneA?: string;
 }): Promise<{ ok: true; data: ListedRiparazione[] } | DashboardFailure> {
   let page = 1;
   const limit = 100;
@@ -108,8 +134,8 @@ async function fetchAllRiparazioni(filters: {
       stato: filters.stato,
       tecnicoId: filters.tecnicoId,
       priorita: undefined,
-      dataRicezioneDa: undefined,
-      dataRicezioneA: undefined,
+      dataRicezioneDa: filters.dataRicezioneDa,
+      dataRicezioneA: filters.dataRicezioneA,
       search: undefined,
     });
 
@@ -129,6 +155,136 @@ async function fetchAllRiparazioni(filters: {
   }
 
   return { ok: true, data: rows };
+}
+
+function toUtcDateOnly(value: Date): string {
+  const year = value.getUTCFullYear();
+  const month = String(value.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(value.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function resolveDashboardPeriodo(
+  periodo: unknown,
+  now: Date,
+):
+  | { ok: true; data: { dataRicezioneDa?: string; dataRicezioneA?: string } }
+  | { ok: false; code: "VALIDATION_ERROR"; message: string } {
+  if (periodo === undefined || periodo === null || periodo === "") {
+    return { ok: true, data: {} };
+  }
+  if (typeof periodo !== "string") {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "periodo non valido",
+    };
+  }
+
+  const normalized = periodo.trim().toLowerCase();
+  const utcMidnightToday = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
+
+  if (normalized === "today") {
+    const day = toUtcDateOnly(utcMidnightToday);
+    return {
+      ok: true,
+      data: {
+        dataRicezioneDa: day,
+        dataRicezioneA: day,
+      },
+    };
+  }
+  if (normalized === "week") {
+    const start = new Date(utcMidnightToday);
+    start.setUTCDate(start.getUTCDate() - 6);
+    return {
+      ok: true,
+      data: {
+        dataRicezioneDa: toUtcDateOnly(start),
+        dataRicezioneA: toUtcDateOnly(utcMidnightToday),
+      },
+    };
+  }
+  if (normalized === "month") {
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
+    return {
+      ok: true,
+      data: {
+        dataRicezioneDa: toUtcDateOnly(start),
+        dataRicezioneA: toUtcDateOnly(end),
+      },
+    };
+  }
+
+  return {
+    ok: false,
+    code: "VALIDATION_ERROR",
+    message: "periodo non supportato: valori ammessi today|week|month",
+  };
+}
+
+async function getDashboardRiparazioniPerStato(
+  input: GetDashboardRiparazioniPerStatoInput,
+): Promise<{ ok: true; data: Record<DashboardStatoKey, number> } | DashboardFailure> {
+  const actorUserId = asPositiveInteger(input.actorUserId);
+  if (actorUserId === null) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "actorUserId non valido",
+    };
+  }
+
+  const actorRole = asRole(input.actorRole);
+  if (!actorRole) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "actorRole non valido",
+    };
+  }
+  if (actorRole !== "ADMIN") {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      message: "Admin only",
+    };
+  }
+
+  const periodo = resolveDashboardPeriodo(input.periodo, new Date());
+  if (!periodo.ok) {
+    return periodo;
+  }
+
+  const riparazioniResult = await fetchAllRiparazioni({
+    dataRicezioneDa: periodo.data.dataRicezioneDa,
+    dataRicezioneA: periodo.data.dataRicezioneA,
+  });
+  if (!riparazioniResult.ok) {
+    return riparazioniResult;
+  }
+
+  const counter: Record<DashboardStatoKey, number> = {
+    RICEVUTA: 0,
+    IN_DIAGNOSI: 0,
+    IN_LAVORAZIONE: 0,
+    PREVENTIVO_EMESSO: 0,
+    COMPLETATA: 0,
+    CONSEGNATA: 0,
+    ANNULLATA: 0,
+  };
+
+  for (const row of riparazioniResult.data) {
+    if (DASHBOARD_STATI.includes(row.stato as DashboardStatoKey)) {
+      const key = row.stato as DashboardStatoKey;
+      counter[key] += 1;
+    }
+  }
+
+  return { ok: true, data: counter };
 }
 
 async function fetchAllFatture(filters: {
@@ -388,4 +544,10 @@ async function getDashboard(input: GetDashboardInput): Promise<GetDashboardResul
   };
 }
 
-export { getDashboard, type GetDashboardInput, type GetDashboardResult };
+export {
+  getDashboard,
+  getDashboardRiparazioniPerStato,
+  type GetDashboardInput,
+  type GetDashboardResult,
+  type GetDashboardRiparazioniPerStatoInput,
+};
