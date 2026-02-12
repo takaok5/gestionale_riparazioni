@@ -103,6 +103,13 @@ interface CreateOrdineFornitoreInput {
   voci: unknown;
 }
 
+interface UpdateOrdineFornitoreStatoInput {
+  actorUserId: unknown;
+  actorRole: unknown;
+  ordineId: unknown;
+  stato: unknown;
+}
+
 interface UpdateFornitoreInput {
   actorUserId: unknown;
   fornitoreId: unknown;
@@ -349,6 +356,19 @@ interface OrdineFornitoreCreatePayload {
   numeroOrdine: string;
   stato: string;
   dataOrdine: string;
+  dataEmissione: string | null;
+  dataRicezione: string | null;
+  totale: number;
+}
+
+interface OrdineFornitoreStatoPayload {
+  id: number;
+  fornitoreId: number;
+  numeroOrdine: string;
+  stato: string;
+  dataOrdine: string;
+  dataEmissione: string | null;
+  dataRicezione: string | null;
   totale: number;
 }
 
@@ -393,6 +413,12 @@ type CreateOrdineFornitoreResult =
   | ValidationFailure
   | { ok: false; code: "FORNITORE_NOT_FOUND" }
   | { ok: false; code: "ARTICOLO_NOT_FOUND"; message: "ARTICOLO_NOT_FOUND in voce" }
+  | ServiceUnavailableFailure;
+
+type UpdateOrdineFornitoreStatoResult =
+  | { ok: true; data: OrdineFornitoreStatoPayload }
+  | ValidationFailure
+  | { ok: false; code: "ORDINE_NOT_FOUND" }
   | ServiceUnavailableFailure;
 
 type UpdateFornitoreResult =
@@ -525,6 +551,13 @@ interface ParsedCreateOrdineFornitoreInput {
   voci: OrdineFornitoreVoceInput[];
 }
 
+interface ParsedUpdateOrdineFornitoreStatoInput {
+  actorUserId: number;
+  actorRole: "ADMIN" | "TECNICO" | "COMMERCIALE";
+  ordineId: number;
+  stato: "BOZZA" | "EMESSO" | "CONFERMATO" | "SPEDITO" | "RICEVUTO" | "ANNULLATO";
+}
+
 interface ParsedUpdateFornitoreInput {
   actorUserId: number;
   fornitoreId: number;
@@ -636,6 +669,8 @@ interface TestFornitoreOrdineRecord {
   numeroOrdine: string;
   stato: string;
   dataOrdine: string;
+  dataEmissione: string | null;
+  dataRicezione: string | null;
   totale: number;
   voci: TestFornitoreOrdineVoceRecord[];
 }
@@ -679,6 +714,22 @@ const MAX_LIST_LIMIT = 100;
 const MAX_CODICE_CLIENTE_GENERATION_ATTEMPTS = 3;
 const MAX_CODICE_FORNITORE_GENERATION_ATTEMPTS = 3;
 const MAX_NUMERO_ORDINE_GENERATION_ATTEMPTS = 3;
+const ORDINE_STATI: ReadonlySet<string> = new Set([
+  "BOZZA",
+  "EMESSO",
+  "CONFERMATO",
+  "SPEDITO",
+  "RICEVUTO",
+  "ANNULLATO",
+] as const);
+const ORDINE_ALLOWED_TRANSITIONS = new Map<string, Set<string>>([
+  ["BOZZA", new Set(["EMESSO", "ANNULLATO"])],
+  ["EMESSO", new Set(["CONFERMATO"])],
+  ["CONFERMATO", new Set(["SPEDITO", "ANNULLATO"])],
+  ["SPEDITO", new Set(["RICEVUTO"])],
+  ["RICEVUTO", new Set<string>()],
+  ["ANNULLATO", new Set<string>()],
+]);
 const VALID_PROVINCE_CODES = new Set([
   "AG", "AL", "AN", "AO", "AR", "AP", "AT", "AV", "BA", "BT", "BL", "BN", "BG", "BI",
   "BO", "BZ", "BS", "BR", "CA", "CL", "CB", "CI", "CE", "CT", "CZ", "CH", "CO", "CS",
@@ -830,6 +881,37 @@ let nextTestMovimentoMagazzinoId = computeNextId(
 let nextTestAuditLogId = computeNextId(testAuditLogs.map((item) => item.id));
 
 let prismaClient: PrismaClient | null = null;
+
+function toOrdineFornitorePayload(
+  row: {
+    id: number;
+    fornitoreId: number;
+    numeroOrdine: string;
+    stato: string;
+    dataOrdine: Date | string;
+    dataEmissione: Date | string | null;
+    dataRicezione: Date | string | null;
+    totale: number;
+  },
+): OrdineFornitoreStatoPayload {
+  return {
+    id: row.id,
+    fornitoreId: row.fornitoreId,
+    numeroOrdine: row.numeroOrdine,
+    stato: row.stato,
+    dataOrdine:
+      row.dataOrdine instanceof Date ? row.dataOrdine.toISOString() : row.dataOrdine,
+    dataEmissione:
+      row.dataEmissione instanceof Date
+        ? row.dataEmissione.toISOString()
+        : row.dataEmissione,
+    dataRicezione:
+      row.dataRicezione instanceof Date
+        ? row.dataRicezione.toISOString()
+        : row.dataRicezione,
+    totale: row.totale,
+  };
+}
 
 function cloneTestClienti(source: TestClienteRecord[]): TestClienteRecord[] {
   return source.map((item) => ({ ...item }));
@@ -1701,6 +1783,108 @@ function parseCreateOrdineFornitoreInput(
       voci: parsedVoci,
     },
   };
+}
+
+function parseUpdateOrdineFornitoreStatoInput(
+  input: UpdateOrdineFornitoreStatoInput,
+): { ok: true; data: ParsedUpdateOrdineFornitoreStatoInput } | ValidationFailure {
+  const actorUserId = asPositiveInteger(input.actorUserId);
+  if (actorUserId === null) {
+    return buildValidationFailure({
+      field: "actorUserId",
+      rule: "invalid_integer",
+    });
+  }
+
+  if (
+    typeof input.actorRole !== "string" ||
+    (input.actorRole !== "ADMIN" &&
+      input.actorRole !== "TECNICO" &&
+      input.actorRole !== "COMMERCIALE")
+  ) {
+    return buildValidationFailure({
+      field: "actorRole",
+      rule: "invalid_enum",
+    });
+  }
+
+  const ordineId = asPositiveInteger(input.ordineId);
+  if (ordineId === null) {
+    return buildValidationFailure({
+      field: "ordineId",
+      rule: "invalid_integer",
+    });
+  }
+
+  if (typeof input.stato !== "string" || !ORDINE_STATI.has(input.stato)) {
+    return buildValidationFailure({
+      field: "stato",
+      rule: "invalid_enum",
+    });
+  }
+  const stato = input.stato as ParsedUpdateOrdineFornitoreStatoInput["stato"];
+
+  return {
+    ok: true,
+    data: {
+      actorUserId,
+      actorRole: input.actorRole,
+      ordineId,
+      stato,
+    },
+  };
+}
+
+function validateOrdineTransition(
+  from: string,
+  to: string,
+  actorRole: "ADMIN" | "TECNICO" | "COMMERCIALE",
+): ValidationFailure | null {
+  if (!ORDINE_STATI.has(from) || !ORDINE_STATI.has(to)) {
+    return buildValidationFailure({
+      field: "stato",
+      rule: "invalid_transition",
+    });
+  }
+
+  if (to === "ANNULLATO" && from === "SPEDITO" && actorRole !== "ADMIN") {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "Cannot cancel order in SPEDITO state",
+      details: {
+        field: "stato",
+        rule: "invalid_transition",
+      },
+    };
+  }
+
+  if (to === "ANNULLATO" && from === "CONFERMATO" && actorRole !== "ADMIN") {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "Only ADMIN can cancel order in CONFERMATO state",
+      details: {
+        field: "stato",
+        rule: "forbidden_transition",
+      },
+    };
+  }
+
+  const allowed = ORDINE_ALLOWED_TRANSITIONS.get(from);
+  if (!allowed || !allowed.has(to)) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: `Invalid state transition from ${from} to ${to}`,
+      details: {
+        field: "stato",
+        rule: "invalid_transition",
+      },
+    };
+  }
+
+  return null;
 }
 
 function parseUpdateFornitoreInput(
@@ -2883,6 +3067,8 @@ async function createOrdineFornitoreInTestStore(
     numeroOrdine: formatOrdineNumber(sequence),
     stato: "BOZZA",
     dataOrdine: now,
+    dataEmissione: null,
+    dataRicezione: null,
     totale,
     voci: payload.voci.map((voce) => ({ ...voce })),
   };
@@ -2905,6 +3091,8 @@ async function createOrdineFornitoreInTestStore(
       numeroOrdine: created.numeroOrdine,
       stato: created.stato,
       dataOrdine: created.dataOrdine,
+      dataEmissione: created.dataEmissione,
+      dataRicezione: created.dataRicezione,
       totale: created.totale,
     },
   };
@@ -3032,6 +3220,8 @@ async function createOrdineFornitoreInDatabase(
           numeroOrdine: result.data.numeroOrdine,
           stato: result.data.stato,
           dataOrdine: result.data.dataOrdine.toISOString(),
+          dataEmissione: null,
+          dataRicezione: null,
           totale: result.data.totale,
         },
       };
@@ -3057,6 +3247,163 @@ async function createOrdineFornitoreInDatabase(
     ok: false,
     code: "SERVICE_UNAVAILABLE",
   };
+}
+
+async function updateOrdineFornitoreStatoInTestStore(
+  payload: ParsedUpdateOrdineFornitoreStatoInput,
+): Promise<UpdateOrdineFornitoreStatoResult> {
+  const index = testFornitoreOrdini.findIndex((row) => row.id === payload.ordineId);
+  if (index === -1) {
+    return {
+      ok: false,
+      code: "ORDINE_NOT_FOUND",
+    };
+  }
+
+  const current = testFornitoreOrdini[index];
+  const transitionFailure = validateOrdineTransition(
+    current.stato,
+    payload.stato,
+    payload.actorRole,
+  );
+  if (transitionFailure) {
+    return transitionFailure;
+  }
+
+  const now = new Date().toISOString();
+  const next: TestFornitoreOrdineRecord = {
+    ...current,
+    stato: payload.stato,
+    dataEmissione:
+      payload.stato === "EMESSO"
+        ? current.dataEmissione ?? now
+        : current.dataEmissione,
+    dataRicezione:
+      payload.stato === "RICEVUTO"
+        ? current.dataRicezione ?? now
+        : current.dataRicezione,
+  };
+  testFornitoreOrdini[index] = next;
+
+  appendTestAuditLog({
+    userId: payload.actorUserId,
+    action: "UPDATE",
+    modelName: "OrdineFornitore",
+    objectId: String(next.id),
+  });
+
+  return {
+    ok: true,
+    data: toOrdineFornitorePayload(next),
+  };
+}
+
+async function updateOrdineFornitoreStatoInDatabase(
+  payload: ParsedUpdateOrdineFornitoreStatoInput,
+): Promise<UpdateOrdineFornitoreStatoResult> {
+  try {
+    const result = await getPrismaClient().$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const transaction = tx as Prisma.TransactionClient & {
+          ordineFornitore: {
+            findUnique: (args: unknown) => Promise<{
+              id: number;
+              fornitoreId: number;
+              numeroOrdine: string;
+              stato: string;
+              dataOrdine: Date;
+              dataEmissione: Date | null;
+              dataRicezione: Date | null;
+              totale: number;
+            } | null>;
+            update: (args: unknown) => Promise<{
+              id: number;
+              fornitoreId: number;
+              numeroOrdine: string;
+              stato: string;
+              dataOrdine: Date;
+              dataEmissione: Date | null;
+              dataRicezione: Date | null;
+              totale: number;
+            }>;
+          };
+        };
+
+        const existing = await transaction.ordineFornitore.findUnique({
+          where: { id: payload.ordineId },
+          select: {
+            id: true,
+            fornitoreId: true,
+            numeroOrdine: true,
+            stato: true,
+            dataOrdine: true,
+            dataEmissione: true,
+            dataRicezione: true,
+            totale: true,
+          },
+        });
+        if (!existing) {
+          return { ok: false, code: "ORDINE_NOT_FOUND" } as const;
+        }
+
+        const transitionFailure = validateOrdineTransition(
+          existing.stato,
+          payload.stato,
+          payload.actorRole,
+        );
+        if (transitionFailure) {
+          return transitionFailure;
+        }
+
+        const now = new Date();
+        const updated = await transaction.ordineFornitore.update({
+          where: { id: existing.id },
+          data: {
+            stato: payload.stato,
+            dataEmissione:
+              payload.stato === "EMESSO"
+                ? existing.dataEmissione ?? now
+                : existing.dataEmissione,
+            dataRicezione:
+              payload.stato === "RICEVUTO"
+                ? existing.dataRicezione ?? now
+                : existing.dataRicezione,
+          },
+          select: {
+            id: true,
+            fornitoreId: true,
+            numeroOrdine: true,
+            stato: true,
+            dataOrdine: true,
+            dataEmissione: true,
+            dataRicezione: true,
+            totale: true,
+          },
+        });
+
+        await tx.auditLog.create({
+          data: {
+            userId: payload.actorUserId,
+            action: "UPDATE",
+            modelName: "OrdineFornitore",
+            objectId: String(updated.id),
+          },
+        });
+
+        return {
+          ok: true,
+          data: toOrdineFornitorePayload(updated),
+        } as const;
+      },
+    );
+
+    return result;
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
 }
 
 function computeMovimentoDelta(
@@ -4703,6 +5050,21 @@ async function createOrdineFornitore(
   return createOrdineFornitoreInDatabase(parsed.data);
 }
 
+async function updateOrdineFornitoreStato(
+  input: UpdateOrdineFornitoreStatoInput,
+): Promise<UpdateOrdineFornitoreStatoResult> {
+  const parsed = parseUpdateOrdineFornitoreStatoInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return updateOrdineFornitoreStatoInTestStore(parsed.data);
+  }
+
+  return updateOrdineFornitoreStatoInDatabase(parsed.data);
+}
+
 async function createArticoloMovimento(
   input: CreateArticoloMovimentoInput,
 ): Promise<CreateArticoloMovimentoResult> {
@@ -4949,6 +5311,8 @@ function seedFornitoreDetailScenarioForTests(): void {
       numeroOrdine: "ORD-000301",
       stato: "APERTO",
       dataOrdine: "2026-02-11T09:00:00.000Z",
+      dataEmissione: null,
+      dataRicezione: null,
       totale: 120.5,
       voci: [],
     },
@@ -4958,6 +5322,8 @@ function seedFornitoreDetailScenarioForTests(): void {
       numeroOrdine: "ORD-000302",
       stato: "IN_LAVORAZIONE",
       dataOrdine: "2026-02-10T10:30:00.000Z",
+      dataEmissione: null,
+      dataRicezione: null,
       totale: 88,
       voci: [],
     },
@@ -4967,6 +5333,8 @@ function seedFornitoreDetailScenarioForTests(): void {
       numeroOrdine: "ORD-000303",
       stato: "SPEDITO",
       dataOrdine: "2026-02-09T16:00:00.000Z",
+      dataEmissione: "2026-02-09T10:00:00.000Z",
+      dataRicezione: null,
       totale: 44.99,
       voci: [],
     },
@@ -4976,6 +5344,8 @@ function seedFornitoreDetailScenarioForTests(): void {
       numeroOrdine: "ORD-000304",
       stato: "CONSEGNATO",
       dataOrdine: "2026-02-08T14:15:00.000Z",
+      dataEmissione: "2026-02-08T09:00:00.000Z",
+      dataRicezione: "2026-02-08T14:00:00.000Z",
       totale: 310.75,
       voci: [],
     },
@@ -4985,6 +5355,8 @@ function seedFornitoreDetailScenarioForTests(): void {
       numeroOrdine: "ORD-000305",
       stato: "CHIUSO",
       dataOrdine: "2026-02-07T11:45:00.000Z",
+      dataEmissione: "2026-02-07T11:00:00.000Z",
+      dataRicezione: "2026-02-07T11:30:00.000Z",
       totale: 15,
       voci: [],
     },
@@ -5002,6 +5374,7 @@ export {
   createFornitore,
   createArticolo,
   createOrdineFornitore,
+  updateOrdineFornitoreStato,
   createArticoloMovimento,
   getArticoloById,
   getFornitoreById,
@@ -5025,6 +5398,8 @@ export {
   type CreateArticoloResult,
   type CreateOrdineFornitoreInput,
   type CreateOrdineFornitoreResult,
+  type UpdateOrdineFornitoreStatoInput,
+  type UpdateOrdineFornitoreStatoResult,
   type CreateArticoloMovimentoInput,
   type CreateArticoloMovimentoResult,
   type GetArticoloByIdInput,

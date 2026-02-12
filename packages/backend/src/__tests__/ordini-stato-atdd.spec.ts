@@ -219,9 +219,11 @@ describe("AC-7 - Blocco annullamento da SPEDITO per non Admin", () => {
     await patchStato(ordineId, "EMESSO", "ADMIN", 7707);
     await patchStato(ordineId, "CONFERMATO", "ADMIN", 7708);
     await patchStato(ordineId, "SPEDITO", "ADMIN", 7709);
-    const response = await patchStato(ordineId, "ANNULLATO", "COMMERCIALE", 7710);
+    const forbidden = await patchStato(ordineId, "ANNULLATO", "COMMERCIALE", 7710);
+    const response = await patchStato(ordineId, "RICEVUTO", "ADMIN", 7711);
 
-    expect(response.status).toBe(400);
-    expect(response.body?.data?.stato ?? "SPEDITO").toBe("SPEDITO");
+    expect(forbidden.status).toBe(400);
+    expect(response.status).toBe(200);
+    expect(response.body?.data?.stato).toBe("RICEVUTO");
   });
 });

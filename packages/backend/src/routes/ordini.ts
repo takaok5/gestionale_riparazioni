@@ -5,12 +5,19 @@ import {
   createOrdineFornitore,
   type CreateOrdineFornitoreInput,
   type CreateOrdineFornitoreResult,
+  updateOrdineFornitoreStato,
+  type UpdateOrdineFornitoreStatoInput,
+  type UpdateOrdineFornitoreStatoResult,
 } from "../services/anagrafiche-service.js";
 
 const ordiniRouter = Router();
 
 type CreateOrdineFornitoreFailure = Exclude<
   CreateOrdineFornitoreResult,
+  { ok: true; data: unknown }
+>;
+type UpdateOrdineFornitoreStatoFailure = Exclude<
+  UpdateOrdineFornitoreStatoResult,
   { ok: true; data: unknown }
 >;
 
@@ -55,6 +62,40 @@ function respondCreateOrdineFornitoreFailure(
     );
 }
 
+function respondUpdateOrdineFornitoreStatoFailure(
+  res: Response,
+  result: UpdateOrdineFornitoreStatoFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Payload non valido",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "ORDINE_NOT_FOUND") {
+    res
+      .status(404)
+      .json(buildErrorResponse("ORDINE_NOT_FOUND", "ORDINE_NOT_FOUND"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "ANAGRAFICHE_SERVICE_UNAVAILABLE",
+        "Servizio anagrafiche non disponibile",
+      ),
+    );
+}
+
 ordiniRouter.post(
   "/",
   authenticate,
@@ -75,5 +116,22 @@ ordiniRouter.post(
     res.status(201).json(result.data);
   },
 );
+
+ordiniRouter.patch("/:id/stato", authenticate, async (req, res) => {
+  const payload: UpdateOrdineFornitoreStatoInput = {
+    actorUserId: req.user?.userId,
+    actorRole: req.user?.role,
+    ordineId: req.params?.id,
+    stato: req.body?.stato,
+  };
+
+  const result = await updateOrdineFornitoreStato(payload);
+  if (!result.ok) {
+    respondUpdateOrdineFornitoreStatoFailure(res, result);
+    return;
+  }
+
+  res.status(200).json({ data: result.data });
+});
 
 export { ordiniRouter };
