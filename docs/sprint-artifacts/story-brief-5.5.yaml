@@ -1,0 +1,35 @@
+target_modules:
+  - packages/backend/src/index.ts
+  - packages/backend/prisma/schema.prisma
+  - packages/backend/src/services/anagrafiche-service.ts
+  - packages/backend/src/routes/fornitori.ts
+  - packages/backend/src/routes/articoli.ts
+  - packages/backend/src/middleware/auth.ts
+
+patterns_to_follow:
+  - "packages/backend/src/routes/articoli.ts:209 - create endpoints use authenticate + authorize('ADMIN'), build typed payload from body+user, delegate to service and return 201 on success"
+  - "packages/backend/src/routes/fornitori.ts:176 - route-level responders map domain failures (VALIDATION_ERROR, NOT_FOUND, SERVICE_UNAVAILABLE) to stable API error payloads"
+  - "packages/backend/src/routes/fornitori.ts:303 - ordini-related route pattern already exists on fornitore detail: '/:id/ordini' parses param id and calls listFornitoreOrdini service"
+  - "packages/backend/src/services/anagrafiche-service.ts:963 - shared numeric parsing/validation uses asPositiveInteger and returns VALIDATION_ERROR instead of throwing"
+  - "packages/backend/src/services/anagrafiche-service.ts:3298 - database access for fornitore ordini uses Prisma transaction + deterministic mapping for API shape"
+  - "packages/backend/src/__tests__/articoli-create-atdd.spec.ts:42 - ATDD style uses supertest with authHeader, explicit Given/When/Then test names, and exact HTTP/code assertions"
+
+dependencies:
+  - "packages/backend/src/index.ts mounts routers and will need to mount the new /api/ordini router entrypoint"
+  - "packages/backend/src/services/anagrafiche-service.ts is the existing source for fornitore/articolo lookup and order-list projection (listFornitoreOrdini)"
+  - "packages/backend/prisma/schema.prisma already defines Fornitore -> OrdineFornitore relation and OrdineFornitore fields (numeroOrdine, stato, totale)"
+  - "packages/backend/src/routes/fornitori.ts imports listFornitoreOrdini from anagrafiche-service and provides existing error-mapping conventions"
+  - "packages/backend/src/middleware/auth.ts enforces RBAC and returns canonical FORBIDDEN payload used by admin-only routes"
+
+risks:
+  - "Data-model risk: AC-1 requires order lines (voci con articoloId/quantitaOrdinata/prezzoUnitario) but schema currently has only OrdineFornitore header; implementing without dedicated line storage breaks traceability"
+  - "Calculation risk: totale must be exact sum of voce subtotals (e.g. 1400.00); float handling or rounding drift can fail strict ATDD assertions"
+  - "Contract risk: AC-2/AC-3 require distinct 404 semantics (FORNITORE_NOT_FOUND vs ARTICOLO_NOT_FOUND in voce); error mapping must preserve exact code/message"
+  - "RBAC risk: endpoint must be ADMIN-only; inconsistent guard order or fallback error path can return 401/500 instead of required 403 FORBIDDEN"
+  - "Sequence risk: auto-generated numeroOrdine must be unique and deterministic under concurrency; naive generation can collide on parallel requests"
+
+existing_tests:
+  - packages/backend/src/__tests__/fornitori-detail-update-atdd.spec.ts
+  - packages/backend/src/__tests__/fornitori-create-atdd.spec.ts
+  - packages/backend/src/__tests__/articoli-create-atdd.spec.ts
+  - packages/backend/src/__tests__/articoli-movimenti-atdd.spec.ts
