@@ -1,8 +1,8 @@
 story_id: '5.3'
 status: 'in_progress'
-currentStep: 4
-completedSteps: [1, 2, 3]
-lastTaskCompleted: 'story-created-gate-pass'
+currentStep: 5
+completedSteps: [1, 2, 3, 4]
+lastTaskCompleted: 'story-validated-gate-pass'
 worktree: false
 started_at: '2026-02-12T15:25:59+01:00'
-timestamp: '2026-02-12T15:41:00+01:00'
+timestamp: '2026-02-12T15:42:55+01:00'
