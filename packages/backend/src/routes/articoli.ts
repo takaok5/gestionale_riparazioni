@@ -5,12 +5,28 @@ import {
   createArticolo,
   type CreateArticoloInput,
   type CreateArticoloResult,
+  listArticoli,
+  listArticoliAlert,
+  type ListArticoliAlertInput,
+  type ListArticoliAlertResult,
+  type ListArticoliInput,
+  type ListArticoliResult,
 } from "../services/anagrafiche-service.js";
 
 const articoliRouter = Router();
 
 type CreateArticoloFailure = Exclude<
   CreateArticoloResult,
+  { ok: true; data: unknown }
+>;
+
+type ListArticoliFailure = Exclude<
+  ListArticoliResult,
+  { ok: true; data: unknown }
+>;
+
+type ListArticoliAlertFailure = Exclude<
+  ListArticoliAlertResult,
   { ok: true; data: unknown }
 >;
 
@@ -59,6 +75,85 @@ function respondCreateArticoloFailure(
       ),
     );
 }
+
+function respondListArticoliFailure(
+  res: Response,
+  result: ListArticoliFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Parametri query non validi",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "ANAGRAFICHE_SERVICE_UNAVAILABLE",
+        "Servizio anagrafiche non disponibile",
+      ),
+    );
+}
+
+function respondListArticoliAlertFailure(
+  res: Response,
+  _result: ListArticoliAlertFailure,
+): void {
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "ANAGRAFICHE_SERVICE_UNAVAILABLE",
+        "Servizio anagrafiche non disponibile",
+      ),
+    );
+}
+
+articoliRouter.get(
+  "/",
+  authenticate,
+  authorize("TECNICO", "ADMIN"),
+  async (req, res) => {
+    const payload: ListArticoliInput = {
+      page: req.query.page,
+      limit: req.query.limit,
+      search: req.query.search,
+      categoria: req.query.categoria,
+    };
+
+    const result = await listArticoli(payload);
+    if (!result.ok) {
+      respondListArticoliFailure(res, result);
+      return;
+    }
+
+    res.status(200).json(result.data);
+  },
+);
+
+articoliRouter.get(
+  "/alert",
+  authenticate,
+  authorize("TECNICO", "ADMIN"),
+  async (_req, res) => {
+    const payload: ListArticoliAlertInput = {};
+    const result = await listArticoliAlert(payload);
+    if (!result.ok) {
+      respondListArticoliAlertFailure(res, result);
+      return;
+    }
+
+    res.status(200).json(result.data);
+  },
+);
 
 articoliRouter.post(
   "/",

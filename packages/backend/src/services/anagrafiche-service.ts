@@ -109,6 +109,17 @@ interface ListFornitoriInput {
   categoria: unknown;
 }
 
+interface ListArticoliInput {
+  page: unknown;
+  limit: unknown;
+  search: unknown;
+  categoria: unknown;
+}
+
+interface ListArticoliAlertInput {
+  _?: never;
+}
+
 interface GetFornitoreByIdInput {
   fornitoreId: unknown;
 }
@@ -234,6 +245,30 @@ interface ArticoloCreatePayload {
   giacenza: number;
 }
 
+interface ArticoloListItem {
+  id: number;
+  codiceArticolo: string;
+  nome: string;
+  descrizione: string;
+  categoria: string;
+  sogliaMinima: number;
+  giacenza: number;
+}
+
+interface ArticoloListPayload {
+  data: ArticoloListItem[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+interface ArticoloAlertPayload {
+  data: ArticoloListItem[];
+}
+
 interface FornitoreDetailPayload {
   id: number;
   codiceFornitore: string;
@@ -318,6 +353,15 @@ type ListClientiResult =
 type ListFornitoriResult =
   | { ok: true; data: FornitoreListPayload }
   | ValidationFailure
+  | ServiceUnavailableFailure;
+
+type ListArticoliResult =
+  | { ok: true; data: ArticoloListPayload }
+  | ValidationFailure
+  | ServiceUnavailableFailure;
+
+type ListArticoliAlertResult =
+  | { ok: true; data: ArticoloAlertPayload }
   | ServiceUnavailableFailure;
 
 type GetFornitoreByIdResult =
@@ -418,6 +462,13 @@ interface ParsedListFornitoriInput {
   limit: number;
   search?: string;
   categoria?: CategoriaFornitore;
+}
+
+interface ParsedListArticoliInput {
+  page: number;
+  limit: number;
+  search?: string;
+  categoria?: string;
 }
 
 interface ParsedGetFornitoreByIdInput {
@@ -1616,6 +1667,74 @@ function parseListClientiInput(
       limit,
       search,
       tipologia,
+    },
+  };
+}
+
+function parseListArticoliInput(
+  input: ListArticoliInput,
+):
+  | { ok: true; data: ParsedListArticoliInput }
+  | ValidationFailure {
+  let page = 1;
+  if (input.page !== undefined) {
+    const parsedPage = asPositiveInteger(input.page);
+    if (parsedPage === null) {
+      return buildValidationFailure({
+        field: "page",
+        rule: "invalid_integer",
+      });
+    }
+    page = parsedPage;
+  }
+
+  let limit = TEST_PAGE_SIZE;
+  if (input.limit !== undefined) {
+    const parsedLimit = asPositiveInteger(input.limit);
+    if (parsedLimit === null) {
+      return buildValidationFailure({
+        field: "limit",
+        rule: "invalid_integer",
+      });
+    }
+    if (parsedLimit > MAX_LIST_LIMIT) {
+      return buildValidationFailure({
+        field: "limit",
+        rule: "too_large",
+      });
+    }
+    limit = parsedLimit;
+  }
+
+  let search: string | undefined;
+  if (input.search !== undefined && input.search !== null) {
+    if (typeof input.search !== "string" || !input.search.trim()) {
+      return buildValidationFailure({
+        field: "search",
+        rule: "invalid_string",
+      });
+    }
+    search = input.search.trim();
+  }
+
+  let categoria: string | undefined;
+  if (input.categoria !== undefined && input.categoria !== null) {
+    if (typeof input.categoria !== "string" || !input.categoria.trim()) {
+      return buildValidationFailure({
+        field: "categoria",
+        rule: "invalid_string",
+      });
+    }
+    categoria = input.categoria.trim().toUpperCase();
+  }
+
+  return {
+    ok: true,
+    data: {
+      page,
+      limit,
+      search,
+      categoria,
     },
   };
 }
@@ -3224,6 +3343,75 @@ async function listFornitoriInTestStore(
   };
 }
 
+async function listArticoliInTestStore(
+  payload: ParsedListArticoliInput,
+): Promise<ListArticoliResult> {
+  const searchValue = payload.search?.toLowerCase();
+
+  const filtered = testArticoli
+    .filter((row) => {
+      if (payload.categoria && row.categoria.toUpperCase() !== payload.categoria) {
+        return false;
+      }
+
+      if (!searchValue) {
+        return true;
+      }
+
+      return (
+        row.nome.toLowerCase().includes(searchValue) ||
+        row.codiceArticolo.toLowerCase().includes(searchValue) ||
+        row.descrizione.toLowerCase().includes(searchValue)
+      );
+    })
+    .sort((left, right) => left.id - right.id);
+
+  const total = filtered.length;
+  const offset = (payload.page - 1) * payload.limit;
+  const data = filtered.slice(offset, offset + payload.limit).map((row) => ({
+    id: row.id,
+    codiceArticolo: row.codiceArticolo,
+    nome: row.nome,
+    descrizione: row.descrizione,
+    categoria: row.categoria,
+    sogliaMinima: row.sogliaMinima,
+    giacenza: row.giacenza,
+  }));
+
+  return {
+    ok: true,
+    data: {
+      data,
+      meta: {
+        page: payload.page,
+        limit: payload.limit,
+        total,
+        totalPages: total === 0 ? 0 : Math.ceil(total / payload.limit),
+      },
+    },
+  };
+}
+
+async function listArticoliAlertInTestStore(): Promise<ListArticoliAlertResult> {
+  const data = testArticoli
+    .filter((row) => row.giacenza <= row.sogliaMinima)
+    .sort((left, right) => left.id - right.id)
+    .map((row) => ({
+      id: row.id,
+      codiceArticolo: row.codiceArticolo,
+      nome: row.nome,
+      descrizione: row.descrizione,
+      categoria: row.categoria,
+      sogliaMinima: row.sogliaMinima,
+      giacenza: row.giacenza,
+    }));
+
+  return {
+    ok: true,
+    data: { data },
+  };
+}
+
 async function listClientiInDatabase(
   payload: ParsedListClientiInput,
 ): Promise<ListClientiResult> {
@@ -3369,6 +3557,179 @@ async function listFornitoriInDatabase(
   }
 }
 
+async function listArticoliInDatabase(
+  payload: ParsedListArticoliInput,
+): Promise<ListArticoliResult> {
+  try {
+    const result = await getPrismaClient().$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const transaction = tx as Prisma.TransactionClient & {
+          articolo?: {
+            count: (args: unknown) => Promise<number>;
+            findMany: (args: unknown) => Promise<Array<{
+              id: number;
+              codiceArticolo: string;
+              nome: string;
+              descrizione: string;
+              categoria: string;
+              sogliaMinima: number;
+              giacenza: number;
+            }>>;
+          };
+        };
+
+        if (!transaction.articolo) {
+          return { ok: false, code: "SERVICE_UNAVAILABLE" } as const;
+        }
+
+        const where: {
+          categoria?: string;
+          OR?: Array<
+            | { nome: { contains: string; mode: "insensitive" } }
+            | { codiceArticolo: { contains: string; mode: "insensitive" } }
+            | { descrizione: { contains: string; mode: "insensitive" } }
+          >;
+        } = {};
+
+        if (payload.categoria) {
+          where.categoria = payload.categoria;
+        }
+
+        if (payload.search) {
+          where.OR = [
+            {
+              nome: {
+                contains: payload.search,
+                mode: "insensitive",
+              },
+            },
+            {
+              codiceArticolo: {
+                contains: payload.search,
+                mode: "insensitive",
+              },
+            },
+            {
+              descrizione: {
+                contains: payload.search,
+                mode: "insensitive",
+              },
+            },
+          ];
+        }
+
+        const skip = (payload.page - 1) * payload.limit;
+        const [total, rows] = await Promise.all([
+          transaction.articolo.count({ where }),
+          transaction.articolo.findMany({
+            where,
+            orderBy: {
+              id: "asc",
+            },
+            skip,
+            take: payload.limit,
+            select: {
+              id: true,
+              codiceArticolo: true,
+              nome: true,
+              descrizione: true,
+              categoria: true,
+              sogliaMinima: true,
+              giacenza: true,
+            },
+          }),
+        ]);
+
+        return {
+          ok: true,
+          data: {
+            data: rows,
+            meta: {
+              page: payload.page,
+              limit: payload.limit,
+              total,
+              totalPages: total === 0 ? 0 : Math.ceil(total / payload.limit),
+            },
+          },
+        } as const;
+      },
+    );
+
+    if (!result.ok) {
+      return result;
+    }
+
+    return {
+      ok: true,
+      data: result.data,
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function listArticoliAlertInDatabase(): Promise<ListArticoliAlertResult> {
+  try {
+    const result = await getPrismaClient().$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const transaction = tx as Prisma.TransactionClient & {
+          articolo?: {
+            findMany: (args: unknown) => Promise<Array<{
+              id: number;
+              codiceArticolo: string;
+              nome: string;
+              descrizione: string;
+              categoria: string;
+              sogliaMinima: number;
+              giacenza: number;
+            }>>;
+          };
+        };
+
+        if (!transaction.articolo) {
+          return { ok: false, code: "SERVICE_UNAVAILABLE" } as const;
+        }
+
+        const rows = await transaction.articolo.findMany({
+          orderBy: {
+            id: "asc",
+          },
+          select: {
+            id: true,
+            codiceArticolo: true,
+            nome: true,
+            descrizione: true,
+            categoria: true,
+            sogliaMinima: true,
+            giacenza: true,
+          },
+        });
+
+        return { ok: true, data: rows } as const;
+      },
+    );
+
+    if (!result.ok) {
+      return result;
+    }
+
+    return {
+      ok: true,
+      data: {
+        data: result.data.filter((row) => row.giacenza <= row.sogliaMinima),
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
 async function createCliente(input: CreateClienteInput): Promise<CreateClienteResult> {
   const parsed = parseCreateClienteInput(input);
   if (!parsed.ok) {
@@ -3470,6 +3831,31 @@ async function listFornitori(
   }
 
   return listFornitoriInDatabase(parsed.data);
+}
+
+async function listArticoli(
+  input: ListArticoliInput,
+): Promise<ListArticoliResult> {
+  const parsed = parseListArticoliInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return listArticoliInTestStore(parsed.data);
+  }
+
+  return listArticoliInDatabase(parsed.data);
+}
+
+async function listArticoliAlert(
+  _input: ListArticoliAlertInput,
+): Promise<ListArticoliAlertResult> {
+  if (process.env.NODE_ENV === "test") {
+    return listArticoliAlertInTestStore();
+  }
+
+  return listArticoliAlertInDatabase();
 }
 
 async function getFornitoreById(
@@ -3653,6 +4039,8 @@ export {
   listAuditLogs,
   listClienti,
   listFornitori,
+  listArticoli,
+  listArticoliAlert,
   listClienteRiparazioni,
   resetAnagraficheStoreForTests,
   seedFornitoreDetailScenarioForTests,
@@ -3676,6 +4064,10 @@ export {
   type ListClientiResult,
   type ListFornitoriInput,
   type ListFornitoriResult,
+  type ListArticoliInput,
+  type ListArticoliResult,
+  type ListArticoliAlertInput,
+  type ListArticoliAlertResult,
   type ListFornitoreOrdiniInput,
   type ListFornitoreOrdiniResult,
   type ListClienteRiparazioniInput,

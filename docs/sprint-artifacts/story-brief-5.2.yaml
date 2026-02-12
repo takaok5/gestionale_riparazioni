@@ -1,0 +1,28 @@
+target_modules:
+  - packages/backend/src/routes/articoli.ts
+  - packages/backend/src/services/anagrafiche-service.ts
+  - packages/backend/src/__tests__/articoli-list-search-alert-atdd.spec.ts
+patterns_to_follow:
+  - "packages/backend/src/routes/fornitori.ts:210 - GET list endpoint pattern with payload from req.query and failure responder"
+  - "packages/backend/src/routes/clienti.ts:172 - list endpoint shape with authenticate middleware and 200 {data, meta} response"
+  - "packages/backend/src/services/anagrafiche-service.ts:1493 - parseListFornitoriInput validates page/limit/search and enforces MAX_LIST_LIMIT"
+  - "packages/backend/src/services/anagrafiche-service.ts:3298 - listFornitoriInDatabase builds Prisma where filters, pagination skip/take, deterministic orderBy id asc, and meta"
+  - "packages/backend/src/__tests__/fornitori-list-search-atdd.spec.ts:71 - ATDD assertions for paginated meta fields"
+  - "packages/backend/src/__tests__/clienti-list-search-atdd.spec.ts:125 - ATDD search assertions excluding non-matching rows"
+dependencies:
+  - "packages/backend/src/index.ts imports and mounts articoliRouter at /api/articoli"
+  - "packages/backend/src/routes/articoli.ts imports createArticolo from anagrafiche-service"
+  - "packages/backend/src/routes/clienti.ts imports listClienti from anagrafiche-service"
+  - "packages/backend/src/routes/fornitori.ts imports listFornitori from anagrafiche-service"
+  - "packages/backend/src/routes/audit-log.ts imports audit helpers from anagrafiche-service"
+  - "packages/backend/src/__tests__/articoli-create-atdd.spec.ts imports resetAnagraficheStoreForTests from anagrafiche-service"
+risks:
+  - "Regression risk in existing articolo creation route when expanding articoliRouter with GET endpoints and shared error mapping"
+  - "Pagination contract mismatch risk (meta.limit/total/totalPages) versus existing API conventions used by current ATDD suites"
+  - "Search/filter risk: incorrect OR conditions could miss matches in nome/codiceArticolo/descrizione or apply categoria filter incorrectly"
+  - "Low-stock alert risk: using < instead of <= on giacenza vs sogliaMinima would violate AC-3"
+  - "Service coupling risk: changes in anagrafiche-service can break unrelated clienti/fornitori/audit routes that share the same module"
+existing_tests:
+  - packages/backend/src/__tests__/articoli-create-atdd.spec.ts
+  - packages/backend/src/__tests__/fornitori-list-search-atdd.spec.ts
+  - packages/backend/src/__tests__/clienti-list-search-atdd.spec.ts
