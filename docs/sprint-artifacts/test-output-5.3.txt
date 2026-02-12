@@ -1,0 +1,321 @@
+
+> gestionale-riparazioni@0.1.0 test
+> npm run test --workspaces --if-present --run
+
+npm warn Unknown cli config "--run". This will stop working in the next major version of npm.
+
+> @gestionale/backend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend[39m
+
+ [32m✓[39m src/__tests__/preventivi-detail-atdd.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 122[2mms[22m[39m
+ [32m✓[39m src/__tests__/preventivi-response-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 287[2mms[22m[39m
+ [32m✓[39m src/__tests__/preventivi-send-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 355[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-update-deactivate.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 431[2mms[22m[39m
+ [32m✓[39m src/__tests__/preventivi-update-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 479[2mms[22m[39m
+ [32m✓[39m src/__tests__/fornitori-detail-update-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 506[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-create.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 522[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-create-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 558[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-create-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 589[2mms[22m[39m
+ [32m✓[39m src/__tests__/fornitori-create-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 638[2mms[22m[39m
+ [32m✓[39m src/__tests__/articoli-create-atdd.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 644[2mms[22m[39m
+ [32m✓[39m src/__tests__/audit-trail.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 758[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-detail-update-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 893[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Dettaglio cliente esistente[2m > [22mTests AC-1: Given cliente id=5 exists When GET /api/clienti/5 Then 200 with full cliente data [33m 340[2mms[22m[39m
+ [31m❯[39m src/__tests__/articoli-movimenti-atdd.spec.ts [2m([22m[2m10 tests[22m[2m | [22m[31m10 failed[39m[2m)[22m[33m 926[2mms[22m[39m
+[31m   [31m×[31m AC-1 - Movimento CARICO con tracciamento utente e timestamp[2m > [22mTests AC-1: Given articolo giacenza 10 When POST CARICO 20 Then 201 and giacenza 30[39m[32m 279[2mms[22m[39m
+[31m     → expected 404 to be 201 // Object.is equality[39m
+[31m   [31m×[31m AC-1 - Movimento CARICO con tracciamento utente e timestamp[2m > [22mTests AC-1: Given CARICO succeeded When reading response Then movimento has userId and timestamp[39m[32m 47[2mms[22m[39m
+[31m     → expected 404 to be 201 // Object.is equality[39m
+[31m   [31m×[31m AC-2 - Movimento SCARICO con decremento giacenza[2m > [22mTests AC-2: Given giacenza 30 When POST SCARICO 15 Then 201 and giacenza 15[39m[32m 89[2mms[22m[39m
+[31m     → expected 404 to be 201 // Object.is equality[39m
+[31m   [31m×[31m AC-2 - Movimento SCARICO con decremento giacenza[2m > [22mTests AC-2: Given SCARICO accepted When reading movimento Then tipo and riferimento are persisted[39m[32m 97[2mms[22m[39m
+[31m     → expected 404 to be 201 // Object.is equality[39m
+[31m   [31m×[31m AC-3 - Blocco scarico oltre disponibilita[2m > [22mTests AC-3: Given giacenza 5 When POST SCARICO 10 Then 400 "Insufficient stock..."[39m[32m 81[2mms[22m[39m
+[31m     → expected 404 to be 400 // Object.is equality[39m
+[31m   [31m×[31m AC-3 - Blocco scarico oltre disponibilita[2m > [22mTests AC-3: Given rejected SCARICO When checking stock Then giacenza remains unchanged[39m[32m 74[2mms[22m[39m
+[31m     → expected +0 to be 5 // Object.is equality[39m
+[31m   [31m×[31m AC-4 - Movimento RETTIFICA con quantita negativa[2m > [22mTests AC-4: Given giacenza 15 When POST RETTIFICA -5 Then 201 and giacenza 10[39m[32m 67[2mms[22m[39m
+[31m     → expected 404 to be 201 // Object.is equality[39m
+[31m   [31m×[31m AC-4 - Movimento RETTIFICA con quantita negativa[2m > [22mTests AC-4: Given RETTIFICA applied When reading movimento Then tipo RETTIFICA and riferimento are returned[39m[32m 48[2mms[22m[39m
+[31m     → expected 404 to be 201 // Object.is equality[39m
+[31m   [31m×[31m AC-5 - Gestione concorrente SCARICO in transazione atomica[2m > [22mTests AC-5: Given giacenza 10 When two SCARICO 7 run in parallel Then only one request returns 201[39m[32m 65[2mms[22m[39m
+[31m     → expected [ 404, 404 ] to deeply equal [ 201, 400 ][39m
+[31m   [31m×[31m AC-5 - Gestione concorrente SCARICO in transazione atomica[2m > [22mTests AC-5: Given one parallel SCARICO fails When checking side effects Then final giacenza is 3 and failure message is "Insufficient stock"[39m[32m 77[2mms[22m[39m
+[31m     → expected undefined to be defined[39m
+ [32m✓[39m src/__tests__/fornitori-list-search-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 945[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista fornitori paginata[2m > [22mtests AC-1: should return 200 with 15 fornitori and meta {page:1,limit:20,total:15,totalPages:1} [33m 677[2mms[22m[39m
+ [32m✓[39m src/__tests__/preventivi-create-atdd.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1124[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Creazione preventivo con totali[2m > [22mTests AC-1: Given esiste una riparazione con id=10 When invio POST /api/preventivi con payload MANODOPERA+RICAMBIO Then viene creato preventivo in stato "BOZZA" con subtotale=200.00, iva=44.00, totale=244.00 e HTTP 201 [33m 545[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-list-search-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1202[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista clienti paginata[2m > [22mtests AC-1: should return 200 with data[10] and meta {page:1,limit:10,total:25,totalPages:3} [33m 722[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-detail-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1342[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Dettaglio riparazione con cliente, tecnico e stato corrente[2m > [22mTests AC-1: Given riparazione id=10 exists When I GET /api/riparazioni/10 Then I receive 200 with full riparazione data including cliente { id, nome, telefono, email }, tecnico { id, username }, current stato [33m 523[2mms[22m[39m
+ [32m✓[39m src/__tests__/auth-refresh.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 1380[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Rinnovo con refresh token valido[2m > [22mreturns 200 with new accessToken and refreshToken [33m 787[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Rinnovo con refresh token valido[2m > [22mreturns user payload with id, username, email and role [33m 474[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-list-filter-atdd.spec.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 1413[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista riparazioni paginata[2m > [22mtests AC-1: Given 30 repairs exist When GET /api/riparazioni?page=1&limit=15 Then returns 200 with 15 rows and meta {page:1,limit:15,total:30,totalPages:2} [33m 877[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-change-password.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1480[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Current password errata[2m > [22mkeeps old password valid when change fails [33m 974[2mms[22m[39m
+ [32m✓[39m src/__tests__/fatture-create-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1719[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Creazione fattura da preventivo approvato[2m > [22mTests AC-1: Given preventivo id=5 APPROVATO con totale 244.00 When POST /api/fatture { riparazioneId: 10 } Then HTTP 201 con numeroFattura 2026/0001 e importi 200/44/244 [33m 560[2mms[22m[39m
+ [32m✓[39m src/__tests__/articoli-list-search-alert-atdd.spec.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 1800[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista paginata articoli[2m > [22mTests AC-1: Given 30 articoli exist When GET /api/articoli?page=1&limit=20 Then 200 with 20 rows and meta [33m 821[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista paginata articoli[2m > [22mTests AC-1: Given page=2 limit=10 When listing Then meta reflects pagination and deterministic boundaries [33m 417[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-annullamento-admin-atdd.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1785[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Admin annulla da IN_LAVORAZIONE con nota[2m > [22mTests AC-1: Given ADMIN userId=1 and riparazione 10 in stato IN_LAVORAZIONE When PATCH /api/riparazioni/10/stato {"stato":"ANNULLATA","note":"Cliente ha ritirato dispositivo"} Then 200 with data.stato ANNULLATA [33m 725[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Admin annulla da IN_LAVORAZIONE con nota[2m > [22mTests AC-1: Given admin cancellation succeeds When GET /api/riparazioni/10 Then latest statiHistory row has stato ANNULLATA userId 1 note "Cliente ha ritirato dispositivo" [33m 313[2mms[22m[39m
+ [32m✓[39m src/__tests__/auth-login.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 2094[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login Utente valido[2m > [22mreturns 200 with accessToken and refreshToken when credentials are valid [33m 668[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login Utente valido[2m > [22mreturns user payload with id, username, email, role [33m 500[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Account disabilitato[2m > [22mreturns 401 ACCOUNT_DISABLED for mario.disabilitato [33m 420[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Account disabilitato[2m > [22mreturns no tokens for disabled account [33m 386[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-assegnazione-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 2211[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Assegnazione valida a tecnico[2m > [22mTests AC-1: Given admin and user id=7 role TECNICO When PATCH /api/riparazioni/10/assegna {tecnicoId:7} Then 200 and data.id=10 data.tecnicoId=7 [33m 624[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Assegnazione valida a tecnico[2m > [22mTests AC-1: Given assignment to tecnico id=7 succeeds When requesting detail Then riparazione 10 has tecnico.id=7 [33m 326[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-stato-base-atdd.spec.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 2667[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - RICEVUTA -> IN_DIAGNOSI con storico[2m > [22mTests AC-1: Given userId=7 role TECNICO assigned to riparazione 10 in stato RICEVUTA When PATCH /api/riparazioni/10/stato with {"stato":"IN_DIAGNOSI","note":"Iniziata diagnosi"} Then 200 with data {id:10, stato:IN_DIAGNOSI} [33m 655[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - RICEVUTA -> IN_DIAGNOSI con storico[2m > [22mTests AC-1: Given transition to IN_DIAGNOSI succeeds When GET /api/riparazioni/10 Then statiHistory latest row contains stato IN_DIAGNOSI, userId 7, note "Iniziata diagnosi" [33m 336[2mms[22m[39m
+ [32m✓[39m src/__tests__/fatture-pagamenti-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 2699[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Registrazione pagamento totale[2m > [22mTests AC-1: Given fattura id=8 totale 244.00 senza pagamenti When POST /api/fatture/8/pagamenti importo 244.00 Then HTTP 201 e stato PAGATA [33m 988[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Registrazione pagamento totale[2m > [22mTests AC-1: Given pagamento totale registrato When GET /api/fatture/8 Then residuo 0.00 [33m 399[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Registrazione pagamento parziale + saldo[2m > [22mTests AC-2: Given pagamento iniziale 100.00 When POST saldo 144.00 Then totalePagato 244.00 e stato PAGATA [33m 300[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-stato-preventivo-atdd.spec.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 3082[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - IN_DIAGNOSI -> PREVENTIVO_EMESSO[2m > [22mTests AC-1: Given riparazione 10 in stato IN_DIAGNOSI and actor TECNICO userId=7 When PATCH /api/riparazioni/10/stato with {"stato":"PREVENTIVO_EMESSO","note":"Preventivo emesso"} Then 200 with data.stato PREVENTIVO_EMESSO [33m 693[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - IN_DIAGNOSI -> PREVENTIVO_EMESSO[2m > [22mTests AC-1: Given transition to PREVENTIVO_EMESSO succeeds When GET /api/riparazioni/10 Then latest statiHistory row contains stato PREVENTIVO_EMESSO, userId 7 and note "Preventivo emesso" [33m 303[2mms[22m[39m
+ [32m✓[39m src/__tests__/fatture-lista-dettaglio-atdd.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 3233[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista fatture paginata[2m > [22mTests AC-1: Given 20 fatture exist When I GET /api/fatture?page=1&limit=10 Then I receive 200 with data array of 10 fatture and meta { page: 1, limit: 10, total: 20 } [33m 1436[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista fatture paginata[2m > [22mTests AC-1: Given 20 fatture exist When I GET /api/fatture?page=1&limit=10 Then response keeps deterministic first page boundaries [33m 595[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 10 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/articoli-movimenti-atdd.spec.ts[2m > [22mAC-1 - Movimento CARICO con tracciamento utente e timestamp[2m > [22mTests AC-1: Given articolo giacenza 10 When POST CARICO 20 Then 201 and giacenza 30
+[31m[1mAssertionError[22m: expected 404 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/articoli-movimenti-atdd.spec.ts:[2m84:29[22m[39m
+    [90m 82| [39m      .send({ tipo: "CARICO", quantita: 20, riferimento: "Ordine FOR-0…
+    [90m 83| [39m
+    [90m 84| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m 85| [39m    const giacenza = await getGiacenzaByCodice(articolo.codiceArticolo…
+    [90m 86| [39m    [34mexpect[39m(giacenza)[33m.[39m[34mtoBe[39m([34m30[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/articoli-movimenti-atdd.spec.ts[2m > [22mAC-1 - Movimento CARICO con tracciamento utente e timestamp[2m > [22mTests AC-1: Given CARICO succeeded When reading response Then movimento has userId and timestamp
+[31m[1mAssertionError[22m: expected 404 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/articoli-movimenti-atdd.spec.ts:[2m98:29[22m[39m
+    [90m 96| [39m      .send({ tipo: "CARICO", quantita: 20, riferimento: "Ordine FOR-0…
+    [90m 97| [39m
+    [90m 98| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m 99| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mmovimento[33m.[39muserId)[33m.[39m[34mtoBe[39m(tecnicoUserId)[33m;[39m
+    [90m100| [39m    expect(response.body.movimento.timestamp).toEqual(expect.any(Strin…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/articoli-movimenti-atdd.spec.ts[2m > [22mAC-2 - Movimento SCARICO con decremento giacenza[2m > [22mTests AC-2: Given giacenza 30 When POST SCARICO 15 Then 201 and giacenza 15
+[31m[1mAssertionError[22m: expected 404 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/articoli-movimenti-atdd.spec.ts:[2m122:29[22m[39m
+    [90m120| [39m      })[33m;[39m
+    [90m121| [39m
+    [90m122| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m123| [39m    const giacenza = await getGiacenzaByCodice(articolo.codiceArticolo…
+    [90m124| [39m    [34mexpect[39m(giacenza)[33m.[39m[34mtoBe[39m([34m15[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/articoli-movimenti-atdd.spec.ts[2m > [22mAC-2 - Movimento SCARICO con decremento giacenza[2m > [22mTests AC-2: Given SCARICO accepted When reading movimento Then tipo and riferimento are persisted
+[31m[1mAssertionError[22m: expected 404 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/articoli-movimenti-atdd.spec.ts:[2m143:29[22m[39m
+    [90m141| [39m      })[33m;[39m
+    [90m142| [39m
+    [90m143| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m144| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mmovimento[33m.[39mtipo)[33m.[39m[34mtoBe[39m([32m"SCARICO"[39m)[33m;[39m
+    [90m145| [39m    expect(response.body.movimento.riferimento).toBe("Riparazione RIP-…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/articoli-movimenti-atdd.spec.ts[2m > [22mAC-3 - Blocco scarico oltre disponibilita[2m > [22mTests AC-3: Given giacenza 5 When POST SCARICO 10 Then 400 "Insufficient stock..."
+[31m[1mAssertionError[22m: expected 404 to be 400 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 400[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/articoli-movimenti-atdd.spec.ts:[2m162:29[22m[39m
+    [90m160| [39m      [33m.[39m[34msend[39m({ tipo[33m:[39m [32m"SCARICO"[39m[33m,[39m quantita[33m:[39m [34m10[39m })[33m;[39m
+    [90m161| [39m
+    [90m162| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m400[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m163| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mmessage)[33m.[39m[34mtoBe[39m(
+    [90m164| [39m      [32m"Insufficient stock: available 5, requested 10"[39m[33m,[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/articoli-movimenti-atdd.spec.ts[2m > [22mAC-3 - Blocco scarico oltre disponibilita[2m > [22mTests AC-3: Given rejected SCARICO When checking stock Then giacenza remains unchanged
+[31m[1mAssertionError[22m: expected +0 to be 5 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 5[39m
+[31m+ 0[39m
+
+[36m [2m❯[22m src/__tests__/articoli-movimenti-atdd.spec.ts:[2m181:22[22m[39m
+    [90m179| [39m
+    [90m180| [39m    const giacenza = await getGiacenzaByCodice(articolo.codiceArticolo…
+    [90m181| [39m    [34mexpect[39m(giacenza)[33m.[39m[34mtoBe[39m([34m5[39m)[33m;[39m
+    [90m   | [39m                     [31m^[39m
+    [90m182| [39m  })[33m;[39m
+    [90m183| [39m})[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/articoli-movimenti-atdd.spec.ts[2m > [22mAC-4 - Movimento RETTIFICA con quantita negativa[2m > [22mTests AC-4: Given giacenza 15 When POST RETTIFICA -5 Then 201 and giacenza 10
+[31m[1mAssertionError[22m: expected 404 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/articoli-movimenti-atdd.spec.ts:[2m198:29[22m[39m
+    [90m196| [39m      .send({ tipo: "RETTIFICA", quantita: -5, riferimento: "Inventari…
+    [90m197| [39m
+    [90m198| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m199| [39m    const giacenza = await getGiacenzaByCodice(articolo.codiceArticolo…
+    [90m200| [39m    [34mexpect[39m(giacenza)[33m.[39m[34mtoBe[39m([34m10[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/articoli-movimenti-atdd.spec.ts[2m > [22mAC-4 - Movimento RETTIFICA con quantita negativa[2m > [22mTests AC-4: Given RETTIFICA applied When reading movimento Then tipo RETTIFICA and riferimento are returned
+[31m[1mAssertionError[22m: expected 404 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/articoli-movimenti-atdd.spec.ts:[2m215:29[22m[39m
+    [90m213| [39m      .send({ tipo: "RETTIFICA", quantita: -5, riferimento: "Inventari…
+    [90m214| [39m
+    [90m215| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m216| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mmovimento[33m.[39mtipo)[33m.[39m[34mtoBe[39m([32m"RETTIFICA"[39m)[33m;[39m
+    [90m217| [39m    expect(response.body.movimento.riferimento).toBe("Inventario fisic…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/articoli-movimenti-atdd.spec.ts[2m > [22mAC-5 - Gestione concorrente SCARICO in transazione atomica[2m > [22mTests AC-5: Given giacenza 10 When two SCARICO 7 run in parallel Then only one request returns 201
+[31m[1mAssertionError[22m: expected [ 404, 404 ] to deeply equal [ 201, 400 ][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[2m  [[22m
+[32m-   201,[39m
+[32m-   400,[39m
+[31m+   404,[39m
+[31m+   404,[39m
+[2m  ][22m
+
+[36m [2m❯[22m src/__tests__/articoli-movimenti-atdd.spec.ts:[2m246:22[22m[39m
+    [90m244| [39m
+    [90m245| [39m    [35mconst[39m statuses [33m=[39m [resA[33m.[39mstatus[33m,[39m resB[33m.[39mstatus][33m.[39m[34msort[39m((a[33m,[39m b) [33m=>[39m a [33m-[39m b)[33m;[39m
+    [90m246| [39m    [34mexpect[39m(statuses)[33m.[39m[34mtoEqual[39m([[34m201[39m[33m,[39m [34m400[39m])[33m;[39m
+    [90m   | [39m                     [31m^[39m
+    [90m247| [39m  })[33m;[39m
+    [90m248| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/articoli-movimenti-atdd.spec.ts[2m > [22mAC-5 - Gestione concorrente SCARICO in transazione atomica[2m > [22mTests AC-5: Given one parallel SCARICO fails When checking side effects Then final giacenza is 3 and failure message is "Insufficient stock"
+[31m[1mAssertionError[22m: expected undefined to be defined[39m
+[36m [2m❯[22m src/__tests__/articoli-movimenti-atdd.spec.ts:[2m273:20[22m[39m
+    [90m271| [39m
+    [90m272| [39m    [35mconst[39m failed [33m=[39m [resA[33m,[39m resB][33m.[39m[34mfind[39m((res) [33m=>[39m res[33m.[39mstatus [33m===[39m [34m400[39m)[33m;[39m
+    [90m273| [39m    [34mexpect[39m(failed)[33m.[39m[34mtoBeDefined[39m()[33m;[39m
+    [90m   | [39m                   [31m^[39m
+    [90m274| [39m    [34mexpect[39m(failed[33m?.[39mbody[33m.[39merror[33m.[39mmessage)[33m.[39m[34mtoContain[39m([32m"Insufficient stock"[39m)[33m;[39m
+    [90m275| [39m    const giacenza = await getGiacenzaByCodice(articolo.codiceArticolo…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/10]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m29 passed[39m[22m[90m (30)[39m
+[2m      Tests [22m [1m[31m10 failed[39m[22m[2m | [22m[1m[32m275 passed[39m[22m[90m (285)[39m
+[2m   Start at [22m 15:46:42
+[2m   Duration [22m 8.02s[2m (transform 4.29s, setup 0ms, collect 114.51s, tests 37.88s, environment 10ms, prepare 13.61s)[22m
+
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error workspace @gestionale/backend@0.1.0
+npm error location C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c vitest run
+
+
+> @gestionale/frontend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/frontend[39m
+
+No test files found, exiting with code 0
+
+[2minclude: [22m[33msrc/**/*.test.ts[2m, [22msrc/**/*.spec.ts[39m
+[2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+
+
+> @gestionale/shared@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/shared[39m
+
+ [32m✓[39m src/validators/index.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 15:46:52
+[2m   Duration [22m 666ms[2m (transform 52ms, setup 0ms, collect 58ms, tests 4ms, environment 0ms, prepare 239ms)[22m
+
