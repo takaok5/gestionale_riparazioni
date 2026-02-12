@@ -158,6 +158,7 @@ model RiparazionePreventivo {
   numeroPreventivo String      @unique
   stato            String
   dataInvio        DateTime?
+  dataRisposta     DateTime?
   subtotale        Float?
   iva              Float?
   totale           Float

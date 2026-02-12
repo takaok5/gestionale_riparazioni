@@ -19,6 +19,11 @@ interface InviaPreventivoInput {
   preventivoId: unknown;
 }
 
+interface RegistraRispostaPreventivoInput {
+  preventivoId: unknown;
+  approvato: unknown;
+}
+
 interface PreventivoVocePayload {
   tipo: string;
   descrizione: string;
@@ -33,6 +38,7 @@ interface PreventivoPayload {
   numeroPreventivo: string;
   stato: string;
   dataInvio: string | null;
+  dataRisposta: string | null;
   voci: PreventivoVocePayload[];
   subtotale: number;
   iva: number;
@@ -99,6 +105,16 @@ type InviaPreventivoResult =
   | EmailSendFailure
   | ServiceUnavailableFailure;
 
+interface RegistraRispostaPreventivoSuccessPayload extends PreventivoPayload {
+  riparazioneStato: string;
+}
+
+type RegistraRispostaPreventivoResult =
+  | { ok: true; data: RegistraRispostaPreventivoSuccessPayload }
+  | ValidationFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
 interface ParsedCreatePreventivoInput {
   riparazioneId: number;
   voci: PreventivoVocePayload[];
@@ -115,6 +131,11 @@ interface ParsedUpdatePreventivoInput {
 
 interface ParsedInviaPreventivoInput {
   preventivoId: number;
+}
+
+interface ParsedRegistraRispostaPreventivoInput {
+  preventivoId: number;
+  approvato: boolean;
 }
 
 let prismaClient: PrismaClient | null = null;
@@ -359,6 +380,27 @@ function parseInviaPreventivoInput(
   };
 }
 
+function parseRegistraRispostaPreventivoInput(
+  input: RegistraRispostaPreventivoInput,
+): { ok: true; data: ParsedRegistraRispostaPreventivoInput } | ValidationFailure {
+  const preventivoId = asPositiveInteger(input.preventivoId);
+  if (preventivoId === null) {
+    return buildValidationFailure("id", "required");
+  }
+
+  if (typeof input.approvato !== "boolean") {
+    return buildValidationFailure("approvato", "required");
+  }
+
+  return {
+    ok: true,
+    data: {
+      preventivoId,
+      approvato: input.approvato,
+    },
+  };
+}
+
 function toNumeroPreventivo(id: number): string {
   const padded = String(id).padStart(6, "0");
   return `PREV-${padded}`;
@@ -381,6 +423,7 @@ async function createPreventivoInTestStore(
     numeroPreventivo: toNumeroPreventivo(nextTestPreventivoId),
     stato: "BOZZA",
     dataInvio: null,
+    dataRisposta: null,
     voci: payload.voci.map((voce) => ({ ...voce })),
     subtotale: totals.subtotale,
     iva: totals.iva,
@@ -445,6 +488,7 @@ async function createPreventivoInDatabase(
             numeroPreventivo: temporaryNumeroPreventivo,
             stato: "BOZZA",
             dataInvio: null,
+            dataRisposta: null,
             subtotale: totals.subtotale,
             iva: totals.iva,
             totale: totals.totale,
@@ -464,6 +508,7 @@ async function createPreventivoInDatabase(
             numeroPreventivo: true,
             stato: true,
             dataInvio: true,
+            dataRisposta: true,
             subtotale: true,
             iva: true,
             totale: true,
@@ -491,6 +536,7 @@ async function createPreventivoInDatabase(
             numeroPreventivo: true,
             stato: true,
             dataInvio: true,
+            dataRisposta: true,
             subtotale: true,
             iva: true,
             totale: true,
@@ -516,6 +562,9 @@ async function createPreventivoInDatabase(
             stato: numbered.stato,
             dataInvio: numbered.dataInvio
               ? numbered.dataInvio.toISOString()
+              : null,
+            dataRisposta: numbered.dataRisposta
+              ? numbered.dataRisposta.toISOString()
               : null,
             voci: numbered.voci.map((voce) => ({
               tipo: voce.tipo,
@@ -551,6 +600,7 @@ async function getPreventivoDettaglioInDatabase(
         numeroPreventivo: true,
         stato: true,
         dataInvio: true,
+        dataRisposta: true,
         subtotale: true,
         iva: true,
         totale: true,
@@ -587,6 +637,7 @@ async function getPreventivoDettaglioInDatabase(
           numeroPreventivo: row.numeroPreventivo,
           stato: row.stato,
           dataInvio: row.dataInvio ? row.dataInvio.toISOString() : null,
+          dataRisposta: row.dataRisposta ? row.dataRisposta.toISOString() : null,
           voci: row.voci.map((voce) => ({
             tipo: voce.tipo,
             descrizione: voce.descrizione,
@@ -692,6 +743,7 @@ async function updatePreventivoInDatabase(
             numeroPreventivo: true,
             stato: true,
             dataInvio: true,
+            dataRisposta: true,
             subtotale: true,
             iva: true,
             totale: true,
@@ -717,6 +769,9 @@ async function updatePreventivoInDatabase(
             stato: updated.stato,
             dataInvio: updated.dataInvio
               ? updated.dataInvio.toISOString()
+              : null,
+            dataRisposta: updated.dataRisposta
+              ? updated.dataRisposta.toISOString()
               : null,
             voci: updated.voci.map((voce) => ({
               tipo: voce.tipo,
@@ -842,6 +897,7 @@ async function inviaPreventivoInTestStore(
   const sentAt = new Date().toISOString();
   target.stato = "INVIATO";
   target.dataInvio = sentAt;
+  target.dataRisposta = null;
   testRiparazioneStatoById.set(target.riparazioneId, "IN_ATTESA_APPROVAZIONE");
 
   return {
@@ -868,6 +924,7 @@ async function inviaPreventivoInDatabase(
             numeroPreventivo: true,
             stato: true,
             dataInvio: true,
+            dataRisposta: true,
             subtotale: true,
             iva: true,
             totale: true,
@@ -948,6 +1005,7 @@ async function inviaPreventivoInDatabase(
           data: {
             stato: "INVIATO",
             dataInvio: sentAt,
+            dataRisposta: null,
           },
           select: {
             id: true,
@@ -955,6 +1013,7 @@ async function inviaPreventivoInDatabase(
             numeroPreventivo: true,
             stato: true,
             dataInvio: true,
+            dataRisposta: true,
             subtotale: true,
             iva: true,
             totale: true,
@@ -990,6 +1049,196 @@ async function inviaPreventivoInDatabase(
             stato: updatedPreventivo.stato,
             dataInvio: updatedPreventivo.dataInvio
               ? updatedPreventivo.dataInvio.toISOString()
+              : null,
+            dataRisposta: updatedPreventivo.dataRisposta
+              ? updatedPreventivo.dataRisposta.toISOString()
+              : null,
+            voci: updatedPreventivo.voci.map((voce) => ({
+              tipo: voce.tipo,
+              descrizione: voce.descrizione,
+              ...(voce.articoloId ? { articoloId: voce.articoloId } : {}),
+              quantita: voce.quantita,
+              prezzoUnitario: voce.prezzoUnitario,
+            })),
+            subtotale:
+              updatedPreventivo.subtotale !== null
+                ? updatedPreventivo.subtotale
+                : roundCurrency(updatedPreventivo.totale / 1.22),
+            iva:
+              updatedPreventivo.iva !== null
+                ? updatedPreventivo.iva
+                : roundCurrency(
+                    updatedPreventivo.totale -
+                      roundCurrency(updatedPreventivo.totale / 1.22),
+                  ),
+            totale: updatedPreventivo.totale,
+            riparazioneStato: updatedRiparazione.stato,
+          },
+        };
+      },
+    );
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function registraRispostaPreventivoInTestStore(
+  payload: ParsedRegistraRispostaPreventivoInput,
+): Promise<RegistraRispostaPreventivoResult> {
+  const target = testPreventivi.find((row) => row.id === payload.preventivoId);
+  if (!target) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  if (target.stato === "APPROVATO" || target.stato === "RIFIUTATO") {
+    return buildValidationFailure(
+      "stato",
+      "immutable",
+      "Response already recorded for this preventivo",
+    );
+  }
+
+  if (target.stato !== "INVIATO") {
+    return buildValidationFailure(
+      "stato",
+      "invalid_transition",
+      "Preventivo must be in INVIATO state to record response",
+    );
+  }
+
+  const responseAt = new Date().toISOString();
+  const nextPreventivoStato = payload.approvato ? "APPROVATO" : "RIFIUTATO";
+  const nextRiparazioneStato = payload.approvato ? "APPROVATA" : "ANNULLATA";
+
+  target.stato = nextPreventivoStato;
+  target.dataRisposta = responseAt;
+  testRiparazioneStatoById.set(target.riparazioneId, nextRiparazioneStato);
+
+  return {
+    ok: true,
+    data: {
+      ...target,
+      voci: target.voci.map((voce) => ({ ...voce })),
+      riparazioneStato: nextRiparazioneStato,
+    },
+  };
+}
+
+async function registraRispostaPreventivoInDatabase(
+  payload: ParsedRegistraRispostaPreventivoInput,
+): Promise<RegistraRispostaPreventivoResult> {
+  try {
+    return await getPrismaClient().$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const row = await tx.riparazionePreventivo.findUnique({
+          where: { id: payload.preventivoId },
+          select: {
+            id: true,
+            riparazioneId: true,
+            numeroPreventivo: true,
+            stato: true,
+            dataInvio: true,
+            dataRisposta: true,
+            subtotale: true,
+            iva: true,
+            totale: true,
+            voci: {
+              orderBy: { id: "asc" },
+              select: {
+                tipo: true,
+                descrizione: true,
+                articoloId: true,
+                quantita: true,
+                prezzoUnitario: true,
+              },
+            },
+          },
+        });
+
+        if (!row) {
+          return {
+            ok: false as const,
+            code: "NOT_FOUND" as const,
+          };
+        }
+
+        if (row.stato === "APPROVATO" || row.stato === "RIFIUTATO") {
+          return buildValidationFailure(
+            "stato",
+            "immutable",
+            "Response already recorded for this preventivo",
+          );
+        }
+
+        if (row.stato !== "INVIATO") {
+          return buildValidationFailure(
+            "stato",
+            "invalid_transition",
+            "Preventivo must be in INVIATO state to record response",
+          );
+        }
+
+        const responseAt = new Date();
+        const nextPreventivoStato = payload.approvato ? "APPROVATO" : "RIFIUTATO";
+        const nextRiparazioneStato = payload.approvato ? "APPROVATA" : "ANNULLATA";
+
+        const updatedPreventivo = await tx.riparazionePreventivo.update({
+          where: { id: row.id },
+          data: {
+            stato: nextPreventivoStato,
+            dataRisposta: responseAt,
+          },
+          select: {
+            id: true,
+            riparazioneId: true,
+            numeroPreventivo: true,
+            stato: true,
+            dataInvio: true,
+            dataRisposta: true,
+            subtotale: true,
+            iva: true,
+            totale: true,
+            voci: {
+              orderBy: { id: "asc" },
+              select: {
+                tipo: true,
+                descrizione: true,
+                articoloId: true,
+                quantita: true,
+                prezzoUnitario: true,
+              },
+            },
+          },
+        });
+
+        const updatedRiparazione = await tx.riparazione.update({
+          where: { id: row.riparazioneId },
+          data: {
+            stato: nextRiparazioneStato,
+          },
+          select: {
+            stato: true,
+          },
+        });
+
+        return {
+          ok: true as const,
+          data: {
+            id: updatedPreventivo.id,
+            riparazioneId: updatedPreventivo.riparazioneId,
+            numeroPreventivo: updatedPreventivo.numeroPreventivo,
+            stato: updatedPreventivo.stato,
+            dataInvio: updatedPreventivo.dataInvio
+              ? updatedPreventivo.dataInvio.toISOString()
+              : null,
+            dataRisposta: updatedPreventivo.dataRisposta
+              ? updatedPreventivo.dataRisposta.toISOString()
               : null,
             voci: updatedPreventivo.voci.map((voce) => ({
               tipo: voce.tipo,
@@ -1083,6 +1332,21 @@ async function inviaPreventivo(
   return inviaPreventivoInDatabase(parsed.data);
 }
 
+async function registraRispostaPreventivo(
+  input: RegistraRispostaPreventivoInput,
+): Promise<RegistraRispostaPreventivoResult> {
+  const parsed = parseRegistraRispostaPreventivoInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return registraRispostaPreventivoInTestStore(parsed.data);
+  }
+
+  return registraRispostaPreventivoInDatabase(parsed.data);
+}
+
 function ensureTestEnvironment(): void {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
@@ -1097,6 +1361,7 @@ function seedDefaultTestPreventivi(): PreventivoPayload[] {
       numeroPreventivo: "PREV-000005",
       stato: "BOZZA",
       dataInvio: null,
+      dataRisposta: null,
       voci: [
         {
           tipo: "MANODOPERA",
@@ -1115,6 +1380,7 @@ function seedDefaultTestPreventivi(): PreventivoPayload[] {
       numeroPreventivo: "PREV-000021",
       stato: "BOZZA",
       dataInvio: null,
+      dataRisposta: null,
       voci: [
         {
           tipo: "MANODOPERA",
@@ -1164,11 +1430,25 @@ function setPreventivoStatoForTests(preventivoId: number, stato: string): void {
     throw new Error("PREVENTIVO_NOT_FOUND_FOR_TESTS");
   }
   target.stato = stato;
-  if (stato !== "INVIATO") {
-    target.dataInvio = null;
+  if (stato === "INVIATO") {
+    target.dataInvio = new Date().toISOString();
+    target.dataRisposta = null;
+    testRiparazioneStatoById.set(target.riparazioneId, "IN_ATTESA_APPROVAZIONE");
     return;
   }
-  target.dataInvio = new Date().toISOString();
+
+  target.dataInvio = null;
+  if (stato === "APPROVATO" || stato === "RIFIUTATO") {
+    target.dataRisposta = new Date().toISOString();
+    testRiparazioneStatoById.set(
+      target.riparazioneId,
+      stato === "APPROVATO" ? "APPROVATA" : "ANNULLATA",
+    );
+    return;
+  }
+
+  testRiparazioneStatoById.set(target.riparazioneId, "PREVENTIVO_EMESSO");
+  target.dataRisposta = null;
 }
 
 function setPreventivoClienteEmailForTests(
@@ -1202,6 +1482,7 @@ export {
   createPreventivo,
   getPreventivoDettaglio,
   inviaPreventivo,
+  registraRispostaPreventivo,
   updatePreventivo,
   resetPreventiviStoreForTests,
   setPreventivoClienteEmailForTests,
@@ -1213,6 +1494,8 @@ export {
   type GetPreventivoDettaglioResult,
   type InviaPreventivoInput,
   type InviaPreventivoResult,
+  type RegistraRispostaPreventivoInput,
+  type RegistraRispostaPreventivoResult,
   type UpdatePreventivoInput,
   type UpdatePreventivoResult,
 };

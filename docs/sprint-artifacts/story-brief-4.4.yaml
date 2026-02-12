@@ -1,0 +1,35 @@
+target_modules:
+  - packages/backend/src/routes/preventivi.ts
+  - packages/backend/src/services/preventivi-service.ts
+  - packages/backend/prisma/schema.prisma
+patterns_to_follow:
+  - pattern: "Route handler style: typed payload -> service call -> respond*Failure mapping"
+    reference: packages/backend/src/routes/preventivi.ts:145
+  - pattern: "Route registrations and handler wiring for preventivi endpoints"
+    reference: packages/backend/src/routes/preventivi.ts:186
+  - pattern: "Input parsing + validation guard for preventivi actions"
+    reference: packages/backend/src/services/preventivi-service.ts:348
+  - pattern: "Transactional DB update for preventivo state changes"
+    reference: packages/backend/src/services/preventivi-service.ts:857
+  - pattern: "Test-store implementation for preventivo state changes"
+    reference: packages/backend/src/services/preventivi-service.ts:790
+dependencies:
+  - packages/backend/src/index.ts
+  - packages/backend/src/routes/preventivi.ts
+  - packages/backend/src/services/riparazioni-service.ts
+  - packages/backend/src/__tests__/preventivi-create-atdd.spec.ts
+  - packages/backend/src/__tests__/preventivi-detail-atdd.spec.ts
+  - packages/backend/src/__tests__/preventivi-update-atdd.spec.ts
+  - packages/backend/src/__tests__/preventivi-send-atdd.spec.ts
+risks:
+  - "Schema lacks dataRisposta on RiparazionePreventivo (only dataInvio exists), so AC1/AC2 need schema + migration + service/test-store alignment. Reference: packages/backend/prisma/schema.prisma:154."
+  - "Preventivi service has dual paths (test store vs DB); missing response logic in either path will break ATDD. Reference: packages/backend/src/services/preventivi-service.ts:790 and packages/backend/src/services/preventivi-service.ts:857."
+  - "Side-effect updates riparazione state directly in preventivi service (not via riparazioni-service workflow/history), risking missing history entries or bypassing transition rules. Reference: packages/backend/src/services/preventivi-service.ts:974."
+  - "State-guard consistency: existing checks for INVIATO/APPROVATO are used in update/invia flows; risposta must align error codes/messages and handle already-processed states (APPROVATO/RIFIUTATO) to satisfy AC3/AC4. References: packages/backend/src/services/preventivi-service.ts:626, packages/backend/src/services/preventivi-service.ts:805."
+  - "No existing tests for PATCH /api/preventivi/:id/risposta, so regressions around error messages or state transitions can slip without new ATDD coverage."
+existing_tests:
+  - packages/backend/src/__tests__/preventivi-create-atdd.spec.ts
+  - packages/backend/src/__tests__/preventivi-detail-atdd.spec.ts
+  - packages/backend/src/__tests__/preventivi-update-atdd.spec.ts
+  - packages/backend/src/__tests__/preventivi-send-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-stato-preventivo-atdd.spec.ts

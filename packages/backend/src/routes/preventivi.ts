@@ -11,6 +11,9 @@ import {
   inviaPreventivo,
   type InviaPreventivoInput,
   type InviaPreventivoResult,
+  registraRispostaPreventivo,
+  type RegistraRispostaPreventivoInput,
+  type RegistraRispostaPreventivoResult,
   updatePreventivo,
   type UpdatePreventivoInput,
   type UpdatePreventivoResult,
@@ -35,6 +38,11 @@ type UpdatePreventivoFailure = Exclude<
 
 type InviaPreventivoFailure = Exclude<
   InviaPreventivoResult,
+  { ok: true; data: unknown }
+>;
+
+type RegistraRispostaPreventivoFailure = Exclude<
+  RegistraRispostaPreventivoResult,
   { ok: true; data: unknown }
 >;
 
@@ -183,6 +191,40 @@ function respondInviaPreventivoFailure(
     );
 }
 
+function respondRegistraRispostaPreventivoFailure(
+  res: Response,
+  result: RegistraRispostaPreventivoFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Payload non valido",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "NOT_FOUND") {
+    res
+      .status(404)
+      .json(buildErrorResponse("PREVENTIVO_NOT_FOUND", "Preventivo non trovato"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "PREVENTIVI_SERVICE_UNAVAILABLE",
+        "Servizio preventivi non disponibile",
+      ),
+    );
+}
+
 preventiviRouter.post("/", authenticate, async (req, res) => {
   const payload: CreatePreventivoInput = {
     riparazioneId: req.body?.riparazioneId,
@@ -239,6 +281,33 @@ preventiviRouter.post("/:id/invia", authenticate, async (req, res) => {
   }
 
   res.status(200).json(result.data);
+});
+
+preventiviRouter.patch("/:id/risposta", authenticate, async (req, res) => {
+  if (req.user?.role !== "COMMERCIALE") {
+    res
+      .status(403)
+      .json(
+        buildErrorResponse(
+          "FORBIDDEN",
+          "Operazione consentita solo al ruolo COMMERCIALE",
+        ),
+      );
+    return;
+  }
+
+  const payload: RegistraRispostaPreventivoInput = {
+    preventivoId: req.params.id,
+    approvato: req.body?.approvato,
+  };
+
+  const result = await registraRispostaPreventivo(payload);
+  if (!result.ok) {
+    respondRegistraRispostaPreventivoFailure(res, result);
+    return;
+  }
+
+  res.status(200).json({ data: result.data });
 });
 
 export { preventiviRouter };
