@@ -10,6 +10,11 @@ interface GetPreventivoDettaglioInput {
   preventivoId: unknown;
 }
 
+interface UpdatePreventivoInput {
+  preventivoId: unknown;
+  voci: unknown;
+}
+
 interface PreventivoVocePayload {
   tipo: string;
   descrizione: string;
@@ -66,6 +71,12 @@ type GetPreventivoDettaglioResult =
   | NotFoundFailure
   | ServiceUnavailableFailure;
 
+type UpdatePreventivoResult =
+  | { ok: true; data: PreventivoPayload }
+  | ValidationFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
 interface ParsedCreatePreventivoInput {
   riparazioneId: number;
   voci: PreventivoVocePayload[];
@@ -73,6 +84,11 @@ interface ParsedCreatePreventivoInput {
 
 interface ParsedGetPreventivoDettaglioInput {
   preventivoId: number;
+}
+
+interface ParsedUpdatePreventivoInput {
+  preventivoId: number;
+  voci: PreventivoVocePayload[];
 }
 
 let prismaClient: PrismaClient | null = null;
@@ -181,20 +197,13 @@ function buildValidationFailure(
   };
 }
 
-function parseCreatePreventivoInput(
-  input: CreatePreventivoInput,
-): { ok: true; data: ParsedCreatePreventivoInput } | ValidationFailure {
-  const riparazioneId = asPositiveInteger(input.riparazioneId);
-  if (riparazioneId === null) {
-    return buildValidationFailure("riparazioneId", "required");
-  }
-
-  if (!Array.isArray(input.voci) || input.voci.length === 0) {
+function parseVociPayload(input: unknown): { ok: true; data: PreventivoVocePayload[] } | ValidationFailure {
+  if (!Array.isArray(input) || input.length === 0) {
     return buildValidationFailure("voci", "required");
   }
 
   const parsedVoci: PreventivoVocePayload[] = [];
-  for (const voce of input.voci) {
+  for (const voce of input) {
     if (typeof voce !== "object" || voce === null) {
       return buildValidationFailure("voci", "invalid_type");
     }
@@ -245,9 +254,28 @@ function parseCreatePreventivoInput(
 
   return {
     ok: true,
+    data: parsedVoci,
+  };
+}
+
+function parseCreatePreventivoInput(
+  input: CreatePreventivoInput,
+): { ok: true; data: ParsedCreatePreventivoInput } | ValidationFailure {
+  const riparazioneId = asPositiveInteger(input.riparazioneId);
+  if (riparazioneId === null) {
+    return buildValidationFailure("riparazioneId", "required");
+  }
+
+  const parsedVoci = parseVociPayload(input.voci);
+  if (!parsedVoci.ok) {
+    return parsedVoci;
+  }
+
+  return {
+    ok: true,
     data: {
       riparazioneId,
-      voci: parsedVoci,
+      voci: parsedVoci.data,
     },
   };
 }
@@ -263,6 +291,28 @@ function parseGetPreventivoDettaglioInput(
   return {
     ok: true,
     data: { preventivoId },
+  };
+}
+
+function parseUpdatePreventivoInput(
+  input: UpdatePreventivoInput,
+): { ok: true; data: ParsedUpdatePreventivoInput } | ValidationFailure {
+  const preventivoId = asPositiveInteger(input.preventivoId);
+  if (preventivoId === null) {
+    return buildValidationFailure("id", "required");
+  }
+
+  const parsedVoci = parseVociPayload(input.voci);
+  if (!parsedVoci.ok) {
+    return parsedVoci;
+  }
+
+  return {
+    ok: true,
+    data: {
+      preventivoId,
+      voci: parsedVoci.data,
+    },
   };
 }
 
@@ -506,6 +556,134 @@ async function getPreventivoDettaglioInDatabase(
   }
 }
 
+async function updatePreventivoInTestStore(
+  payload: ParsedUpdatePreventivoInput,
+): Promise<UpdatePreventivoResult> {
+  const target = testPreventivi.find((row) => row.id === payload.preventivoId);
+  if (!target) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  if (target.stato !== "BOZZA") {
+    return buildValidationFailure(
+      "stato",
+      "immutable",
+      `Cannot edit preventivo with stato ${target.stato}`,
+    );
+  }
+
+  const totals = computeTotals(payload.voci);
+  target.voci = payload.voci.map((voce) => ({ ...voce }));
+  target.subtotale = totals.subtotale;
+  target.iva = totals.iva;
+  target.totale = totals.totale;
+
+  return {
+    ok: true,
+    data: {
+      ...target,
+      voci: target.voci.map((voce) => ({ ...voce })),
+    },
+  };
+}
+
+async function updatePreventivoInDatabase(
+  payload: ParsedUpdatePreventivoInput,
+): Promise<UpdatePreventivoResult> {
+  try {
+    return await getPrismaClient().$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const existing = await tx.riparazionePreventivo.findUnique({
+          where: { id: payload.preventivoId },
+          select: { id: true, stato: true, riparazioneId: true },
+        });
+
+        if (!existing) {
+          return {
+            ok: false as const,
+            code: "NOT_FOUND" as const,
+          };
+        }
+
+        if (existing.stato !== "BOZZA") {
+          return buildValidationFailure(
+            "stato",
+            "immutable",
+            `Cannot edit preventivo with stato ${existing.stato}`,
+          );
+        }
+
+        const totals = computeTotals(payload.voci);
+        const updated = await tx.riparazionePreventivo.update({
+          where: { id: payload.preventivoId },
+          data: {
+            subtotale: totals.subtotale,
+            iva: totals.iva,
+            totale: totals.totale,
+            voci: {
+              deleteMany: {},
+              create: payload.voci.map((voce) => ({
+                tipo: voce.tipo,
+                descrizione: voce.descrizione,
+                articoloId: voce.articoloId,
+                quantita: voce.quantita,
+                prezzoUnitario: voce.prezzoUnitario,
+              })),
+            },
+          },
+          select: {
+            id: true,
+            riparazioneId: true,
+            numeroPreventivo: true,
+            stato: true,
+            subtotale: true,
+            iva: true,
+            totale: true,
+            voci: {
+              orderBy: { id: "asc" },
+              select: {
+                tipo: true,
+                descrizione: true,
+                articoloId: true,
+                quantita: true,
+                prezzoUnitario: true,
+              },
+            },
+          },
+        });
+
+        return {
+          ok: true as const,
+          data: {
+            id: updated.id,
+            riparazioneId: updated.riparazioneId,
+            numeroPreventivo: updated.numeroPreventivo,
+            stato: updated.stato,
+            voci: updated.voci.map((voce) => ({
+              tipo: voce.tipo,
+              descrizione: voce.descrizione,
+              ...(voce.articoloId ? { articoloId: voce.articoloId } : {}),
+              quantita: voce.quantita,
+              prezzoUnitario: voce.prezzoUnitario,
+            })),
+            subtotale: updated.subtotale ?? totals.subtotale,
+            iva: updated.iva ?? totals.iva,
+            totale: updated.totale,
+          },
+        };
+      },
+    );
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
 async function createPreventivo(
   input: CreatePreventivoInput,
 ): Promise<CreatePreventivoResult> {
@@ -536,6 +714,21 @@ async function getPreventivoDettaglio(
   return getPreventivoDettaglioInDatabase(parsed.data);
 }
 
+async function updatePreventivo(
+  input: UpdatePreventivoInput,
+): Promise<UpdatePreventivoResult> {
+  const parsed = parseUpdatePreventivoInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return updatePreventivoInTestStore(parsed.data);
+  }
+
+  return updatePreventivoInDatabase(parsed.data);
+}
+
 function ensureTestEnvironment(): void {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
@@ -544,6 +737,23 @@ function ensureTestEnvironment(): void {
 
 function seedDefaultTestPreventivi(): PreventivoPayload[] {
   return [
+    {
+      id: 5,
+      riparazioneId: 10,
+      numeroPreventivo: "PREV-000005",
+      stato: "BOZZA",
+      voci: [
+        {
+          tipo: "MANODOPERA",
+          descrizione: "Diagnosi iniziale",
+          quantita: 1,
+          prezzoUnitario: 50,
+        },
+      ],
+      subtotale: 50,
+      iva: 11,
+      totale: 61,
+    },
     {
       id: 21,
       riparazioneId: 10,
@@ -584,12 +794,29 @@ function resetPreventiviStoreForTests(): void {
   nextTestPreventivoId = 22;
 }
 
+function setPreventivoStatoForTests(preventivoId: number, stato: string): void {
+  ensureTestEnvironment();
+  const allowed = new Set(["BOZZA", "INVIATO", "APPROVATO", "RIFIUTATO"]);
+  if (!allowed.has(stato)) {
+    throw new Error("INVALID_STATO_FOR_TESTS");
+  }
+  const target = testPreventivi.find((row) => row.id === preventivoId);
+  if (!target) {
+    throw new Error("PREVENTIVO_NOT_FOUND_FOR_TESTS");
+  }
+  target.stato = stato;
+}
+
 export {
   createPreventivo,
   getPreventivoDettaglio,
+  updatePreventivo,
   resetPreventiviStoreForTests,
+  setPreventivoStatoForTests,
   type CreatePreventivoInput,
   type CreatePreventivoResult,
   type GetPreventivoDettaglioInput,
   type GetPreventivoDettaglioResult,
+  type UpdatePreventivoInput,
+  type UpdatePreventivoResult,
 };

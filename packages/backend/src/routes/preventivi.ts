@@ -8,6 +8,9 @@ import {
   getPreventivoDettaglio,
   type GetPreventivoDettaglioInput,
   type GetPreventivoDettaglioResult,
+  updatePreventivo,
+  type UpdatePreventivoInput,
+  type UpdatePreventivoResult,
 } from "../services/preventivi-service.js";
 
 const preventiviRouter = Router();
@@ -19,6 +22,11 @@ type CreatePreventivoFailure = Exclude<
 
 type GetPreventivoDettaglioFailure = Exclude<
   GetPreventivoDettaglioResult,
+  { ok: true; data: unknown }
+>;
+
+type UpdatePreventivoFailure = Exclude<
+  UpdatePreventivoResult,
   { ok: true; data: unknown }
 >;
 
@@ -92,6 +100,40 @@ function respondGetPreventivoDettaglioFailure(
     );
 }
 
+function respondUpdatePreventivoFailure(
+  res: Response,
+  result: UpdatePreventivoFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Payload non valido",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "NOT_FOUND") {
+    res
+      .status(404)
+      .json(buildErrorResponse("PREVENTIVO_NOT_FOUND", "Preventivo non trovato"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "PREVENTIVI_SERVICE_UNAVAILABLE",
+        "Servizio preventivi non disponibile",
+      ),
+    );
+}
+
 preventiviRouter.post("/", authenticate, async (req, res) => {
   const payload: CreatePreventivoInput = {
     riparazioneId: req.body?.riparazioneId,
@@ -115,6 +157,21 @@ preventiviRouter.get("/:id", authenticate, async (req, res) => {
   const result = await getPreventivoDettaglio(payload);
   if (!result.ok) {
     respondGetPreventivoDettaglioFailure(res, result);
+    return;
+  }
+
+  res.status(200).json(result.data);
+});
+
+preventiviRouter.put("/:id", authenticate, async (req, res) => {
+  const payload: UpdatePreventivoInput = {
+    preventivoId: req.params.id,
+    voci: req.body?.voci,
+  };
+
+  const result = await updatePreventivo(payload);
+  if (!result.ok) {
+    respondUpdatePreventivoFailure(res, result);
     return;
   }
 
