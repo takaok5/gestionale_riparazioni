@@ -38,8 +38,15 @@ type ServiceUnavailableFailure = {
   code: "SERVICE_UNAVAILABLE";
 };
 
+type InsufficientStockFailure = {
+  ok: false;
+  code: "INSUFFICIENT_STOCK";
+  message: string;
+};
+
 type TipologiaCliente = "PRIVATO" | "AZIENDA";
 type CategoriaFornitore = "RICAMBI" | "SERVIZI" | "ALTRO";
+type MovimentoMagazzinoTipo = "CARICO" | "SCARICO" | "RETTIFICA";
 
 interface CreateClienteInput {
   actorUserId: unknown;
@@ -80,6 +87,14 @@ interface CreateArticoloInput {
   prezzoAcquisto: unknown;
   prezzoVendita: unknown;
   sogliaMinima: unknown;
+}
+
+interface CreateArticoloMovimentoInput {
+  actorUserId: unknown;
+  articoloId: unknown;
+  tipo: unknown;
+  quantita: unknown;
+  riferimento: unknown;
 }
 
 interface UpdateFornitoreInput {
@@ -269,6 +284,21 @@ interface ArticoloAlertPayload {
   data: ArticoloListItem[];
 }
 
+interface ArticoloMovimentoPayload {
+  id: number;
+  articoloId: number;
+  tipo: MovimentoMagazzinoTipo;
+  quantita: number;
+  riferimento: string | null;
+  userId: number;
+  timestamp: string;
+}
+
+interface ArticoloMovimentoCreatePayload {
+  movimento: ArticoloMovimentoPayload;
+  giacenza: number;
+}
+
 interface FornitoreDetailPayload {
   id: number;
   codiceFornitore: string;
@@ -324,6 +354,13 @@ type CreateArticoloResult =
   | ValidationFailure
   | DuplicateCodiceArticoloFailure
   | NotFoundFailure
+  | ServiceUnavailableFailure;
+
+type CreateArticoloMovimentoResult =
+  | { ok: true; data: ArticoloMovimentoCreatePayload }
+  | ValidationFailure
+  | NotFoundFailure
+  | InsufficientStockFailure
   | ServiceUnavailableFailure;
 
 type UpdateFornitoreResult =
@@ -434,6 +471,14 @@ interface ParsedCreateArticoloInput {
   prezzoAcquisto: number;
   prezzoVendita: number;
   sogliaMinima: number;
+}
+
+interface ParsedCreateArticoloMovimentoInput {
+  actorUserId: number;
+  articoloId: number;
+  tipo: MovimentoMagazzinoTipo;
+  quantita: number;
+  riferimento: string | null;
 }
 
 interface ParsedUpdateFornitoreInput {
@@ -555,6 +600,16 @@ interface TestArticoloRecord {
   updatedAt: string;
 }
 
+interface TestMovimentoMagazzinoRecord {
+  id: number;
+  articoloId: number;
+  tipo: MovimentoMagazzinoTipo;
+  quantita: number;
+  riferimento: string | null;
+  userId: number;
+  timestamp: string;
+}
+
 interface TestRiparazioneRecord {
   id: number;
   clienteId: number;
@@ -641,6 +696,7 @@ const baseTestFornitori: TestFornitoreRecord[] = [
 
 const baseTestFornitoreOrdini: TestFornitoreOrdineRecord[] = [];
 const baseTestArticoli: TestArticoloRecord[] = [];
+const baseTestMovimentiMagazzino: TestMovimentoMagazzinoRecord[] = [];
 
 const baseTestRiparazioni: TestRiparazioneRecord[] = [
   {
@@ -702,6 +758,7 @@ let testClienti = cloneTestClienti(baseTestClienti);
 let testFornitori = cloneTestFornitori(baseTestFornitori);
 let testFornitoreOrdini = cloneTestFornitoreOrdini(baseTestFornitoreOrdini);
 let testArticoli = cloneTestArticoli(baseTestArticoli);
+let testMovimentiMagazzino = cloneTestMovimentiMagazzino(baseTestMovimentiMagazzino);
 let testRiparazioni = cloneTestRiparazioni(baseTestRiparazioni);
 let testAuditLogs = cloneAuditLogs(baseTestAuditLogs);
 
@@ -710,6 +767,9 @@ let nextTestClienteCodeSequence = computeNextClienteCodeSequence(testClienti);
 let nextTestFornitoreId = computeNextId(testFornitori.map((item) => item.id));
 let nextTestFornitoreCodeSequence = computeNextFornitoreCodeSequence(testFornitori);
 let nextTestArticoloId = computeNextId(testArticoli.map((item) => item.id));
+let nextTestMovimentoMagazzinoId = computeNextId(
+  testMovimentiMagazzino.map((item) => item.id),
+);
 let nextTestAuditLogId = computeNextId(testAuditLogs.map((item) => item.id));
 
 let prismaClient: PrismaClient | null = null;
@@ -729,6 +789,12 @@ function cloneTestFornitoreOrdini(
 }
 
 function cloneTestArticoli(source: TestArticoloRecord[]): TestArticoloRecord[] {
+  return source.map((item) => ({ ...item }));
+}
+
+function cloneTestMovimentiMagazzino(
+  source: TestMovimentoMagazzinoRecord[],
+): TestMovimentoMagazzinoRecord[] {
   return source.map((item) => ({ ...item }));
 }
 
@@ -869,6 +935,17 @@ function buildDuplicateCodiceArticoloFailure(): DuplicateCodiceArticoloFailure {
   };
 }
 
+function buildInsufficientStockFailure(
+  available: number,
+  requested: number,
+): InsufficientStockFailure {
+  return {
+    ok: false,
+    code: "INSUFFICIENT_STOCK",
+    message: `Insufficient stock: available ${available}, requested ${requested}`,
+  };
+}
+
 function asPositiveInteger(value: unknown): number | null {
   if (typeof value === "number") {
     if (Number.isInteger(value) && value > 0) {
@@ -888,6 +965,31 @@ function asPositiveInteger(value: unknown): number | null {
 
   const parsed = Number(trimmed);
   if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function asInteger(value: unknown): number | null {
+  if (typeof value === "number") {
+    if (Number.isInteger(value)) {
+      return value;
+    }
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!/^-?\d+$/.test(trimmed)) {
+    return null;
+  }
+
+  const parsed = Number(trimmed);
+  if (!Number.isSafeInteger(parsed)) {
     return null;
   }
 
@@ -1353,6 +1455,77 @@ function parseCreateArticoloInput(
       prezzoAcquisto,
       prezzoVendita,
       sogliaMinima,
+    },
+  };
+}
+
+function parseCreateArticoloMovimentoInput(
+  input: CreateArticoloMovimentoInput,
+):
+  | { ok: true; data: ParsedCreateArticoloMovimentoInput }
+  | ValidationFailure {
+  const actorUserId = asPositiveInteger(input.actorUserId);
+  if (actorUserId === null) {
+    return buildValidationFailure({
+      field: "actorUserId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const articoloId = asPositiveInteger(input.articoloId);
+  if (articoloId === null) {
+    return buildValidationFailure({
+      field: "articoloId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const rawTipo = asRequiredString(input.tipo);
+  if (!rawTipo) {
+    return buildValidationFailure({
+      field: "tipo",
+      rule: "required",
+    });
+  }
+
+  const tipo = rawTipo.toUpperCase();
+  if (tipo !== "CARICO" && tipo !== "SCARICO" && tipo !== "RETTIFICA") {
+    return buildValidationFailure({
+      field: "tipo",
+      rule: "invalid_enum",
+    });
+  }
+
+  const quantita = asInteger(input.quantita);
+  if (quantita === null) {
+    return buildValidationFailure({
+      field: "quantita",
+      rule: "invalid_integer",
+    });
+  }
+
+  if ((tipo === "CARICO" || tipo === "SCARICO") && quantita <= 0) {
+    return buildValidationFailure({
+      field: "quantita",
+      rule: "must_be_positive",
+    });
+  }
+
+  if (tipo === "RETTIFICA" && quantita === 0) {
+    return buildValidationFailure({
+      field: "quantita",
+      rule: "must_not_be_zero",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      actorUserId,
+      articoloId,
+      tipo,
+      quantita,
+      riferimento: asOptionalString(input.riferimento),
     },
   };
 }
@@ -2459,6 +2632,198 @@ async function createArticoloInDatabase(
     if (!result.ok) {
       if (result.code === "CODICE_ARTICOLO_EXISTS") {
         return buildDuplicateCodiceArticoloFailure();
+      }
+      return result;
+    }
+
+    return {
+      ok: true,
+      data: result.data,
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+function computeMovimentoDelta(
+  tipo: MovimentoMagazzinoTipo,
+  quantita: number,
+): number {
+  if (tipo === "CARICO") {
+    return quantita;
+  }
+  return tipo === "SCARICO" ? -quantita : quantita;
+}
+
+async function createArticoloMovimentoInTestStore(
+  payload: ParsedCreateArticoloMovimentoInput,
+): Promise<CreateArticoloMovimentoResult> {
+  const articoloIndex = testArticoli.findIndex(
+    (record) => record.id === payload.articoloId,
+  );
+  if (articoloIndex === -1) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  const currentArticolo = testArticoli[articoloIndex];
+  const delta = computeMovimentoDelta(payload.tipo, payload.quantita);
+  const nuovaGiacenza = currentArticolo.giacenza + delta;
+  if (nuovaGiacenza < 0) {
+    const requested = delta < 0 ? Math.abs(delta) : payload.quantita;
+    return buildInsufficientStockFailure(currentArticolo.giacenza, requested);
+  }
+
+  const now = new Date().toISOString();
+  testArticoli[articoloIndex] = {
+    ...currentArticolo,
+    giacenza: nuovaGiacenza,
+    updatedAt: now,
+  };
+
+  const movimento: TestMovimentoMagazzinoRecord = {
+    id: nextTestMovimentoMagazzinoId,
+    articoloId: payload.articoloId,
+    tipo: payload.tipo,
+    quantita: payload.quantita,
+    riferimento: payload.riferimento,
+    userId: payload.actorUserId,
+    timestamp: now,
+  };
+  nextTestMovimentoMagazzinoId += 1;
+  testMovimentiMagazzino.push(movimento);
+
+  appendTestAuditLog({
+    userId: payload.actorUserId,
+    action: "UPDATE",
+    modelName: "Articolo",
+    objectId: String(payload.articoloId),
+    dettagli: {
+      old: {
+        giacenza: currentArticolo.giacenza,
+      },
+      new: {
+        giacenza: nuovaGiacenza,
+        movimento: {
+          tipo: payload.tipo,
+          quantita: payload.quantita,
+          riferimento: payload.riferimento,
+        },
+      },
+    },
+  });
+
+  return {
+    ok: true,
+    data: {
+      movimento: {
+        id: movimento.id,
+        articoloId: movimento.articoloId,
+        tipo: movimento.tipo,
+        quantita: movimento.quantita,
+        riferimento: movimento.riferimento,
+        userId: movimento.userId,
+        timestamp: movimento.timestamp,
+      },
+      giacenza: nuovaGiacenza,
+    },
+  };
+}
+
+async function createArticoloMovimentoInDatabase(
+  payload: ParsedCreateArticoloMovimentoInput,
+): Promise<CreateArticoloMovimentoResult> {
+  try {
+    const result = await getPrismaClient().$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const transaction = tx as Prisma.TransactionClient & {
+          articolo?: {
+            findUnique: (args: unknown) => Promise<{
+              id: number;
+              giacenza: number;
+            } | null>;
+            update: (args: unknown) => Promise<{ id: number; giacenza: number }>;
+          };
+        };
+
+        if (!transaction.articolo) {
+          return { ok: false, code: "SERVICE_UNAVAILABLE" } as const;
+        }
+
+        const articolo = await transaction.articolo.findUnique({
+          where: { id: payload.articoloId },
+          select: { id: true, giacenza: true },
+        });
+        if (!articolo) {
+          return { ok: false, code: "NOT_FOUND" } as const;
+        }
+
+        const delta = computeMovimentoDelta(payload.tipo, payload.quantita);
+        const nuovaGiacenza = articolo.giacenza + delta;
+        if (nuovaGiacenza < 0) {
+          const requested = delta < 0 ? Math.abs(delta) : payload.quantita;
+          return {
+            ok: false,
+            code: "INSUFFICIENT_STOCK",
+            available: articolo.giacenza,
+            requested,
+          } as const;
+        }
+
+        const updatedArticolo = await transaction.articolo.update({
+          where: { id: payload.articoloId },
+          data: { giacenza: nuovaGiacenza },
+          select: { id: true, giacenza: true },
+        });
+
+        const audit = await tx.auditLog.create({
+          data: {
+            userId: payload.actorUserId,
+            action: "UPDATE",
+            modelName: "Articolo",
+            objectId: String(payload.articoloId),
+            dettagli: {
+              old: {
+                giacenza: articolo.giacenza,
+              },
+              new: {
+                giacenza: updatedArticolo.giacenza,
+                movimento: {
+                  tipo: payload.tipo,
+                  quantita: payload.quantita,
+                  riferimento: payload.riferimento,
+                },
+              },
+            },
+          },
+        });
+
+        return {
+          ok: true,
+          data: {
+            movimento: {
+              id: audit.id,
+              articoloId: payload.articoloId,
+              tipo: payload.tipo,
+              quantita: payload.quantita,
+              riferimento: payload.riferimento,
+              userId: payload.actorUserId,
+              timestamp: audit.timestamp.toISOString(),
+            },
+            giacenza: updatedArticolo.giacenza,
+          },
+        } as const;
+      },
+    );
+
+    if (!result.ok) {
+      if (result.code === "INSUFFICIENT_STOCK") {
+        return buildInsufficientStockFailure(result.available, result.requested);
       }
       return result;
     }
@@ -3773,6 +4138,21 @@ async function createArticolo(
   return createArticoloInDatabase(parsed.data);
 }
 
+async function createArticoloMovimento(
+  input: CreateArticoloMovimentoInput,
+): Promise<CreateArticoloMovimentoResult> {
+  const parsed = parseCreateArticoloMovimentoInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return createArticoloMovimentoInTestStore(parsed.data);
+  }
+
+  return createArticoloMovimentoInDatabase(parsed.data);
+}
+
 async function updateFornitore(
   input: UpdateFornitoreInput,
 ): Promise<UpdateFornitoreResult> {
@@ -3939,6 +4319,7 @@ function resetAnagraficheStoreForTests(): void {
   testFornitori = cloneTestFornitori(baseTestFornitori);
   testFornitoreOrdini = cloneTestFornitoreOrdini(baseTestFornitoreOrdini);
   testArticoli = cloneTestArticoli(baseTestArticoli);
+  testMovimentiMagazzino = cloneTestMovimentiMagazzino(baseTestMovimentiMagazzino);
   testRiparazioni = cloneTestRiparazioni(baseTestRiparazioni);
   testAuditLogs = cloneAuditLogs(baseTestAuditLogs);
   nextTestClienteId = computeNextId(testClienti.map((item) => item.id));
@@ -3946,6 +4327,9 @@ function resetAnagraficheStoreForTests(): void {
   nextTestFornitoreId = computeNextId(testFornitori.map((item) => item.id));
   nextTestFornitoreCodeSequence = computeNextFornitoreCodeSequence(testFornitori);
   nextTestArticoloId = computeNextId(testArticoli.map((item) => item.id));
+  nextTestMovimentoMagazzinoId = computeNextId(
+    testMovimentiMagazzino.map((item) => item.id),
+  );
   nextTestAuditLogId = computeNextId(testAuditLogs.map((item) => item.id));
 }
 
@@ -4031,6 +4415,7 @@ export {
   createCliente,
   createFornitore,
   createArticolo,
+  createArticoloMovimento,
   getFornitoreById,
   getClienteById,
   listFornitoreOrdini,
@@ -4050,6 +4435,8 @@ export {
   type CreateFornitoreResult,
   type CreateArticoloInput,
   type CreateArticoloResult,
+  type CreateArticoloMovimentoInput,
+  type CreateArticoloMovimentoResult,
   type GetFornitoreByIdInput,
   type GetFornitoreByIdResult,
   type GetClienteByIdInput,
