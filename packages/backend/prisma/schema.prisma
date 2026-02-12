@@ -128,6 +128,8 @@ model OrdineFornitoreVoce {
   articoloId       Int
   articolo         Articolo        @relation(fields: [articoloId], references: [id])
   quantitaOrdinata Int
+  quantitaRicevuta Int             @default(0)
+  dataUltimaRicezione DateTime?
   prezzoUnitario   Float
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt

@@ -1,0 +1,14 @@
+
+> @gestionale/backend@0.1.0 test
+> vitest run --run src/__tests__/ordini-ricezione-atdd.spec.ts
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend[39m
+
+ [32m✓[39m src/__tests__/ordini-ricezione-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 208[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m8 passed[39m[22m[90m (8)[39m
+[2m   Start at [22m 19:29:57
+[2m   Duration [22m 2.14s[2m (transform 241ms, setup 0ms, collect 1.36s, tests 208ms, environment 0ms, prepare 199ms)[22m
+

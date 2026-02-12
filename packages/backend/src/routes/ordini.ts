@@ -5,6 +5,9 @@ import {
   createOrdineFornitore,
   type CreateOrdineFornitoreInput,
   type CreateOrdineFornitoreResult,
+  receiveOrdineFornitore,
+  type ReceiveOrdineFornitoreInput,
+  type ReceiveOrdineFornitoreResult,
   updateOrdineFornitoreStato,
   type UpdateOrdineFornitoreStatoInput,
   type UpdateOrdineFornitoreStatoResult,
@@ -18,6 +21,10 @@ type CreateOrdineFornitoreFailure = Exclude<
 >;
 type UpdateOrdineFornitoreStatoFailure = Exclude<
   UpdateOrdineFornitoreStatoResult,
+  { ok: true; data: unknown }
+>;
+type ReceiveOrdineFornitoreFailure = Exclude<
+  ReceiveOrdineFornitoreResult,
   { ok: true; data: unknown }
 >;
 
@@ -96,6 +103,47 @@ function respondUpdateOrdineFornitoreStatoFailure(
     );
 }
 
+function respondReceiveOrdineFornitoreFailure(
+  res: Response,
+  result: ReceiveOrdineFornitoreFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Payload non valido",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "ORDINE_NOT_FOUND") {
+    res
+      .status(404)
+      .json(buildErrorResponse("ORDINE_NOT_FOUND", "ORDINE_NOT_FOUND"));
+    return;
+  }
+
+  if (result.code === "ARTICOLO_NOT_FOUND") {
+    res
+      .status(404)
+      .json(buildErrorResponse("ARTICOLO_NOT_FOUND", "ARTICOLO_NOT_FOUND"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "ANAGRAFICHE_SERVICE_UNAVAILABLE",
+        "Servizio anagrafiche non disponibile",
+      ),
+    );
+}
+
 ordiniRouter.post(
   "/",
   authenticate,
@@ -128,6 +176,22 @@ ordiniRouter.patch("/:id/stato", authenticate, async (req, res) => {
   const result = await updateOrdineFornitoreStato(payload);
   if (!result.ok) {
     respondUpdateOrdineFornitoreStatoFailure(res, result);
+    return;
+  }
+
+  res.status(200).json({ data: result.data });
+});
+
+ordiniRouter.post("/:id/ricevi", authenticate, authorize("ADMIN"), async (req, res) => {
+  const payload: ReceiveOrdineFornitoreInput = {
+    actorUserId: req.user?.userId,
+    ordineId: req.params?.id,
+    voci: req.body?.voci,
+  };
+
+  const result = await receiveOrdineFornitore(payload);
+  if (!result.ok) {
+    respondReceiveOrdineFornitoreFailure(res, result);
     return;
   }
 

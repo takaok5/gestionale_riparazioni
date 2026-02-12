@@ -110,6 +110,12 @@ interface UpdateOrdineFornitoreStatoInput {
   stato: unknown;
 }
 
+interface ReceiveOrdineFornitoreInput {
+  actorUserId: unknown;
+  ordineId: unknown;
+  voci: unknown;
+}
+
 interface UpdateFornitoreInput {
   actorUserId: unknown;
   fornitoreId: unknown;
@@ -350,6 +356,11 @@ interface OrdineFornitoreVoceInput {
   prezzoUnitario: number;
 }
 
+interface OrdineFornitoreRicezioneVoceInput {
+  articoloId: number;
+  quantitaRicevuta: number;
+}
+
 interface OrdineFornitoreCreatePayload {
   id: number;
   fornitoreId: number;
@@ -419,6 +430,13 @@ type UpdateOrdineFornitoreStatoResult =
   | { ok: true; data: OrdineFornitoreStatoPayload }
   | ValidationFailure
   | { ok: false; code: "ORDINE_NOT_FOUND" }
+  | ServiceUnavailableFailure;
+
+type ReceiveOrdineFornitoreResult =
+  | { ok: true; data: OrdineFornitoreStatoPayload }
+  | ValidationFailure
+  | { ok: false; code: "ORDINE_NOT_FOUND" }
+  | { ok: false; code: "ARTICOLO_NOT_FOUND" }
   | ServiceUnavailableFailure;
 
 type UpdateFornitoreResult =
@@ -558,6 +576,12 @@ interface ParsedUpdateOrdineFornitoreStatoInput {
   stato: "BOZZA" | "EMESSO" | "CONFERMATO" | "SPEDITO" | "RICEVUTO" | "ANNULLATO";
 }
 
+interface ParsedReceiveOrdineFornitoreInput {
+  actorUserId: number;
+  ordineId: number;
+  voci: OrdineFornitoreRicezioneVoceInput[];
+}
+
 interface ParsedUpdateFornitoreInput {
   actorUserId: number;
   fornitoreId: number;
@@ -660,6 +684,7 @@ interface TestFornitoreRecord {
 interface TestFornitoreOrdineVoceRecord {
   articoloId: number;
   quantitaOrdinata: number;
+  quantitaRicevuta: number;
   prezzoUnitario: number;
 }
 
@@ -1833,6 +1858,136 @@ function parseUpdateOrdineFornitoreStatoInput(
       stato,
     },
   };
+}
+
+function parseReceiveOrdineFornitoreInput(
+  input: ReceiveOrdineFornitoreInput,
+): { ok: true; data: ParsedReceiveOrdineFornitoreInput } | ValidationFailure {
+  const actorUserId = asPositiveInteger(input.actorUserId);
+  if (actorUserId === null) {
+    return buildValidationFailure({
+      field: "actorUserId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const ordineId = asPositiveInteger(input.ordineId);
+  if (ordineId === null) {
+    return buildValidationFailure({
+      field: "ordineId",
+      rule: "invalid_integer",
+    });
+  }
+
+  if (!Array.isArray(input.voci) || input.voci.length === 0) {
+    return buildValidationFailure({
+      field: "voci",
+      rule: "required_non_empty_array",
+    });
+  }
+
+  const parsedVoci: OrdineFornitoreRicezioneVoceInput[] = [];
+  const seenArticoli = new Set<number>();
+  for (let index = 0; index < input.voci.length; index += 1) {
+    const voce = input.voci[index];
+    if (typeof voce !== "object" || voce === null) {
+      return buildValidationFailure({
+        field: `voci[${index}]`,
+        rule: "invalid_object",
+      });
+    }
+
+    const row = voce as Record<string, unknown>;
+    const articoloId = asPositiveInteger(row.articoloId);
+    if (articoloId === null) {
+      return buildValidationFailure({
+        field: `voci[${index}].articoloId`,
+        rule: "invalid_integer",
+      });
+    }
+
+    if (seenArticoli.has(articoloId)) {
+      return buildValidationFailure({
+        field: `voci[${index}].articoloId`,
+        rule: "duplicate_articolo",
+      });
+    }
+    seenArticoli.add(articoloId);
+
+    const quantitaRicevuta = asPositiveInteger(row.quantitaRicevuta);
+    if (quantitaRicevuta === null) {
+      return buildValidationFailure({
+        field: `voci[${index}].quantitaRicevuta`,
+        rule: "invalid_integer",
+      });
+    }
+
+    parsedVoci.push({
+      articoloId,
+      quantitaRicevuta,
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      actorUserId,
+      ordineId,
+      voci: parsedVoci,
+    },
+  };
+}
+
+function validateOrdineReceiveState(stato: string): ValidationFailure | null {
+  if (stato === "BOZZA") {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "Cannot receive order in BOZZA state",
+      details: {
+        field: "stato",
+        rule: "invalid_transition",
+      },
+    };
+  }
+
+  if (stato === "ANNULLATO") {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "Cannot receive order in ANNULLATO state",
+      details: {
+        field: "stato",
+        rule: "invalid_transition",
+      },
+    };
+  }
+
+  if (stato === "RICEVUTO") {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "Order is already in RICEVUTO state",
+      details: {
+        field: "stato",
+        rule: "already_in_state",
+      },
+    };
+  }
+
+  if (stato !== "SPEDITO") {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: `Cannot receive order in ${stato} state`,
+      details: {
+        field: "stato",
+        rule: "invalid_transition",
+      },
+    };
+  }
+
+  return null;
 }
 
 function validateOrdineTransition(
@@ -3082,7 +3237,10 @@ async function createOrdineFornitoreInTestStore(
     dataEmissione: null,
     dataRicezione: null,
     totale,
-    voci: payload.voci.map((voce) => ({ ...voce })),
+    voci: payload.voci.map((voce) => ({
+      ...voce,
+      quantitaRicevuta: 0,
+    })),
   };
 
   nextTestFornitoreOrdineId += 1;
@@ -3200,6 +3358,7 @@ async function createOrdineFornitoreInDatabase(
               ordineId: created.id,
               articoloId: voce.articoloId,
               quantitaOrdinata: voce.quantitaOrdinata,
+              quantitaRicevuta: 0,
               prezzoUnitario: voce.prezzoUnitario,
             })),
           });
@@ -3405,6 +3564,322 @@ async function updateOrdineFornitoreStatoInDatabase(
         return {
           ok: true,
           data: toOrdineFornitorePayload(updated),
+        } as const;
+      },
+    );
+
+    return result;
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function receiveOrdineFornitoreInTestStore(
+  payload: ParsedReceiveOrdineFornitoreInput,
+): Promise<ReceiveOrdineFornitoreResult> {
+  const ordineIndex = testFornitoreOrdini.findIndex((row) => row.id === payload.ordineId);
+  if (ordineIndex === -1) {
+    return {
+      ok: false,
+      code: "ORDINE_NOT_FOUND",
+    };
+  }
+
+  const currentOrdine = testFornitoreOrdini[ordineIndex];
+  const receiveStateFailure = validateOrdineReceiveState(currentOrdine.stato);
+  if (receiveStateFailure) {
+    return receiveStateFailure;
+  }
+
+  const nextOrdine: TestFornitoreOrdineRecord = {
+    ...currentOrdine,
+    voci: currentOrdine.voci.map((voce) => ({ ...voce })),
+  };
+
+  for (let index = 0; index < payload.voci.length; index += 1) {
+    const voceRicezione = payload.voci[index];
+    const voceOrdine = nextOrdine.voci.find((row) => row.articoloId === voceRicezione.articoloId);
+    if (!voceOrdine) {
+      return buildValidationFailure(
+        {
+          field: `voci[${index}].articoloId`,
+          rule: "not_in_order",
+        },
+        "Articolo not present in order",
+      );
+    }
+
+    const residuo = voceOrdine.quantitaOrdinata - voceOrdine.quantitaRicevuta;
+    if (voceRicezione.quantitaRicevuta > residuo) {
+      return buildValidationFailure(
+        {
+          field: `voci[${index}].quantitaRicevuta`,
+          rule: "exceeds_remaining",
+        },
+        `Received quantity exceeds remaining amount: remaining ${residuo}`,
+      );
+    }
+  }
+
+  for (const voceRicezione of payload.voci) {
+    const voceOrdine = nextOrdine.voci.find((row) => row.articoloId === voceRicezione.articoloId);
+    if (!voceOrdine) {
+      continue;
+    }
+
+    voceOrdine.quantitaRicevuta += voceRicezione.quantitaRicevuta;
+    const movimento = await createArticoloMovimentoInTestStore({
+      actorUserId: payload.actorUserId,
+      articoloId: voceRicezione.articoloId,
+      tipo: "CARICO",
+      quantita: voceRicezione.quantitaRicevuta,
+      riferimento: `Ricezione ordine ${nextOrdine.numeroOrdine}`,
+    });
+    if (!movimento.ok) {
+      if (movimento.code === "NOT_FOUND") {
+        return {
+          ok: false,
+          code: "ARTICOLO_NOT_FOUND",
+        };
+      }
+      if (movimento.code === "VALIDATION_ERROR") {
+        return movimento;
+      }
+      return {
+        ok: false,
+        code: "SERVICE_UNAVAILABLE",
+      };
+    }
+  }
+
+  const now = new Date().toISOString();
+  const allReceived = nextOrdine.voci.every(
+    (voce) => voce.quantitaRicevuta >= voce.quantitaOrdinata,
+  );
+  nextOrdine.stato = allReceived ? "RICEVUTO" : "SPEDITO";
+  nextOrdine.dataRicezione = allReceived
+    ? nextOrdine.dataRicezione ?? now
+    : nextOrdine.dataRicezione;
+  testFornitoreOrdini[ordineIndex] = nextOrdine;
+
+  appendTestAuditLog({
+    userId: payload.actorUserId,
+    action: "UPDATE",
+    modelName: "OrdineFornitore",
+    objectId: String(nextOrdine.id),
+  });
+
+  return {
+    ok: true,
+    data: toOrdineFornitorePayload(nextOrdine),
+  };
+}
+
+async function receiveOrdineFornitoreInDatabase(
+  payload: ParsedReceiveOrdineFornitoreInput,
+): Promise<ReceiveOrdineFornitoreResult> {
+  try {
+    const result = await getPrismaClient().$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const transaction = tx as Prisma.TransactionClient & {
+          ordineFornitore: {
+            findUnique: (args: unknown) => Promise<{
+              id: number;
+              fornitoreId: number;
+              numeroOrdine: string;
+              stato: string;
+              dataOrdine: Date;
+              dataEmissione: Date | null;
+              dataRicezione: Date | null;
+              totale: number;
+              voci: Array<{
+                id: number;
+                articoloId: number;
+                quantitaOrdinata: number;
+                quantitaRicevuta: number;
+              }>;
+            } | null>;
+            update: (args: unknown) => Promise<{
+              id: number;
+              fornitoreId: number;
+              numeroOrdine: string;
+              stato: string;
+              dataOrdine: Date;
+              dataEmissione: Date | null;
+              dataRicezione: Date | null;
+              totale: number;
+            }>;
+          };
+          ordineFornitoreVoce: {
+            update: (args: unknown) => Promise<unknown>;
+          };
+          articolo: {
+            findUnique: (args: unknown) => Promise<{
+              id: number;
+              giacenza: number;
+            } | null>;
+            update: (args: unknown) => Promise<{
+              id: number;
+              giacenza: number;
+            }>;
+          };
+        };
+
+        const ordine = await transaction.ordineFornitore.findUnique({
+          where: { id: payload.ordineId },
+          select: {
+            id: true,
+            fornitoreId: true,
+            numeroOrdine: true,
+            stato: true,
+            dataOrdine: true,
+            dataEmissione: true,
+            dataRicezione: true,
+            totale: true,
+            voci: {
+              select: {
+                id: true,
+                articoloId: true,
+                quantitaOrdinata: true,
+                quantitaRicevuta: true,
+              },
+            },
+          },
+        });
+        if (!ordine) {
+          return { ok: false, code: "ORDINE_NOT_FOUND" } as const;
+        }
+
+        const receiveStateFailure = validateOrdineReceiveState(ordine.stato);
+        if (receiveStateFailure) {
+          return receiveStateFailure;
+        }
+
+        const vociOrdine = ordine.voci.map((voce) => ({ ...voce }));
+        for (let index = 0; index < payload.voci.length; index += 1) {
+          const voceRicezione = payload.voci[index];
+          const voceOrdine = vociOrdine.find((row) => row.articoloId === voceRicezione.articoloId);
+          if (!voceOrdine) {
+            return buildValidationFailure(
+              {
+                field: `voci[${index}].articoloId`,
+                rule: "not_in_order",
+              },
+              "Articolo not present in order",
+            );
+          }
+
+          const residuo = voceOrdine.quantitaOrdinata - voceOrdine.quantitaRicevuta;
+          if (voceRicezione.quantitaRicevuta > residuo) {
+            return buildValidationFailure(
+              {
+                field: `voci[${index}].quantitaRicevuta`,
+                rule: "exceeds_remaining",
+              },
+              `Received quantity exceeds remaining amount: remaining ${residuo}`,
+            );
+          }
+        }
+
+        for (const voceRicezione of payload.voci) {
+          const voceOrdine = vociOrdine.find((row) => row.articoloId === voceRicezione.articoloId);
+          if (!voceOrdine) {
+            continue;
+          }
+
+          await transaction.ordineFornitoreVoce.update({
+            where: { id: voceOrdine.id },
+            data: {
+              quantitaRicevuta: {
+                increment: voceRicezione.quantitaRicevuta,
+              },
+              dataUltimaRicezione: new Date(),
+            },
+          });
+
+          const articolo = await transaction.articolo.findUnique({
+            where: { id: voceRicezione.articoloId },
+            select: { id: true, giacenza: true },
+          });
+          if (!articolo) {
+            return {
+              ok: false,
+              code: "ARTICOLO_NOT_FOUND",
+            } as const;
+          }
+
+          const updatedArticolo = await transaction.articolo.update({
+            where: { id: voceRicezione.articoloId },
+            data: {
+              giacenza: {
+                increment: voceRicezione.quantitaRicevuta,
+              },
+            },
+            select: { id: true, giacenza: true },
+          });
+
+          await tx.auditLog.create({
+            data: {
+              userId: payload.actorUserId,
+              action: "UPDATE",
+              modelName: "Articolo",
+              objectId: String(updatedArticolo.id),
+              dettagli: {
+                old: {
+                  giacenza: articolo.giacenza,
+                },
+                new: {
+                  giacenza: updatedArticolo.giacenza,
+                  movimento: {
+                    tipo: "CARICO",
+                    quantita: voceRicezione.quantitaRicevuta,
+                    riferimento: `Ricezione ordine ${ordine.numeroOrdine}`,
+                  },
+                },
+              },
+            },
+          });
+
+          voceOrdine.quantitaRicevuta += voceRicezione.quantitaRicevuta;
+        }
+
+        const allReceived = vociOrdine.every(
+          (voce) => voce.quantitaRicevuta >= voce.quantitaOrdinata,
+        );
+        const now = new Date();
+        const updatedOrdine = await transaction.ordineFornitore.update({
+          where: { id: ordine.id },
+          data: {
+            stato: allReceived ? "RICEVUTO" : "SPEDITO",
+            dataRicezione: allReceived ? ordine.dataRicezione ?? now : ordine.dataRicezione,
+          },
+          select: {
+            id: true,
+            fornitoreId: true,
+            numeroOrdine: true,
+            stato: true,
+            dataOrdine: true,
+            dataEmissione: true,
+            dataRicezione: true,
+            totale: true,
+          },
+        });
+
+        await tx.auditLog.create({
+          data: {
+            userId: payload.actorUserId,
+            action: "UPDATE",
+            modelName: "OrdineFornitore",
+            objectId: String(updatedOrdine.id),
+          },
+        });
+
+        return {
+          ok: true,
+          data: toOrdineFornitorePayload(updatedOrdine),
         } as const;
       },
     );
@@ -5077,6 +5552,21 @@ async function updateOrdineFornitoreStato(
   return updateOrdineFornitoreStatoInDatabase(parsed.data);
 }
 
+async function receiveOrdineFornitore(
+  input: ReceiveOrdineFornitoreInput,
+): Promise<ReceiveOrdineFornitoreResult> {
+  const parsed = parseReceiveOrdineFornitoreInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return receiveOrdineFornitoreInTestStore(parsed.data);
+  }
+
+  return receiveOrdineFornitoreInDatabase(parsed.data);
+}
+
 async function createArticoloMovimento(
   input: CreateArticoloMovimentoInput,
 ): Promise<CreateArticoloMovimentoResult> {
@@ -5387,6 +5877,7 @@ export {
   createArticolo,
   createOrdineFornitore,
   updateOrdineFornitoreStato,
+  receiveOrdineFornitore,
   createArticoloMovimento,
   getArticoloById,
   getFornitoreById,
@@ -5412,6 +5903,8 @@ export {
   type CreateOrdineFornitoreResult,
   type UpdateOrdineFornitoreStatoInput,
   type UpdateOrdineFornitoreStatoResult,
+  type ReceiveOrdineFornitoreInput,
+  type ReceiveOrdineFornitoreResult,
   type CreateArticoloMovimentoInput,
   type CreateArticoloMovimentoResult,
   type GetArticoloByIdInput,

@@ -1,0 +1,60 @@
+﻿story_id: '5.7'
+story_title: 'Ricezione Ordine e Carico Magazzino'
+acceptance_criteria:
+  - id: 'AC-1'
+    given: 'ordine id=12 con due voci e giacenze iniziali articoli 5=3, 7=8'
+    when: 'POST /api/ordini/12/ricevi con quantitaRicevuta complete per entrambe le voci'
+    then: 'giacenze aggiornate a 13/13, movimenti CARICO creati, ordine in stato RICEVUTO, HTTP 200'
+  - id: 'AC-2'
+    given: 'ordine con 2 voci'
+    when: 'POST /api/ordini/12/ricevi con ricezione parziale di una sola voce'
+    then: 'solo quella voce riceve CARICO, ordine resta SPEDITO'
+  - id: 'AC-3'
+    given: 'ordine con una voce gia ricevuta in chiamata precedente'
+    when: 'POST /api/ordini/12/ricevi con completamento della voce rimanente'
+    then: 'ordine passa a RICEVUTO quando tutte le voci sono complete'
+  - id: 'AC-4'
+    given: 'ordine in stato BOZZA'
+    when: 'POST /api/ordini/12/ricevi'
+    then: 'HTTP 400 con messaggio "Cannot receive order in BOZZA state"'
+target_modules:
+  - packages/backend/src/routes/ordini.ts
+  - packages/backend/src/services/anagrafiche-service.ts
+  - packages/backend/prisma/schema.prisma
+  - packages/backend/src/__tests__/ordini-stato-atdd.spec.ts
+  - packages/backend/src/__tests__/articoli-movimenti-atdd.spec.ts
+patterns_to_follow:
+  - pattern: 'Router endpoint con authenticate + mapping payload servizio + error mapper dedicato'
+    example: 'packages/backend/src/routes/ordini.ts:120'
+  - pattern: 'Transizione stato ordine validata via validateOrdineTransition prima di update DB'
+    example: 'packages/backend/src/services/anagrafiche-service.ts:3361'
+  - pattern: 'dataEmissione/dataRicezione valorizzate condizionalmente nel transaction update'
+    example: 'packages/backend/src/services/anagrafiche-service.ts:3375'
+  - pattern: 'Movimento magazzino atomico con updateMany condizionale su giacenza e fallback errore'
+    example: 'packages/backend/src/services/anagrafiche-service.ts:3542'
+  - pattern: 'Dispatch test-store vs database in base a NODE_ENV per servizi anagrafiche'
+    example: 'packages/backend/src/services/anagrafiche-service.ts:5073'
+  - pattern: 'ATDD con seed helper + patch helper per endpoint ordini'
+    example: 'packages/backend/src/__tests__/ordini-stato-atdd.spec.ts:41'
+dependencies:
+  - module: 'packages/backend/src/index.ts'
+    relation: 'Monta ordiniRouter su /api/ordini'
+  - module: 'packages/backend/src/routes/ordini.ts'
+    relation: 'Importa createOrdineFornitore e updateOrdineFornitoreStato da anagrafiche-service'
+  - module: 'packages/backend/src/services/anagrafiche-service.ts'
+    relation: 'Usa Prisma (ordineFornitore, ordineFornitoreVoce, articolo, auditLog) per transazioni inventory/order'
+  - module: 'packages/backend/prisma/schema.prisma'
+    relation: 'Definisce struttura OrdineFornitore e OrdineFornitoreVoce usata dal servizio'
+  - module: 'packages/backend/src/services/riparazioni-service.ts'
+    relation: 'Riusa il pattern createArticoloMovimento per SCARICO e dipende da consistenza movimenti'
+risks:
+  - 'Mancanza di campi di tracciamento ricezione voce in OrdineFornitoreVoce (es. quantitaRicevuta) puo forzare logica non idempotente o incompleta per ricezioni parziali.'
+  - 'Ricezione ordine e carico articoli devono essere in singola transazione: rischio inconsistenza se aggiornamento stato ordine e movimenti non sono atomici.'
+  - 'Doppia chiamata /ricevi sulla stessa voce puo causare doppio CARICO senza guardrail su residuo ricevibile.'
+  - 'Percorso test-store e DB devono avere parita comportamentale; divergenze possono far passare test con comportamento runtime diverso.'
+  - 'Vincolo stato: consentire /ricevi solo da stati validi (almeno SPEDITO) per evitare regressioni su transizioni gia coperte da Story 5.6.'
+existing_tests:
+  - packages/backend/src/__tests__/ordini-create-atdd.spec.ts
+  - packages/backend/src/__tests__/ordini-stato-atdd.spec.ts
+  - packages/backend/src/__tests__/articoli-movimenti-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-ricambi-atdd.spec.ts
