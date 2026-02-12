@@ -1,0 +1,57 @@
+﻿story_id: '4.7'
+title: 'Lista e Dettaglio Fatture'
+source_story: 'docs/epic-details.md'
+acceptance_criteria:
+  - id: 'AC-1'
+    given: '20 fatture esistono'
+    when: 'GET /api/fatture?page=1&limit=10'
+    then: '200 con data di 10 fatture e meta {page, limit, total}'
+  - id: 'AC-2'
+    given: 'esistono fatture con stato EMESSA e PAGATA'
+    when: 'GET /api/fatture?stato=PAGATA'
+    then: 'ritorna solo fatture con stato PAGATA'
+  - id: 'AC-3'
+    given: 'esistono fatture create a Febbraio 2026'
+    when: 'GET /api/fatture?dataDa=2026-02-01&dataA=2026-02-28'
+    then: 'ritorna fatture nel range date richiesto'
+  - id: 'AC-4'
+    given: 'fattura id=8 ha 2 pagamenti'
+    when: 'GET /api/fatture/8'
+    then: 'ritorna dettaglio fattura con array pagamenti completo'
+  - id: 'AC-5'
+    given: 'fattura id=8 ha PDF generato'
+    when: 'GET /api/fatture/8/pdf'
+    then: 'ritorna file PDF con content-type application/pdf e filename corretto'
+target_modules:
+  - packages/backend/src/routes/fatture.ts
+  - packages/backend/src/services/fatture-service.ts
+  - packages/backend/src/services/fatture-pdf-service.ts
+  - packages/backend/src/index.ts
+  - packages/backend/src/routes/riparazioni.ts
+  - packages/backend/src/services/riparazioni-service.ts
+patterns_to_follow:
+  - file:line: 'packages/backend/src/routes/fatture.ts:176'
+    pattern: 'role guard esplicita prima della logica route (COMMERCIALE).'
+  - file:line: 'packages/backend/src/routes/riparazioni.ts:235'
+    pattern: 'wiring query params page/limit dal request object al service payload.'
+  - file:line: 'packages/backend/src/services/riparazioni-service.ts:1180'
+    pattern: 'shape meta consistente con page/limit/total/totalPages nella risposta list.'
+  - file:line: 'packages/backend/src/services/fatture-service.ts:340'
+    pattern: 'clone difensivo dell\'entita prima di restituirla all\'API.'
+  - file:line: 'packages/backend/src/services/fatture-service.ts:480'
+    pattern: 'response envelope con campo data sul dettaglio fattura.'
+  - file:line: 'packages/backend/src/services/fatture-pdf-service.ts:1'
+    pattern: 'convenzione centralizzata per costruzione path/nome file PDF.'
+dependencies:
+  - 'packages/backend/src/index.ts monta fattureRouter e impatta nuovi endpoint /api/fatture.'
+  - 'packages/backend/src/routes/fatture.ts dipende dalle funzioni exportate da fatture-service.'
+  - 'packages/backend/src/services/fatture-service.ts usa createFatturaPdfPath da fatture-pdf-service.'
+risks:
+  - 'Aggiunta endpoint list/pdf puo alterare mapping errori e autorizzazioni nelle route esistenti.'
+  - 'Filtri data e stato devono mantenere output meta coerente con gli altri endpoint list.'
+  - 'Endpoint PDF deve restituire stream/binario e header corretti, non solo path logico.'
+existing_tests:
+  - packages/backend/src/__tests__/fatture-pagamenti-atdd.spec.ts
+  - packages/backend/src/__tests__/fatture-create-atdd.spec.ts
+  - 'no existing files found for list fatture and download PDF endpoint tests'
+created_at: '2026-02-12T13:25:33+01:00'

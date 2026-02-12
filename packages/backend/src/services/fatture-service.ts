@@ -16,6 +16,18 @@ interface GetFatturaDetailInput {
   fatturaId: unknown;
 }
 
+interface ListFattureInput {
+  page?: unknown;
+  limit?: unknown;
+  stato?: unknown;
+  dataDa?: unknown;
+  dataA?: unknown;
+}
+
+interface GetFatturaPdfInput {
+  fatturaId: unknown;
+}
+
 interface FatturaVocePayload {
   tipo: string;
   descrizione: string;
@@ -39,6 +51,7 @@ interface FatturaPayload {
   riparazioneId: number;
   numeroFattura: string;
   stato: FatturaStato;
+  dataEmissione: string;
   subtotale: number;
   iva: number;
   totale: number;
@@ -125,6 +138,29 @@ type GetFatturaDetailResult =
   | FatturaNotFoundFailure
   | ServiceUnavailableFailure;
 
+interface ListFattureMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+interface ListFattureData {
+  data: FatturaPayload[];
+  meta: ListFattureMeta;
+}
+
+type GetFatturaPdfResult =
+  | { ok: true; data: { fileName: string; content: Buffer } }
+  | ValidationFailure
+  | FatturaNotFoundFailure
+  | ServiceUnavailableFailure;
+
+type ListFattureResult =
+  | { ok: true; data: ListFattureData }
+  | ValidationFailure
+  | ServiceUnavailableFailure;
+
 interface ParsedCreateFatturaInput {
   riparazioneId: number;
 }
@@ -137,6 +173,18 @@ interface ParsedCreatePagamentoInput {
 }
 
 interface ParsedGetFatturaDetailInput {
+  fatturaId: number;
+}
+
+interface ParsedListFattureInput {
+  page: number;
+  limit: number;
+  stato?: FatturaStato;
+  dataDa?: string;
+  dataA?: string;
+}
+
+interface ParsedGetFatturaPdfInput {
   fatturaId: number;
 }
 
@@ -187,6 +235,33 @@ function asNonEmptyString(value: unknown): string | null {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function asIsoDate(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return null;
+  }
+
+  const [yearRaw, monthRaw, dayRaw] = trimmed.split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() + 1 !== month ||
+    parsed.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return trimmed;
 }
 
 function roundCurrency(value: number): number {
@@ -305,6 +380,149 @@ function parseGetFatturaDetailInput(
   };
 }
 
+function parseListFattureInput(
+  input: ListFattureInput,
+): { ok: true; data: ParsedListFattureInput } | ValidationFailure {
+  let page = 1;
+  if (input.page !== undefined) {
+    const parsedPage = asPositiveInteger(input.page);
+    if (parsedPage === null) {
+      return {
+        ok: false,
+        code: "VALIDATION_ERROR",
+        details: {
+          field: "page",
+          rule: "invalid",
+        },
+      };
+    }
+
+    page = parsedPage;
+  }
+
+  let limit = 20;
+  if (input.limit !== undefined) {
+    const parsedLimit = asPositiveInteger(input.limit);
+    if (parsedLimit === null) {
+      return {
+        ok: false,
+        code: "VALIDATION_ERROR",
+        details: {
+          field: "limit",
+          rule: "invalid",
+        },
+      };
+    }
+
+    if (parsedLimit > 100) {
+      return {
+        ok: false,
+        code: "VALIDATION_ERROR",
+        details: {
+          field: "limit",
+          rule: "too_large",
+        },
+      };
+    }
+
+    limit = parsedLimit;
+  }
+
+  let stato: FatturaStato | undefined;
+  if (input.stato !== undefined) {
+    const parsedStato = asNonEmptyString(input.stato);
+    if (!parsedStato || (parsedStato !== "EMESSA" && parsedStato !== "PAGATA")) {
+      return {
+        ok: false,
+        code: "VALIDATION_ERROR",
+        details: {
+          field: "stato",
+          rule: "invalid",
+        },
+      };
+    }
+
+    stato = parsedStato;
+  }
+
+  let dataDa: string | undefined;
+  if (input.dataDa !== undefined) {
+    const parsed = asIsoDate(input.dataDa);
+    if (!parsed) {
+      return {
+        ok: false,
+        code: "VALIDATION_ERROR",
+        details: {
+          field: "dataDa",
+          rule: "invalid",
+        },
+      };
+    }
+
+    dataDa = parsed;
+  }
+
+  let dataA: string | undefined;
+  if (input.dataA !== undefined) {
+    const parsed = asIsoDate(input.dataA);
+    if (!parsed) {
+      return {
+        ok: false,
+        code: "VALIDATION_ERROR",
+        details: {
+          field: "dataA",
+          rule: "invalid",
+        },
+      };
+    }
+
+    dataA = parsed;
+  }
+
+  if (dataDa && dataA && dataDa > dataA) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: {
+        field: "dataDa",
+        rule: "range",
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      page,
+      limit,
+      stato,
+      dataDa,
+      dataA,
+    },
+  };
+}
+
+function parseGetFatturaPdfInput(
+  input: GetFatturaPdfInput,
+): { ok: true; data: ParsedGetFatturaPdfInput } | ValidationFailure {
+  const fatturaId = asPositiveInteger(input.fatturaId);
+  if (fatturaId === null) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: {
+        field: "fatturaId",
+        rule: "required",
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    data: { fatturaId },
+  };
+}
+
 function getCurrentYear(): number {
   return new Date().getFullYear();
 }
@@ -393,6 +611,7 @@ async function createFatturaInTestStore(
     riparazioneId: payload.riparazioneId,
     numeroFattura,
     stato: "EMESSA",
+    dataEmissione: toIsoDate(),
     subtotale: approvedPreventivo.subtotale,
     iva: approvedPreventivo.iva,
     totale,
@@ -464,6 +683,33 @@ async function createPagamentoInTestStore(
   };
 }
 
+async function listFattureInTestStore(
+  payload: ParsedListFattureInput,
+): Promise<ListFattureResult> {
+  const filtered = testFatture
+    .filter((row) => (payload.stato ? row.stato === payload.stato : true))
+    .filter((row) => (payload.dataDa ? row.dataEmissione >= payload.dataDa : true))
+    .filter((row) => (payload.dataA ? row.dataEmissione <= payload.dataA : true))
+    .sort((a, b) => a.id - b.id);
+
+  const total = filtered.length;
+  const offset = (payload.page - 1) * payload.limit;
+  const data = filtered.slice(offset, offset + payload.limit).map((row) => cloneFattura(row));
+
+  return {
+    ok: true,
+    data: {
+      data,
+      meta: {
+        page: payload.page,
+        limit: payload.limit,
+        total,
+        totalPages: total === 0 ? 0 : Math.ceil(total / payload.limit),
+      },
+    },
+  };
+}
+
 async function getFatturaDetailInTestStore(
   payload: ParsedGetFatturaDetailInput,
 ): Promise<GetFatturaDetailResult> {
@@ -478,6 +724,46 @@ async function getFatturaDetailInTestStore(
   return {
     ok: true,
     data: cloneFattura(fattura),
+  };
+}
+
+async function getFatturaPdfInTestStore(
+  payload: ParsedGetFatturaPdfInput,
+): Promise<GetFatturaPdfResult> {
+  const fattura = testFatture.find((row) => row.id === payload.fatturaId);
+  if (!fattura) {
+    return {
+      ok: false,
+      code: "FATTURA_NOT_FOUND",
+    };
+  }
+
+  const fileName = fattura.pdfPath.split("/").pop() ?? `${fattura.numeroFattura.replace("/", "-")}-${fattura.id}.pdf`;
+  const pdfContent = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 144] /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 44 >>
+stream
+BT /F1 12 Tf 36 100 Td (Fattura ${fattura.numeroFattura}) Tj ET
+endstream
+endobj
+trailer
+<< /Root 1 0 R >>
+%%EOF`;
+  return {
+    ok: true,
+    data: {
+      fileName,
+      content: Buffer.from(pdfContent),
+    },
   };
 }
 
@@ -535,6 +821,42 @@ async function getFatturaDetail(
   };
 }
 
+async function listFatture(
+  input: ListFattureInput,
+): Promise<ListFattureResult> {
+  const parsed = parseListFattureInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return listFattureInTestStore(parsed.data);
+  }
+
+  return {
+    ok: false,
+    code: "SERVICE_UNAVAILABLE",
+  };
+}
+
+async function getFatturaPdf(
+  input: GetFatturaPdfInput,
+): Promise<GetFatturaPdfResult> {
+  const parsed = parseGetFatturaPdfInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return getFatturaPdfInTestStore(parsed.data);
+  }
+
+  return {
+    ok: false,
+    code: "SERVICE_UNAVAILABLE",
+  };
+}
+
 function ensureTestEnvironment(): void {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
@@ -571,6 +893,8 @@ export {
   createFattura,
   createPagamento,
   getFatturaDetail,
+  listFatture,
+  getFatturaPdf,
   countFattureByRiparazioneForTests,
   resetFattureStoreForTests,
   setFatturaSequenceForTests,
@@ -580,4 +904,8 @@ export {
   type CreatePagamentoResult,
   type GetFatturaDetailInput,
   type GetFatturaDetailResult,
+  type ListFattureInput,
+  type ListFattureResult,
+  type GetFatturaPdfInput,
+  type GetFatturaPdfResult,
 };

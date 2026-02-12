@@ -1,0 +1,1 @@
+packages/backend/src/__tests__/fatture-lista-dettaglio-atdd.spec.ts

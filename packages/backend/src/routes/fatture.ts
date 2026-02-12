@@ -5,12 +5,18 @@ import {
   createFattura,
   createPagamento,
   getFatturaDetail,
+  getFatturaPdf,
+  listFatture,
   type CreateFatturaInput,
   type CreateFatturaResult,
   type CreatePagamentoInput,
   type CreatePagamentoResult,
+  type GetFatturaPdfInput,
+  type GetFatturaPdfResult,
   type GetFatturaDetailInput,
   type GetFatturaDetailResult,
+  type ListFattureInput,
+  type ListFattureResult,
 } from "../services/fatture-service.js";
 
 const fattureRouter = Router();
@@ -18,6 +24,8 @@ const fattureRouter = Router();
 type CreateFatturaFailure = Exclude<CreateFatturaResult, { ok: true; data: unknown }>;
 type CreatePagamentoFailure = Exclude<CreatePagamentoResult, { ok: true; data: unknown }>;
 type GetFatturaDetailFailure = Exclude<GetFatturaDetailResult, { ok: true; data: unknown }>;
+type ListFattureFailure = Exclude<ListFattureResult, { ok: true; data: unknown }>;
+type GetFatturaPdfFailure = Exclude<GetFatturaPdfResult, { ok: true; data: unknown }>;
 
 function respondCreateFatturaFailure(
   res: Response,
@@ -172,6 +180,72 @@ function respondGetFatturaDetailFailure(
     );
 }
 
+function respondListFattureFailure(
+  res: Response,
+  result: ListFattureFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Payload non valido",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "FATTURE_SERVICE_UNAVAILABLE",
+        "Servizio fatture non disponibile",
+      ),
+    );
+}
+
+function respondGetFatturaPdfFailure(
+  res: Response,
+  result: GetFatturaPdfFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Payload non valido",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "FATTURA_NOT_FOUND") {
+    res
+      .status(404)
+      .json(
+        buildErrorResponse(
+          "FATTURA_NOT_FOUND",
+          "Fattura non trovata",
+        ),
+      );
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "FATTURE_SERVICE_UNAVAILABLE",
+        "Servizio fatture non disponibile",
+      ),
+    );
+}
+
 function ensureCommercialeRole(res: Response, role: string | undefined): boolean {
   if (role === "COMMERCIALE") {
     return true;
@@ -187,6 +261,28 @@ function ensureCommercialeRole(res: Response, role: string | undefined): boolean
     );
   return false;
 }
+
+fattureRouter.get("/", authenticate, async (req, res) => {
+  if (!ensureCommercialeRole(res, req.user?.role)) {
+    return;
+  }
+
+  const payload: ListFattureInput = {
+    page: req.query.page,
+    limit: req.query.limit,
+    stato: req.query.stato,
+    dataDa: req.query.dataDa,
+    dataA: req.query.dataA,
+  };
+
+  const result = await listFatture(payload);
+  if (!result.ok) {
+    respondListFattureFailure(res, result);
+    return;
+  }
+
+  res.status(200).json(result.data);
+});
 
 fattureRouter.post("/", authenticate, async (req, res) => {
   if (!ensureCommercialeRole(res, req.user?.role)) {
@@ -225,6 +321,29 @@ fattureRouter.post("/:id/pagamenti", authenticate, async (req, res) => {
   }
 
   res.status(201).json({ data: result.data });
+});
+
+fattureRouter.get("/:id/pdf", authenticate, async (req, res) => {
+  if (!ensureCommercialeRole(res, req.user?.role)) {
+    return;
+  }
+
+  const payload: GetFatturaPdfInput = {
+    fatturaId: req.params.id,
+  };
+
+  const result = await getFatturaPdf(payload);
+  if (!result.ok) {
+    respondGetFatturaPdfFailure(res, result);
+    return;
+  }
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename=\"${result.data.fileName}\"`,
+  );
+  res.status(200).send(result.data.content);
 });
 
 fattureRouter.get("/:id", authenticate, async (req, res) => {
