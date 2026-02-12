@@ -678,6 +678,7 @@ const TEST_PAGE_SIZE = 10;
 const MAX_LIST_LIMIT = 100;
 const MAX_CODICE_CLIENTE_GENERATION_ATTEMPTS = 3;
 const MAX_CODICE_FORNITORE_GENERATION_ATTEMPTS = 3;
+const MAX_NUMERO_ORDINE_GENERATION_ATTEMPTS = 3;
 const VALID_PROVINCE_CODES = new Set([
   "AG", "AL", "AN", "AO", "AR", "AP", "AT", "AV", "BA", "BT", "BL", "BN", "BG", "BI",
   "BO", "BZ", "BS", "BR", "CA", "CL", "CB", "CI", "CE", "CT", "CZ", "CH", "CO", "CS",
@@ -2912,91 +2913,89 @@ async function createOrdineFornitoreInTestStore(
 async function createOrdineFornitoreInDatabase(
   payload: ParsedCreateOrdineFornitoreInput,
 ): Promise<CreateOrdineFornitoreResult> {
-  try {
-    const result = await getPrismaClient().$transaction(
-      async (tx: Prisma.TransactionClient) => {
-        const transaction = tx as Prisma.TransactionClient & {
-          articolo?: {
-            findMany: (args: unknown) => Promise<Array<{ id: number }>>;
+  for (let attempt = 1; attempt <= MAX_NUMERO_ORDINE_GENERATION_ATTEMPTS; attempt += 1) {
+    try {
+      const result = await getPrismaClient().$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          const transaction = tx as Prisma.TransactionClient & {
+            articolo?: {
+              findMany: (args: unknown) => Promise<Array<{ id: number }>>;
+            };
+            ordineFornitoreVoce?: {
+              createMany: (args: unknown) => Promise<unknown>;
+            };
           };
-        };
 
-        const fornitore = await tx.fornitore.findUnique({
-          where: { id: payload.fornitoreId },
-          select: { id: true },
-        });
-        if (!fornitore) {
-          return { ok: false, code: "FORNITORE_NOT_FOUND" } as const;
-        }
+          const fornitore = await tx.fornitore.findUnique({
+            where: { id: payload.fornitoreId },
+            select: { id: true },
+          });
+          if (!fornitore) {
+            return { ok: false, code: "FORNITORE_NOT_FOUND" } as const;
+          }
 
-        if (!transaction.articolo) {
-          return { ok: false, code: "SERVICE_UNAVAILABLE" } as const;
-        }
+          if (!transaction.articolo || !transaction.ordineFornitoreVoce) {
+            return { ok: false, code: "SERVICE_UNAVAILABLE" } as const;
+          }
 
-        const articleIds = payload.voci.map((voce) => voce.articoloId);
-        const articoliFound = await transaction.articolo.findMany({
-          where: {
-            id: {
-              in: articleIds,
+          const uniqueArticleIds = [...new Set(payload.voci.map((voce) => voce.articoloId))];
+          const articoliFound = await transaction.articolo.findMany({
+            where: {
+              id: {
+                in: uniqueArticleIds,
+              },
             },
-          },
-          select: { id: true },
-        });
-        if (articoliFound.length !== articleIds.length) {
-          return {
-            ok: false,
-            code: "ARTICOLO_NOT_FOUND",
-            message: "ARTICOLO_NOT_FOUND in voce",
-          } as const;
-        }
+            select: { id: true },
+          });
+          if (articoliFound.length !== uniqueArticleIds.length) {
+            return {
+              ok: false,
+              code: "ARTICOLO_NOT_FOUND",
+              message: "ARTICOLO_NOT_FOUND in voce",
+            } as const;
+          }
 
-        const existing = await tx.ordineFornitore.findMany({
-          orderBy: {
-            id: "desc",
-          },
-          take: 20,
-          select: {
-            numeroOrdine: true,
-          },
-        });
-        const sequence =
-          existing.reduce(
-            (acc, row) => Math.max(acc, extractOrdineSequence(row.numeroOrdine)),
-            0,
-          ) + 1;
+          const existing = await tx.ordineFornitore.findMany({
+            orderBy: {
+              id: "desc",
+            },
+            take: 20,
+            select: {
+              numeroOrdine: true,
+            },
+          });
+          const sequence =
+            existing.reduce(
+              (acc, row) => Math.max(acc, extractOrdineSequence(row.numeroOrdine)),
+              0,
+            ) + 1;
 
-        const totale = roundToTwo(
-          payload.voci.reduce(
-            (acc, voce) => acc + (voce.quantitaOrdinata * voce.prezzoUnitario),
-            0,
-          ),
-        );
+          const totale = roundToTwo(
+            payload.voci.reduce(
+              (acc, voce) => acc + (voce.quantitaOrdinata * voce.prezzoUnitario),
+              0,
+            ),
+          );
 
-        const created = await tx.ordineFornitore.create({
-          data: {
-            fornitoreId: payload.fornitoreId,
-            numeroOrdine: formatOrdineNumber(sequence),
-            stato: "BOZZA",
-            dataOrdine: new Date(),
-            totale,
-          },
-          select: {
-            id: true,
-            fornitoreId: true,
-            numeroOrdine: true,
-            stato: true,
-            dataOrdine: true,
-            totale: true,
-          },
-        });
+          const created = await tx.ordineFornitore.create({
+            data: {
+              fornitoreId: payload.fornitoreId,
+              numeroOrdine: formatOrdineNumber(sequence),
+              stato: "BOZZA",
+              dataOrdine: new Date(),
+              totale,
+            },
+            select: {
+              id: true,
+              fornitoreId: true,
+              numeroOrdine: true,
+              stato: true,
+              dataOrdine: true,
+              totale: true,
+            },
+          });
 
-        const optionalTx = tx as Prisma.TransactionClient & {
-          ordineFornitoreVoce?: {
-            createMany: (args: unknown) => Promise<unknown>;
-          };
-        };
-        if (optionalTx.ordineFornitoreVoce) {
-          await optionalTx.ordineFornitoreVoce.createMany({
+          await transaction.ordineFornitoreVoce.createMany({
             data: payload.voci.map((voce) => ({
               ordineId: created.id,
               articoloId: voce.articoloId,
@@ -3004,45 +3003,60 @@ async function createOrdineFornitoreInDatabase(
               prezzoUnitario: voce.prezzoUnitario,
             })),
           });
-        }
 
-        await tx.auditLog.create({
-          data: {
-            userId: payload.actorUserId,
-            action: "CREATE",
-            modelName: "OrdineFornitore",
-            objectId: String(created.id),
-          },
-        });
+          await tx.auditLog.create({
+            data: {
+              userId: payload.actorUserId,
+              action: "CREATE",
+              modelName: "OrdineFornitore",
+              objectId: String(created.id),
+            },
+          });
 
-        return {
-          ok: true,
-          data: created,
-        } as const;
-      },
-    );
+          return {
+            ok: true,
+            data: created,
+          } as const;
+        },
+      );
 
-    if (!result.ok) {
-      return result;
+      if (!result.ok) {
+        return result;
+      }
+
+      return {
+        ok: true,
+        data: {
+          id: result.data.id,
+          fornitoreId: result.data.fornitoreId,
+          numeroOrdine: result.data.numeroOrdine,
+          stato: result.data.stato,
+          dataOrdine: result.data.dataOrdine.toISOString(),
+          totale: result.data.totale,
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === "P2002" &&
+        Array.isArray(error.meta?.target) &&
+        error.meta.target.some((field) => String(field).toLowerCase().includes("numeroordine")) &&
+        attempt < MAX_NUMERO_ORDINE_GENERATION_ATTEMPTS
+      ) {
+        continue;
+      }
+
+      return {
+        ok: false,
+        code: "SERVICE_UNAVAILABLE",
+      };
     }
-
-    return {
-      ok: true,
-      data: {
-        id: result.data.id,
-        fornitoreId: result.data.fornitoreId,
-        numeroOrdine: result.data.numeroOrdine,
-        stato: result.data.stato,
-        dataOrdine: result.data.dataOrdine.toISOString(),
-        totale: result.data.totale,
-      },
-    };
-  } catch {
-    return {
-      ok: false,
-      code: "SERVICE_UNAVAILABLE",
-    };
   }
+
+  return {
+    ok: false,
+    code: "SERVICE_UNAVAILABLE",
+  };
 }
 
 function computeMovimentoDelta(
