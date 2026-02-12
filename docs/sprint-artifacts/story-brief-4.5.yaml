@@ -1,0 +1,49 @@
+story_id: '4.5'
+story_title: 'Generazione Fattura'
+source_story: 'docs/epics/epic-4-preventivi-fatturazione.md:69'
+acceptance_criteria:
+  - id: 'AC-1'
+    given: 'preventivo id=5 is APPROVATO with voci totaling 244.00 EUR'
+    when: 'I POST /api/fatture with { riparazioneId: 10 }'
+    then: 'fattura is created with numeroFattura "2026/0001" (year/sequential), voci copied from preventivo, subtotale 200.00, iva 44.00, totale 244.00, stato EMESSA, PDF generated, I receive 201'
+  - id: 'AC-2'
+    given: 'today is 2026-02-09 and last fattura was 2026/0015'
+    when: 'I POST /api/fatture'
+    then: 'numeroFattura is "2026/0016"'
+  - id: 'AC-3'
+    given: 'riparazione id=10 has no APPROVATO preventivo'
+    when: 'I POST /api/fatture with { riparazioneId: 10 }'
+    then: 'I receive 400 with error "No approved preventivo found for this riparazione"'
+  - id: 'AC-4'
+    given: 'fattura already exists for riparazione id=10'
+    when: 'I POST /api/fatture with { riparazioneId: 10 }'
+    then: 'I receive 409 with error "Invoice already exists for this riparazione"'
+
+target_modules:
+  - 'packages/backend/prisma/schema.prisma'
+  - 'packages/backend/src/index.ts'
+  - 'packages/backend/src/routes/preventivi.ts'
+  - 'packages/backend/src/services/preventivi-service.ts'
+  - 'no existing files found for fatture route/service modules (new module expected)'
+
+patterns_to_follow:
+  - 'Route payload -> service call -> error mapper pattern: packages/backend/src/routes/preventivi.ts:228'
+  - 'Totals computation (subtotale/iva/totale) helper pattern: packages/backend/src/services/preventivi-service.ts:221'
+  - 'ATDD backend test setup with auth + supertest: packages/backend/src/__tests__/preventivi-create-atdd.spec.ts:3'
+
+dependencies:
+  - 'packages/backend/src/index.ts imports route modules under packages/backend/src/routes/*.js and mounts /api/* endpoints'
+  - 'packages/backend/src/routes/preventivi.ts depends on packages/backend/src/services/preventivi-service.ts'
+  - 'packages/backend/src/routes/preventivi.ts depends on packages/backend/src/middleware/authenticate.ts'
+  - 'packages/backend/src/services/preventivi-service.ts depends on packages/backend/src/lib/prisma.ts'
+
+risks:
+  - 'Invoice numbering YYYY/NNNN must be concurrency-safe to avoid duplicates.'
+  - 'Prisma migration adds invoice/payment entities and can impact existing relational constraints.'
+  - 'Copying preventivo voci into fattura requires stable rounding rules (2 decimals) to avoid totals mismatch.'
+  - 'No current fatture API surface exists, so integration points (routing/auth/error mapping) can regress if inconsistent.'
+
+existing_tests:
+  - 'packages/backend/src/__tests__/preventivi-create-atdd.spec.ts'
+  - 'packages/backend/src/__tests__/preventivi-send-atdd.spec.ts'
+  - 'packages/backend/src/__tests__/preventivi-response-atdd.spec.ts'

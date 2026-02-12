@@ -45,6 +45,15 @@ interface PreventivoPayload {
   totale: number;
 }
 
+interface ApprovedPreventivoForFattura {
+  id: number;
+  riparazioneId: number;
+  voci: PreventivoVocePayload[];
+  subtotale: number;
+  iva: number;
+  totale: number;
+}
+
 type ValidationFailure = {
   ok: false;
   code: "VALIDATION_ERROR";
@@ -1478,6 +1487,31 @@ function setPreventivoEmailFailureForTests(
   testEmailFailureByPreventivoId.set(preventivoId, fail);
 }
 
+function getApprovedPreventivoForRiparazioneForTests(
+  riparazioneId: number,
+): ApprovedPreventivoForFattura | null {
+  ensureTestEnvironment();
+  const matches = testPreventivi
+    .filter(
+      (row) => row.riparazioneId === riparazioneId && row.stato === "APPROVATO",
+    )
+    .sort((a, b) => b.id - a.id);
+
+  const target = matches[0];
+  if (!target) {
+    return null;
+  }
+
+  return {
+    id: target.id,
+    riparazioneId: target.riparazioneId,
+    voci: target.voci.map((voce) => ({ ...voce })),
+    subtotale: target.subtotale,
+    iva: target.iva,
+    totale: target.totale,
+  };
+}
+
 export {
   createPreventivo,
   getPreventivoDettaglio,
@@ -1487,7 +1521,9 @@ export {
   resetPreventiviStoreForTests,
   setPreventivoClienteEmailForTests,
   setPreventivoEmailFailureForTests,
+  getApprovedPreventivoForRiparazioneForTests,
   setPreventivoStatoForTests,
+  type ApprovedPreventivoForFattura,
   type CreatePreventivoInput,
   type CreatePreventivoResult,
   type GetPreventivoDettaglioInput,
