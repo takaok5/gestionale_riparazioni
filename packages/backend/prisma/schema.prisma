@@ -99,6 +99,7 @@ model Articolo {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   ricambiUsati   RiparazioneRicambio[]
+  ordiniVoci     OrdineFornitoreVoce[]
 
   @@index([fornitoreId])
 }
@@ -113,8 +114,24 @@ model OrdineFornitore {
   totale       Float
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  voci         OrdineFornitoreVoce[]
 
   @@index([fornitoreId])
+}
+
+model OrdineFornitoreVoce {
+  id               Int             @id @default(autoincrement())
+  ordineId         Int
+  ordine           OrdineFornitore @relation(fields: [ordineId], references: [id], onDelete: Cascade)
+  articoloId       Int
+  articolo         Articolo        @relation(fields: [articoloId], references: [id])
+  quantitaOrdinata Int
+  prezzoUnitario   Float
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([ordineId])
+  @@index([articoloId])
 }
 
 model AuditLog {

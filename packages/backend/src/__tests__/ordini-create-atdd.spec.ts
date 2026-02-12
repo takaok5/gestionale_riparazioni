@@ -30,6 +30,28 @@ function buildOrdinePayload(overrides?: Partial<Record<string, unknown>>) {
   };
 }
 
+async function createArticoloSeed(
+  index: number,
+  userId: number,
+): Promise<number> {
+  const response = await request(app)
+    .post("/api/articoli")
+    .set("Authorization", authHeader("ADMIN", userId))
+    .send({
+      codiceArticolo: `ORD-SEED-${String(index).padStart(4, "0")}`,
+      nome: `Articolo ordine ${index}`,
+      descrizione: `Seed articolo ${index}`,
+      categoria: "RICAMBI",
+      fornitoreId: 3,
+      prezzoAcquisto: 50,
+      prezzoVendita: 80,
+      sogliaMinima: 1,
+    });
+
+  expect(response.status).toBe(201);
+  return response.body.id as number;
+}
+
 beforeEach(() => {
   resetUsersStoreForTests();
   resetAnagraficheStoreForTests();
@@ -37,10 +59,19 @@ beforeEach(() => {
 
 describe("AC-1 - Creazione ordine in BOZZA con totale calcolato e numero auto-generato", () => {
   it("Tests AC-1: Given ADMIN and valid supplier/items When POST /api/ordini Then 201 and BOZZA order with totale 1400.00", async () => {
+    const articoloUno = await createArticoloSeed(1, 5490);
+    const articoloDue = await createArticoloSeed(2, 5491);
     const response = await request(app)
       .post("/api/ordini")
       .set("Authorization", authHeader("ADMIN", 5501))
-      .send(buildOrdinePayload());
+      .send(
+        buildOrdinePayload({
+          voci: [
+            { articoloId: articoloUno, quantitaOrdinata: 10, prezzoUnitario: 100.0 },
+            { articoloId: articoloDue, quantitaOrdinata: 5, prezzoUnitario: 80.0 },
+          ],
+        }),
+      );
 
     expect(response.status).toBe(201);
     expect(response.body.stato).toBe("BOZZA");
@@ -48,10 +79,19 @@ describe("AC-1 - Creazione ordine in BOZZA con totale calcolato e numero auto-ge
   });
 
   it("Tests AC-1: Given successful create When checking response Then numeroOrdine matches ^ORD-[0-9]{6}$ and fornitoreId is 3", async () => {
+    const articoloUno = await createArticoloSeed(3, 5492);
+    const articoloDue = await createArticoloSeed(4, 5493);
     const response = await request(app)
       .post("/api/ordini")
       .set("Authorization", authHeader("ADMIN", 5502))
-      .send(buildOrdinePayload());
+      .send(
+        buildOrdinePayload({
+          voci: [
+            { articoloId: articoloUno, quantitaOrdinata: 10, prezzoUnitario: 100.0 },
+            { articoloId: articoloDue, quantitaOrdinata: 5, prezzoUnitario: 80.0 },
+          ],
+        }),
+      );
 
     expect(response.status).toBe(201);
     expect(response.body.numeroOrdine).toMatch(/^ORD-[0-9]{6}$/);

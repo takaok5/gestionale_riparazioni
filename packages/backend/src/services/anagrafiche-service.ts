@@ -97,6 +97,12 @@ interface CreateArticoloMovimentoInput {
   riferimento: unknown;
 }
 
+interface CreateOrdineFornitoreInput {
+  actorUserId: unknown;
+  fornitoreId: unknown;
+  voci: unknown;
+}
+
 interface UpdateFornitoreInput {
   actorUserId: unknown;
   fornitoreId: unknown;
@@ -331,6 +337,21 @@ interface FornitoreOrdineItem {
   totale: number;
 }
 
+interface OrdineFornitoreVoceInput {
+  articoloId: number;
+  quantitaOrdinata: number;
+  prezzoUnitario: number;
+}
+
+interface OrdineFornitoreCreatePayload {
+  id: number;
+  fornitoreId: number;
+  numeroOrdine: string;
+  stato: string;
+  dataOrdine: string;
+  totale: number;
+}
+
 type CreateClienteResult =
   | {
       ok: true;
@@ -365,6 +386,13 @@ type CreateArticoloMovimentoResult =
   | ValidationFailure
   | NotFoundFailure
   | InsufficientStockFailure
+  | ServiceUnavailableFailure;
+
+type CreateOrdineFornitoreResult =
+  | { ok: true; data: OrdineFornitoreCreatePayload }
+  | ValidationFailure
+  | { ok: false; code: "FORNITORE_NOT_FOUND" }
+  | { ok: false; code: "ARTICOLO_NOT_FOUND"; message: "ARTICOLO_NOT_FOUND in voce" }
   | ServiceUnavailableFailure;
 
 type UpdateFornitoreResult =
@@ -491,6 +519,12 @@ interface ParsedCreateArticoloMovimentoInput {
   riferimento: string | null;
 }
 
+interface ParsedCreateOrdineFornitoreInput {
+  actorUserId: number;
+  fornitoreId: number;
+  voci: OrdineFornitoreVoceInput[];
+}
+
 interface ParsedUpdateFornitoreInput {
   actorUserId: number;
   fornitoreId: number;
@@ -590,6 +624,12 @@ interface TestFornitoreRecord {
   updatedAt: string;
 }
 
+interface TestFornitoreOrdineVoceRecord {
+  articoloId: number;
+  quantitaOrdinata: number;
+  prezzoUnitario: number;
+}
+
 interface TestFornitoreOrdineRecord {
   id: number;
   fornitoreId: number;
@@ -597,6 +637,7 @@ interface TestFornitoreOrdineRecord {
   stato: string;
   dataOrdine: string;
   totale: number;
+  voci: TestFornitoreOrdineVoceRecord[];
 }
 
 interface TestArticoloRecord {
@@ -780,6 +821,7 @@ let nextTestClienteId = computeNextId(testClienti.map((item) => item.id));
 let nextTestClienteCodeSequence = computeNextClienteCodeSequence(testClienti);
 let nextTestFornitoreId = computeNextId(testFornitori.map((item) => item.id));
 let nextTestFornitoreCodeSequence = computeNextFornitoreCodeSequence(testFornitori);
+let nextTestFornitoreOrdineId = computeNextId(testFornitoreOrdini.map((item) => item.id));
 let nextTestArticoloId = computeNextId(testArticoli.map((item) => item.id));
 let nextTestMovimentoMagazzinoId = computeNextId(
   testMovimentiMagazzino.map((item) => item.id),
@@ -799,7 +841,10 @@ function cloneTestFornitori(source: TestFornitoreRecord[]): TestFornitoreRecord[
 function cloneTestFornitoreOrdini(
   source: TestFornitoreOrdineRecord[],
 ): TestFornitoreOrdineRecord[] {
-  return source.map((item) => ({ ...item }));
+  return source.map((item) => ({
+    ...item,
+    voci: item.voci.map((voce) => ({ ...voce })),
+  }));
 }
 
 function cloneTestArticoli(source: TestArticoloRecord[]): TestArticoloRecord[] {
@@ -869,6 +914,28 @@ function extractFornitoreCodeSequence(codiceFornitore: string): number {
 
 function formatFornitoreCode(sequence: number): string {
   return `FOR-${String(sequence).padStart(6, "0")}`;
+}
+
+function extractOrdineSequence(numeroOrdine: string): number {
+  const match = numeroOrdine.match(/^ORD-(\d{6})$/);
+  if (!match) {
+    return 0;
+  }
+
+  const parsed = Number(match[1]);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    return 0;
+  }
+
+  return parsed;
+}
+
+function formatOrdineNumber(sequence: number): string {
+  return `ORD-${String(sequence).padStart(6, "0")}`;
+}
+
+function roundToTwo(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 function computeNextClienteCodeSequence(records: TestClienteRecord[]): number {
@@ -1551,6 +1618,86 @@ function parseCreateArticoloMovimentoInput(
       tipo,
       quantita,
       riferimento: asOptionalString(input.riferimento),
+    },
+  };
+}
+
+function parseCreateOrdineFornitoreInput(
+  input: CreateOrdineFornitoreInput,
+):
+  | { ok: true; data: ParsedCreateOrdineFornitoreInput }
+  | ValidationFailure {
+  const actorUserId = asPositiveInteger(input.actorUserId);
+  if (actorUserId === null) {
+    return buildValidationFailure({
+      field: "actorUserId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const fornitoreId = asPositiveInteger(input.fornitoreId);
+  if (fornitoreId === null) {
+    return buildValidationFailure({
+      field: "fornitoreId",
+      rule: "invalid_integer",
+    });
+  }
+
+  if (!Array.isArray(input.voci) || input.voci.length === 0) {
+    return buildValidationFailure({
+      field: "voci",
+      rule: "required_non_empty_array",
+    });
+  }
+
+  const parsedVoci: OrdineFornitoreVoceInput[] = [];
+  for (let index = 0; index < input.voci.length; index += 1) {
+    const voce = input.voci[index];
+    if (typeof voce !== "object" || voce === null) {
+      return buildValidationFailure({
+        field: `voci[${index}]`,
+        rule: "invalid_object",
+      });
+    }
+
+    const row = voce as Record<string, unknown>;
+    const articoloId = asPositiveInteger(row.articoloId);
+    if (articoloId === null) {
+      return buildValidationFailure({
+        field: `voci[${index}].articoloId`,
+        rule: "invalid_integer",
+      });
+    }
+
+    const quantitaOrdinata = asPositiveInteger(row.quantitaOrdinata);
+    if (quantitaOrdinata === null) {
+      return buildValidationFailure({
+        field: `voci[${index}].quantitaOrdinata`,
+        rule: "invalid_integer",
+      });
+    }
+
+    const prezzoUnitario = asPositiveNumber(row.prezzoUnitario);
+    if (prezzoUnitario === null) {
+      return buildValidationFailure({
+        field: `voci[${index}].prezzoUnitario`,
+        rule: "invalid_number",
+      });
+    }
+
+    parsedVoci.push({
+      articoloId,
+      quantitaOrdinata,
+      prezzoUnitario,
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      actorUserId,
+      fornitoreId,
+      voci: parsedVoci,
     },
   };
 }
@@ -2685,6 +2832,210 @@ async function createArticoloInDatabase(
     return {
       ok: true,
       data: result.data,
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function createOrdineFornitoreInTestStore(
+  payload: ParsedCreateOrdineFornitoreInput,
+): Promise<CreateOrdineFornitoreResult> {
+  const fornitoreExists = testFornitori.some((record) => record.id === payload.fornitoreId);
+  if (!fornitoreExists) {
+    return {
+      ok: false,
+      code: "FORNITORE_NOT_FOUND",
+    };
+  }
+
+  for (const voce of payload.voci) {
+    const articoloExists = testArticoli.some((record) => record.id === voce.articoloId);
+    if (!articoloExists) {
+      return {
+        ok: false,
+        code: "ARTICOLO_NOT_FOUND",
+        message: "ARTICOLO_NOT_FOUND in voce",
+      };
+    }
+  }
+
+  const now = new Date().toISOString();
+  const currentMaxSequence = testFornitoreOrdini.reduce(
+    (acc, row) => Math.max(acc, extractOrdineSequence(row.numeroOrdine)),
+    0,
+  );
+  const sequence = Math.max(nextTestFornitoreOrdineId, currentMaxSequence + 1);
+  const totale = roundToTwo(
+    payload.voci.reduce(
+      (acc, voce) => acc + (voce.quantitaOrdinata * voce.prezzoUnitario),
+      0,
+    ),
+  );
+
+  const created: TestFornitoreOrdineRecord = {
+    id: nextTestFornitoreOrdineId,
+    fornitoreId: payload.fornitoreId,
+    numeroOrdine: formatOrdineNumber(sequence),
+    stato: "BOZZA",
+    dataOrdine: now,
+    totale,
+    voci: payload.voci.map((voce) => ({ ...voce })),
+  };
+
+  nextTestFornitoreOrdineId += 1;
+  testFornitoreOrdini.push(created);
+
+  appendTestAuditLog({
+    userId: payload.actorUserId,
+    action: "CREATE",
+    modelName: "OrdineFornitore",
+    objectId: String(created.id),
+  });
+
+  return {
+    ok: true,
+    data: {
+      id: created.id,
+      fornitoreId: created.fornitoreId,
+      numeroOrdine: created.numeroOrdine,
+      stato: created.stato,
+      dataOrdine: created.dataOrdine,
+      totale: created.totale,
+    },
+  };
+}
+
+async function createOrdineFornitoreInDatabase(
+  payload: ParsedCreateOrdineFornitoreInput,
+): Promise<CreateOrdineFornitoreResult> {
+  try {
+    const result = await getPrismaClient().$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const transaction = tx as Prisma.TransactionClient & {
+          articolo?: {
+            findMany: (args: unknown) => Promise<Array<{ id: number }>>;
+          };
+        };
+
+        const fornitore = await tx.fornitore.findUnique({
+          where: { id: payload.fornitoreId },
+          select: { id: true },
+        });
+        if (!fornitore) {
+          return { ok: false, code: "FORNITORE_NOT_FOUND" } as const;
+        }
+
+        if (!transaction.articolo) {
+          return { ok: false, code: "SERVICE_UNAVAILABLE" } as const;
+        }
+
+        const articleIds = payload.voci.map((voce) => voce.articoloId);
+        const articoliFound = await transaction.articolo.findMany({
+          where: {
+            id: {
+              in: articleIds,
+            },
+          },
+          select: { id: true },
+        });
+        if (articoliFound.length !== articleIds.length) {
+          return {
+            ok: false,
+            code: "ARTICOLO_NOT_FOUND",
+            message: "ARTICOLO_NOT_FOUND in voce",
+          } as const;
+        }
+
+        const existing = await tx.ordineFornitore.findMany({
+          orderBy: {
+            id: "desc",
+          },
+          take: 20,
+          select: {
+            numeroOrdine: true,
+          },
+        });
+        const sequence =
+          existing.reduce(
+            (acc, row) => Math.max(acc, extractOrdineSequence(row.numeroOrdine)),
+            0,
+          ) + 1;
+
+        const totale = roundToTwo(
+          payload.voci.reduce(
+            (acc, voce) => acc + (voce.quantitaOrdinata * voce.prezzoUnitario),
+            0,
+          ),
+        );
+
+        const created = await tx.ordineFornitore.create({
+          data: {
+            fornitoreId: payload.fornitoreId,
+            numeroOrdine: formatOrdineNumber(sequence),
+            stato: "BOZZA",
+            dataOrdine: new Date(),
+            totale,
+          },
+          select: {
+            id: true,
+            fornitoreId: true,
+            numeroOrdine: true,
+            stato: true,
+            dataOrdine: true,
+            totale: true,
+          },
+        });
+
+        const optionalTx = tx as Prisma.TransactionClient & {
+          ordineFornitoreVoce?: {
+            createMany: (args: unknown) => Promise<unknown>;
+          };
+        };
+        if (optionalTx.ordineFornitoreVoce) {
+          await optionalTx.ordineFornitoreVoce.createMany({
+            data: payload.voci.map((voce) => ({
+              ordineId: created.id,
+              articoloId: voce.articoloId,
+              quantitaOrdinata: voce.quantitaOrdinata,
+              prezzoUnitario: voce.prezzoUnitario,
+            })),
+          });
+        }
+
+        await tx.auditLog.create({
+          data: {
+            userId: payload.actorUserId,
+            action: "CREATE",
+            modelName: "OrdineFornitore",
+            objectId: String(created.id),
+          },
+        });
+
+        return {
+          ok: true,
+          data: created,
+        } as const;
+      },
+    );
+
+    if (!result.ok) {
+      return result;
+    }
+
+    return {
+      ok: true,
+      data: {
+        id: result.data.id,
+        fornitoreId: result.data.fornitoreId,
+        numeroOrdine: result.data.numeroOrdine,
+        stato: result.data.stato,
+        dataOrdine: result.data.dataOrdine.toISOString(),
+        totale: result.data.totale,
+      },
     };
   } catch {
     return {
@@ -4323,6 +4674,21 @@ async function createArticolo(
   return createArticoloInDatabase(parsed.data);
 }
 
+async function createOrdineFornitore(
+  input: CreateOrdineFornitoreInput,
+): Promise<CreateOrdineFornitoreResult> {
+  const parsed = parseCreateOrdineFornitoreInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return createOrdineFornitoreInTestStore(parsed.data);
+  }
+
+  return createOrdineFornitoreInDatabase(parsed.data);
+}
+
 async function createArticoloMovimento(
   input: CreateArticoloMovimentoInput,
 ): Promise<CreateArticoloMovimentoResult> {
@@ -4526,6 +4892,7 @@ function resetAnagraficheStoreForTests(): void {
   nextTestClienteCodeSequence = computeNextClienteCodeSequence(testClienti);
   nextTestFornitoreId = computeNextId(testFornitori.map((item) => item.id));
   nextTestFornitoreCodeSequence = computeNextFornitoreCodeSequence(testFornitori);
+  nextTestFornitoreOrdineId = computeNextId(testFornitoreOrdini.map((item) => item.id));
   nextTestArticoloId = computeNextId(testArticoli.map((item) => item.id));
   nextTestMovimentoMagazzinoId = computeNextId(
     testMovimentiMagazzino.map((item) => item.id),
@@ -4569,6 +4936,7 @@ function seedFornitoreDetailScenarioForTests(): void {
       stato: "APERTO",
       dataOrdine: "2026-02-11T09:00:00.000Z",
       totale: 120.5,
+      voci: [],
     },
     {
       id: 3002,
@@ -4577,6 +4945,7 @@ function seedFornitoreDetailScenarioForTests(): void {
       stato: "IN_LAVORAZIONE",
       dataOrdine: "2026-02-10T10:30:00.000Z",
       totale: 88,
+      voci: [],
     },
     {
       id: 3003,
@@ -4585,6 +4954,7 @@ function seedFornitoreDetailScenarioForTests(): void {
       stato: "SPEDITO",
       dataOrdine: "2026-02-09T16:00:00.000Z",
       totale: 44.99,
+      voci: [],
     },
     {
       id: 3004,
@@ -4593,6 +4963,7 @@ function seedFornitoreDetailScenarioForTests(): void {
       stato: "CONSEGNATO",
       dataOrdine: "2026-02-08T14:15:00.000Z",
       totale: 310.75,
+      voci: [],
     },
     {
       id: 3005,
@@ -4601,6 +4972,7 @@ function seedFornitoreDetailScenarioForTests(): void {
       stato: "CHIUSO",
       dataOrdine: "2026-02-07T11:45:00.000Z",
       totale: 15,
+      voci: [],
     },
   ]);
 }
@@ -4615,6 +4987,7 @@ export {
   createCliente,
   createFornitore,
   createArticolo,
+  createOrdineFornitore,
   createArticoloMovimento,
   getArticoloById,
   getFornitoreById,
@@ -4636,6 +5009,8 @@ export {
   type CreateFornitoreResult,
   type CreateArticoloInput,
   type CreateArticoloResult,
+  type CreateOrdineFornitoreInput,
+  type CreateOrdineFornitoreResult,
   type CreateArticoloMovimentoInput,
   type CreateArticoloMovimentoResult,
   type GetArticoloByIdInput,
