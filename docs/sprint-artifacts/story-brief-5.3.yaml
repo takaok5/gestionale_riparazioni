@@ -1,0 +1,25 @@
+target_modules:
+  - packages/backend/src/routes/articoli.ts
+  - packages/backend/src/services/anagrafiche-service.ts
+
+patterns_to_follow:
+  - "packages/backend/src/routes/articoli.ts:120 - each new movimenti route should reuse the authenticate/authorize guard, build payload from params/body, call a service helper, and reuse the existing failure responder before returning 200/201"
+  - "packages/backend/src/routes/articoli.ts:142 - GET /api/articoli/alert shows the standard middleware order, empty payload, and 200 json response sequence that the new route should mirror"
+  - "packages/backend/src/services/anagrafiche-service.ts:1257 - parseCreateArticoloInput centralizes validation for payload fields and returns {ok:false, code:VALIDATION_ERROR} so movimenti parsing should mirror this pattern"
+  - "packages/backend/src/services/anagrafiche-service.ts:3764 - createArticolo demonstrates the ok/failure union plus test-vs-db branch; movimenti operations should follow the same result funnel and helper reuse"
+  - "packages/backend/src/__tests__/articoli-create-atdd.spec.ts:3 - buildAccessToken/authHeader helpers with beforeEach resetting stores show how to seed fixtures and issue authenticated requests for ATDD scenarios"
+dependencies:
+  - "packages/backend/src/index.ts mounts articoliRouter at /api/articoli"
+  - "packages/backend/src/routes/articoli.ts imports createArticolo and other helpers from anagrafiche-service"
+  - "packages/backend/src/routes/audit-log.ts imports anagrafiche-service for audit listing"
+  - "packages/backend/src/routes/clienti.ts imports anagrafiche-service for granularity that shares the same module"
+  - "packages/backend/src/routes/fornitori.ts imports anagrafiche-service for CRUD operations"
+risks:
+  - "Concurrency risk: failing to wrap giacenza decrement + movimento insert in an atomic transaction/regression lock will break AC-5 and allow negative stock"
+  - "Validation risk: tipo/quantita/riferimento expectations must match the ACs, otherwise invalid payloads could update giacenza or skip required riferimento metadata"
+  - "Error mapping risk: Prisma missing articolo or insufficient stock errors must translate into 404/400 with explicit codes so clients can show the claimed messages"
+  - "Giacenza-alert risk: not recording userId/timestamp or missing the RETTIFICA branch will leave historics inconsistent and violate the audit-geared ACs"
+  - "Coupling risk: changes in anagrafiche-service ripple through clienti/fornitori/audit clients and their ATDD suites, so reuse existing validation/failure helpers instead of copy/paste"
+existing_tests:
+  - packages/backend/src/__tests__/articoli-create-atdd.spec.ts
+  - packages/backend/src/__tests__/articoli-list-search-alert-atdd.spec.ts
