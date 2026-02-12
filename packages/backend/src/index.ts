@@ -12,6 +12,7 @@ import { auditLogRouter } from "./routes/audit-log.js";
 import { riparazioniRouter } from "./routes/riparazioni.js";
 import { preventiviRouter } from "./routes/preventivi.js";
 import { fattureRouter } from "./routes/fatture.js";
+import { dashboardRouter } from "./routes/dashboard.js";
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -31,6 +32,7 @@ app.use("/api/riparazioni", riparazioniRouter);
 app.use("/api/preventivi", preventiviRouter);
 app.use("/api/fatture", fattureRouter);
 app.use("/api/audit-log", auditLogRouter);
+app.use("/api/dashboard", dashboardRouter);
 
 if (process.env.NODE_ENV !== "test") {
   app.listen(PORT, () => {

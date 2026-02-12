@@ -1,21 +1,21 @@
-ï»¿# Pipeline State
+# Pipeline State
 
 ## Current Story
 
-**Story:** 5.7
-**Step:** 10
+**Story:** 6.1
+**Step:** 9
 **Status:** in_progress
 
 ## Progress
 
 `
-[â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆ] 100%
+[¦¦¦¦¦¦¦¦¦ ] 90%
 `
 
 ## Session
 
-- **Last activity:** 2026-02-12T19:35:41+01:00
-- **Resume from:** step 10
+- **Last activity:** 2026-02-13T00:11:24
+- **Resume from:** step 9
 
 ---
 *Auto-updated by story-pipeline*
