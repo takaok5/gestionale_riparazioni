@@ -71,10 +71,11 @@ describe("AC-1 - Movimento CARICO con tracciamento utente e timestamp", () => {
   it('Tests AC-1: Given articolo giacenza 10 When POST CARICO 20 Then 201 and giacenza 30', async () => {
     const articolo = await createArticolo(1, 5100);
 
-    await request(app)
+    const preload = await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
       .set("Authorization", authHeader("TECNICO", 5101))
       .send({ tipo: "CARICO", quantita: 10, riferimento: "Ordine FOR-000001-PRELOAD" });
+    expect(preload.status).toBe(201);
 
     const response = await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
@@ -105,10 +106,11 @@ describe("AC-2 - Movimento SCARICO con decremento giacenza", () => {
   it("Tests AC-2: Given giacenza 30 When POST SCARICO 15 Then 201 and giacenza 15", async () => {
     const articolo = await createArticolo(3, 5200);
 
-    await request(app)
+    const preload = await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
       .set("Authorization", authHeader("TECNICO", 5201))
       .send({ tipo: "CARICO", quantita: 30, riferimento: "Ordine FOR-000002" });
+    expect(preload.status).toBe(201);
 
     const response = await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
@@ -126,10 +128,11 @@ describe("AC-2 - Movimento SCARICO con decremento giacenza", () => {
 
   it("Tests AC-2: Given SCARICO accepted When reading movimento Then tipo and riferimento are persisted", async () => {
     const articolo = await createArticolo(4, 5210);
-    await request(app)
+    const preload = await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
       .set("Authorization", authHeader("TECNICO", 5211))
       .send({ tipo: "CARICO", quantita: 30, riferimento: "Ordine FOR-000003" });
+    expect(preload.status).toBe(201);
 
     const response = await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
@@ -149,10 +152,11 @@ describe("AC-2 - Movimento SCARICO con decremento giacenza", () => {
 describe("AC-3 - Blocco scarico oltre disponibilita", () => {
   it('Tests AC-3: Given giacenza 5 When POST SCARICO 10 Then 400 "Insufficient stock..."', async () => {
     const articolo = await createArticolo(5, 5300);
-    await request(app)
+    const preload = await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
       .set("Authorization", authHeader("TECNICO", 5301))
       .send({ tipo: "CARICO", quantita: 5, riferimento: "Ordine FOR-000004" });
+    expect(preload.status).toBe(201);
 
     const response = await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
@@ -167,10 +171,11 @@ describe("AC-3 - Blocco scarico oltre disponibilita", () => {
 
   it("Tests AC-3: Given rejected SCARICO When checking stock Then giacenza remains unchanged", async () => {
     const articolo = await createArticolo(6, 5310);
-    await request(app)
+    const preload = await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
       .set("Authorization", authHeader("TECNICO", 5311))
       .send({ tipo: "CARICO", quantita: 5, riferimento: "Ordine FOR-000005" });
+    expect(preload.status).toBe(201);
 
     await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
@@ -185,10 +190,11 @@ describe("AC-3 - Blocco scarico oltre disponibilita", () => {
 describe("AC-4 - Movimento RETTIFICA con quantita negativa", () => {
   it("Tests AC-4: Given giacenza 15 When POST RETTIFICA -5 Then 201 and giacenza 10", async () => {
     const articolo = await createArticolo(7, 5400);
-    await request(app)
+    const preload = await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
       .set("Authorization", authHeader("TECNICO", 5401))
       .send({ tipo: "CARICO", quantita: 15, riferimento: "Ordine FOR-000006" });
+    expect(preload.status).toBe(201);
 
     const response = await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
@@ -202,10 +208,11 @@ describe("AC-4 - Movimento RETTIFICA con quantita negativa", () => {
 
   it("Tests AC-4: Given RETTIFICA applied When reading movimento Then tipo RETTIFICA and riferimento are returned", async () => {
     const articolo = await createArticolo(8, 5410);
-    await request(app)
+    const preload = await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
       .set("Authorization", authHeader("TECNICO", 5411))
       .send({ tipo: "CARICO", quantita: 15, riferimento: "Ordine FOR-000007" });
+    expect(preload.status).toBe(201);
 
     const response = await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
@@ -221,10 +228,11 @@ describe("AC-4 - Movimento RETTIFICA con quantita negativa", () => {
 describe("AC-5 - Gestione concorrente SCARICO in transazione atomica", () => {
   it("Tests AC-5: Given giacenza 10 When two SCARICO 7 run in parallel Then only one request returns 201", async () => {
     const articolo = await createArticolo(9, 5500);
-    await request(app)
+    const preload = await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
       .set("Authorization", authHeader("TECNICO", 5501))
       .send({ tipo: "CARICO", quantita: 10, riferimento: "Ordine FOR-000008" });
+    expect(preload.status).toBe(201);
 
     const payload = {
       tipo: "SCARICO",
@@ -248,10 +256,11 @@ describe("AC-5 - Gestione concorrente SCARICO in transazione atomica", () => {
 
   it('Tests AC-5: Given one parallel SCARICO fails When checking side effects Then final giacenza is 3 and failure message is "Insufficient stock"', async () => {
     const articolo = await createArticolo(10, 5510);
-    await request(app)
+    const preload = await request(app)
       .post(`/api/articoli/${articolo.id}/movimenti`)
       .set("Authorization", authHeader("TECNICO", 5511))
       .send({ tipo: "CARICO", quantita: 10, riferimento: "Ordine FOR-000009" });
+    expect(preload.status).toBe(201);
 
     const payload = {
       tipo: "SCARICO",

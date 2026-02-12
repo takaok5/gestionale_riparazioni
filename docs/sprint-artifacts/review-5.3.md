@@ -1,21 +1,19 @@
-## Step 4 Validation - Story 5.3
+## Code Review - Story 5.3
 
-### Issue 1: AC-2 non completamente testabile
-- Problem: il Then di AC-2 indicava solo la giacenza finale, senza status HTTP e senza verifica registrazione movimento.
-- Fix: aggiunti nel Then status `201` e registrazione movimento con `userId` + timestamp.
-- Verification: AC-2 ora contiene output verificabili con `expect(response.status).toBe(201)` e assert su audit/movimento.
+### Issue 1 - Database path not atomic on concurrent SCARICO
+Status: RESOLVED
+- Problem: `createArticoloMovimentoInDatabase` read-modify-write on `giacenza` without guarded conditional update, allowing two concurrent decrements to both pass.
+- Fix: replaced decrement flow with atomic `updateMany` guarded by `giacenza >= requested` and fallback re-read for accurate insufficient-stock message.
+- Verification: logic now enforces single winner on concurrent decrements; AC-5 semantics preserved also in DB runtime.
 
-### Issue 2: AC-4 non completamente testabile
-- Problem: il Then di AC-4 non specificava status di risposta ne metadati del movimento.
-- Fix: aggiunti status `201` e requisito esplicito di registrazione movimento `RETTIFICA` con `userId` e timestamp.
-- Verification: AC-4 ora e verificabile sia su side-effect (giacenza) sia su output API.
+### Issue 2 - `riferimento` accepted invalid non-string payloads
+Status: RESOLVED
+- Problem: parser converted invalid `riferimento` types to `null` via optional-string helper, silently accepting malformed payloads.
+- Fix: added explicit validation branch in `parseCreateArticoloMovimentoInput` to reject non-string non-null values with `VALIDATION_ERROR`.
+- Verification: invalid typed payloads now fail deterministically before service logic.
 
-### Issue 3: AC-5 concorrenza troppo vaga
-- Problem: AC-5 non definiva payload concorrenti, esito atteso per entrambe le richieste e giacenza finale.
-- Fix: aggiunti payload concreti (`SCARICO` quantita `7`), status attesi (`201`/`400`) e giacenza finale attesa `3`.
-- Verification: AC-5 ora e traducibile in test concorrente deterministico (`Promise.all`) con assert su outcome e stato finale.
-
-### Issue 4: Task coverage incompleta per scenario concorrente
-- Problem: il task testing era ambiguo ("estendere o suite dedicata") e non esplicitava test file e scenario parallelo.
-- Fix: introdotto file target `packages/backend/src/__tests__/articoli-movimenti-atdd.spec.ts` e task separato per test concorrente.
-- Verification: il breakdown ora mappa in modo esplicito AC-5 a task implementativo e test dedicato.
+### Issue 3 - ATDD preload operations had no explicit assertion
+Status: RESOLVED
+- Problem: multiple tests preloaded stock with movement calls but did not assert preload response status, risking misleading follow-up failures.
+- Fix: added explicit `expect(preload.status).toBe(201)` checks for every preload movement call in `articoli-movimenti-atdd.spec.ts`.
+- Verification: suite now fails immediately on preload regressions and keeps causal diagnostics aligned with each AC.

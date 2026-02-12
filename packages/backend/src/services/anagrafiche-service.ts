@@ -1518,6 +1518,17 @@ function parseCreateArticoloMovimentoInput(
     });
   }
 
+  if (
+    input.riferimento !== undefined &&
+    input.riferimento !== null &&
+    typeof input.riferimento !== "string"
+  ) {
+    return buildValidationFailure({
+      field: "riferimento",
+      rule: "invalid_string",
+    });
+  }
+
   return {
     ok: true,
     data: {
@@ -2747,6 +2758,7 @@ async function createArticoloMovimentoInDatabase(
               id: number;
               giacenza: number;
             } | null>;
+            updateMany: (args: unknown) => Promise<{ count: number }>;
             update: (args: unknown) => Promise<{ id: number; giacenza: number }>;
           };
         };
@@ -2764,22 +2776,54 @@ async function createArticoloMovimentoInDatabase(
         }
 
         const delta = computeMovimentoDelta(payload.tipo, payload.quantita);
-        const nuovaGiacenza = articolo.giacenza + delta;
-        if (nuovaGiacenza < 0) {
-          const requested = delta < 0 ? Math.abs(delta) : payload.quantita;
-          return {
-            ok: false,
-            code: "INSUFFICIENT_STOCK",
-            available: articolo.giacenza,
-            requested,
-          } as const;
+        const requested = delta < 0 ? Math.abs(delta) : payload.quantita;
+
+        let updatedArticolo: { id: number; giacenza: number } | null = null;
+        if (delta < 0) {
+          const updatedCount = await transaction.articolo.updateMany({
+            where: {
+              id: payload.articoloId,
+              giacenza: {
+                gte: requested,
+              },
+            },
+            data: {
+              giacenza: {
+                decrement: requested,
+              },
+            },
+          });
+          if (updatedCount.count === 0) {
+            const latest = await transaction.articolo.findUnique({
+              where: { id: payload.articoloId },
+              select: { id: true, giacenza: true },
+            });
+            return {
+              ok: false,
+              code: "INSUFFICIENT_STOCK",
+              available: latest?.giacenza ?? 0,
+              requested,
+            } as const;
+          }
+          updatedArticolo = await transaction.articolo.findUnique({
+            where: { id: payload.articoloId },
+            select: { id: true, giacenza: true },
+          });
+        } else {
+          updatedArticolo = await transaction.articolo.update({
+            where: { id: payload.articoloId },
+            data: {
+              giacenza: {
+                increment: delta,
+              },
+            },
+            select: { id: true, giacenza: true },
+          });
         }
 
-        const updatedArticolo = await transaction.articolo.update({
-          where: { id: payload.articoloId },
-          data: { giacenza: nuovaGiacenza },
-          select: { id: true, giacenza: true },
-        });
+        if (!updatedArticolo) {
+          return { ok: false, code: "SERVICE_UNAVAILABLE" } as const;
+        }
 
         const audit = await tx.auditLog.create({
           data: {
