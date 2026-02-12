@@ -23,6 +23,11 @@ type DuplicatePartitaIvaFailure = {
   code: "PARTITA_IVA_EXISTS";
 };
 
+type DuplicateCodiceArticoloFailure = {
+  ok: false;
+  code: "CODICE_ARTICOLO_EXISTS";
+};
+
 type NotFoundFailure = {
   ok: false;
   code: "NOT_FOUND";
@@ -63,6 +68,18 @@ interface CreateFornitoreInput {
   cap: unknown;
   citta: unknown;
   provincia: unknown;
+}
+
+interface CreateArticoloInput {
+  actorUserId: unknown;
+  codiceArticolo: unknown;
+  nome: unknown;
+  descrizione: unknown;
+  categoria: unknown;
+  fornitoreId: unknown;
+  prezzoAcquisto: unknown;
+  prezzoVendita: unknown;
+  sogliaMinima: unknown;
 }
 
 interface UpdateFornitoreInput {
@@ -204,6 +221,19 @@ interface FornitoreCreatePayload {
   partitaIva: string | null;
 }
 
+interface ArticoloCreatePayload {
+  id: number;
+  codiceArticolo: string;
+  nome: string;
+  descrizione: string;
+  categoria: string;
+  fornitoreId: number;
+  prezzoAcquisto: number;
+  prezzoVendita: number;
+  sogliaMinima: number;
+  giacenza: number;
+}
+
 interface FornitoreDetailPayload {
   id: number;
   codiceFornitore: string;
@@ -252,6 +282,13 @@ type CreateFornitoreResult =
   | { ok: true; data: FornitoreCreatePayload }
   | ValidationFailure
   | DuplicatePartitaIvaFailure
+  | ServiceUnavailableFailure;
+
+type CreateArticoloResult =
+  | { ok: true; data: ArticoloCreatePayload }
+  | ValidationFailure
+  | DuplicateCodiceArticoloFailure
+  | NotFoundFailure
   | ServiceUnavailableFailure;
 
 type UpdateFornitoreResult =
@@ -341,6 +378,18 @@ interface ParsedCreateFornitoreInput {
   cap: string;
   citta: string;
   provincia: string;
+}
+
+interface ParsedCreateArticoloInput {
+  actorUserId: number;
+  codiceArticolo: string;
+  nome: string;
+  descrizione: string;
+  categoria: string;
+  fornitoreId: number;
+  prezzoAcquisto: number;
+  prezzoVendita: number;
+  sogliaMinima: number;
 }
 
 interface ParsedUpdateFornitoreInput {
@@ -440,6 +489,21 @@ interface TestFornitoreOrdineRecord {
   totale: number;
 }
 
+interface TestArticoloRecord {
+  id: number;
+  codiceArticolo: string;
+  nome: string;
+  descrizione: string;
+  categoria: string;
+  fornitoreId: number;
+  prezzoAcquisto: number;
+  prezzoVendita: number;
+  sogliaMinima: number;
+  giacenza: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface TestRiparazioneRecord {
   id: number;
   clienteId: number;
@@ -485,6 +549,25 @@ const baseTestClienti: TestClienteRecord[] = [
 
 const baseTestFornitori: TestFornitoreRecord[] = [
   {
+    id: 3,
+    codiceFornitore: "FOR-000000",
+    nome: "Ricambi Centro",
+    cognome: null,
+    codiceFiscale: null,
+    note: null,
+    categoria: "RICAMBI",
+    partitaIva: "33333333334",
+    ragioneSociale: "Ricambi Centro",
+    indirizzo: "Via Roma 10",
+    citta: "Roma",
+    cap: "00100",
+    provincia: "RM",
+    telefono: "0612345678",
+    email: "fornitore3@test.local",
+    createdAt: "2026-02-11T09:00:00.000Z",
+    updatedAt: "2026-02-11T09:00:00.000Z",
+  },
+  {
     id: 5,
     codiceFornitore: "FOR-000000",
     nome: "Ricambi Nord",
@@ -506,6 +589,7 @@ const baseTestFornitori: TestFornitoreRecord[] = [
 ];
 
 const baseTestFornitoreOrdini: TestFornitoreOrdineRecord[] = [];
+const baseTestArticoli: TestArticoloRecord[] = [];
 
 const baseTestRiparazioni: TestRiparazioneRecord[] = [
   {
@@ -566,6 +650,7 @@ const baseTestAuditLogs: AuditLogListItem[] = [
 let testClienti = cloneTestClienti(baseTestClienti);
 let testFornitori = cloneTestFornitori(baseTestFornitori);
 let testFornitoreOrdini = cloneTestFornitoreOrdini(baseTestFornitoreOrdini);
+let testArticoli = cloneTestArticoli(baseTestArticoli);
 let testRiparazioni = cloneTestRiparazioni(baseTestRiparazioni);
 let testAuditLogs = cloneAuditLogs(baseTestAuditLogs);
 
@@ -573,6 +658,7 @@ let nextTestClienteId = computeNextId(testClienti.map((item) => item.id));
 let nextTestClienteCodeSequence = computeNextClienteCodeSequence(testClienti);
 let nextTestFornitoreId = computeNextId(testFornitori.map((item) => item.id));
 let nextTestFornitoreCodeSequence = computeNextFornitoreCodeSequence(testFornitori);
+let nextTestArticoloId = computeNextId(testArticoli.map((item) => item.id));
 let nextTestAuditLogId = computeNextId(testAuditLogs.map((item) => item.id));
 
 let prismaClient: PrismaClient | null = null;
@@ -588,6 +674,10 @@ function cloneTestFornitori(source: TestFornitoreRecord[]): TestFornitoreRecord[
 function cloneTestFornitoreOrdini(
   source: TestFornitoreOrdineRecord[],
 ): TestFornitoreOrdineRecord[] {
+  return source.map((item) => ({ ...item }));
+}
+
+function cloneTestArticoli(source: TestArticoloRecord[]): TestArticoloRecord[] {
   return source.map((item) => ({ ...item }));
 }
 
@@ -721,6 +811,13 @@ function buildDuplicatePartitaIvaFailure(): DuplicatePartitaIvaFailure {
   };
 }
 
+function buildDuplicateCodiceArticoloFailure(): DuplicateCodiceArticoloFailure {
+  return {
+    ok: false,
+    code: "CODICE_ARTICOLO_EXISTS",
+  };
+}
+
 function asPositiveInteger(value: unknown): number | null {
   if (typeof value === "number") {
     if (Number.isInteger(value) && value > 0) {
@@ -740,6 +837,56 @@ function asPositiveInteger(value: unknown): number | null {
 
   const parsed = Number(trimmed);
   if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function asNonNegativeInteger(value: unknown): number | null {
+  if (typeof value === "number") {
+    if (Number.isInteger(value) && value >= 0) {
+      return value;
+    }
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+
+  const parsed = Number(trimmed);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function asPositiveNumber(value: unknown): number | null {
+  if (typeof value === "number") {
+    if (Number.isFinite(value) && value > 0) {
+      return value;
+    }
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
     return null;
   }
 
@@ -1052,6 +1199,109 @@ function parseCreateFornitoreInput(
       cap,
       citta,
       provincia: provincia.toUpperCase(),
+    },
+  };
+}
+
+function parseCreateArticoloInput(
+  input: CreateArticoloInput,
+):
+  | { ok: true; data: ParsedCreateArticoloInput }
+  | ValidationFailure {
+  const actorUserId = asPositiveInteger(input.actorUserId);
+  if (actorUserId === null) {
+    return buildValidationFailure({
+      field: "actorUserId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const codiceArticolo = asRequiredString(input.codiceArticolo);
+  if (!codiceArticolo) {
+    return buildValidationFailure({
+      field: "codiceArticolo",
+      rule: "required",
+    });
+  }
+
+  const nome = asRequiredString(input.nome);
+  if (!nome) {
+    return buildValidationFailure({
+      field: "nome",
+      rule: "required",
+    });
+  }
+
+  const descrizione = asRequiredString(input.descrizione);
+  if (!descrizione) {
+    return buildValidationFailure({
+      field: "descrizione",
+      rule: "required",
+    });
+  }
+
+  const categoria = asRequiredString(input.categoria);
+  if (!categoria) {
+    return buildValidationFailure({
+      field: "categoria",
+      rule: "required",
+    });
+  }
+
+  const fornitoreId = asPositiveInteger(input.fornitoreId);
+  if (fornitoreId === null) {
+    return buildValidationFailure({
+      field: "fornitoreId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const prezzoAcquisto = asPositiveNumber(input.prezzoAcquisto);
+  if (prezzoAcquisto === null) {
+    return buildValidationFailure({
+      field: "prezzoAcquisto",
+      rule: "invalid_number",
+    });
+  }
+
+  const prezzoVendita = asPositiveNumber(input.prezzoVendita);
+  if (prezzoVendita === null) {
+    return buildValidationFailure({
+      field: "prezzoVendita",
+      rule: "invalid_number",
+    });
+  }
+
+  if (prezzoVendita <= prezzoAcquisto) {
+    return buildValidationFailure(
+      {
+        field: "prezzoVendita",
+        rule: "greater_than_prezzoAcquisto",
+      },
+      "prezzoVendita must be greater than prezzoAcquisto",
+    );
+  }
+
+  const sogliaMinima = asNonNegativeInteger(input.sogliaMinima);
+  if (sogliaMinima === null) {
+    return buildValidationFailure({
+      field: "sogliaMinima",
+      rule: "invalid_integer",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      actorUserId,
+      codiceArticolo: codiceArticolo.toUpperCase(),
+      nome,
+      descrizione,
+      categoria: categoria.toUpperCase(),
+      fornitoreId,
+      prezzoAcquisto,
+      prezzoVendita,
+      sogliaMinima,
     },
   };
 }
@@ -1935,6 +2185,175 @@ async function createFornitoreInDatabase(
     field: "codiceFornitore",
     rule: "unique",
   });
+}
+
+async function createArticoloInTestStore(
+  payload: ParsedCreateArticoloInput,
+): Promise<CreateArticoloResult> {
+  const fornitoreExists = testFornitori.some(
+    (record) => record.id === payload.fornitoreId,
+  );
+  if (!fornitoreExists) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  if (
+    testArticoli.some(
+      (record) => record.codiceArticolo === payload.codiceArticolo,
+    )
+  ) {
+    return buildDuplicateCodiceArticoloFailure();
+  }
+
+  const now = new Date().toISOString();
+  const created: TestArticoloRecord = {
+    id: nextTestArticoloId,
+    codiceArticolo: payload.codiceArticolo,
+    nome: payload.nome,
+    descrizione: payload.descrizione,
+    categoria: payload.categoria,
+    fornitoreId: payload.fornitoreId,
+    prezzoAcquisto: payload.prezzoAcquisto,
+    prezzoVendita: payload.prezzoVendita,
+    sogliaMinima: payload.sogliaMinima,
+    giacenza: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  nextTestArticoloId += 1;
+  testArticoli.push(created);
+
+  appendTestAuditLog({
+    userId: payload.actorUserId,
+    action: "CREATE",
+    modelName: "Articolo",
+    objectId: String(created.id),
+  });
+
+  return {
+    ok: true,
+    data: {
+      id: created.id,
+      codiceArticolo: created.codiceArticolo,
+      nome: created.nome,
+      descrizione: created.descrizione,
+      categoria: created.categoria,
+      fornitoreId: created.fornitoreId,
+      prezzoAcquisto: created.prezzoAcquisto,
+      prezzoVendita: created.prezzoVendita,
+      sogliaMinima: created.sogliaMinima,
+      giacenza: created.giacenza,
+    },
+  };
+}
+
+async function createArticoloInDatabase(
+  payload: ParsedCreateArticoloInput,
+): Promise<CreateArticoloResult> {
+  try {
+    const result = await getPrismaClient().$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const transaction = tx as Prisma.TransactionClient & {
+          articolo?: {
+            findFirst: (args: unknown) => Promise<{ id: number } | null>;
+            create: (args: unknown) => Promise<{
+              id: number;
+              codiceArticolo: string;
+              nome: string;
+              descrizione: string;
+              categoria: string;
+              fornitoreId: number;
+              prezzoAcquisto: number;
+              prezzoVendita: number;
+              sogliaMinima: number;
+              giacenza: number;
+            }>;
+          };
+        };
+
+        if (!transaction.articolo) {
+          return { ok: false, code: "SERVICE_UNAVAILABLE" } as const;
+        }
+
+        const fornitore = await tx.fornitore.findUnique({
+          where: { id: payload.fornitoreId },
+          select: { id: true },
+        });
+        if (!fornitore) {
+          return { ok: false, code: "NOT_FOUND" } as const;
+        }
+
+        const existing = await transaction.articolo.findFirst({
+          where: { codiceArticolo: payload.codiceArticolo },
+          select: { id: true },
+        });
+        if (existing) {
+          return { ok: false, code: "CODICE_ARTICOLO_EXISTS" } as const;
+        }
+
+        const articolo = await transaction.articolo.create({
+          data: {
+            codiceArticolo: payload.codiceArticolo,
+            nome: payload.nome,
+            descrizione: payload.descrizione,
+            categoria: payload.categoria,
+            fornitoreId: payload.fornitoreId,
+            prezzoAcquisto: payload.prezzoAcquisto,
+            prezzoVendita: payload.prezzoVendita,
+            sogliaMinima: payload.sogliaMinima,
+            giacenza: 0,
+          },
+          select: {
+            id: true,
+            codiceArticolo: true,
+            nome: true,
+            descrizione: true,
+            categoria: true,
+            fornitoreId: true,
+            prezzoAcquisto: true,
+            prezzoVendita: true,
+            sogliaMinima: true,
+            giacenza: true,
+          },
+        });
+
+        await tx.auditLog.create({
+          data: {
+            userId: payload.actorUserId,
+            action: "CREATE",
+            modelName: "Articolo",
+            objectId: String(articolo.id),
+          },
+        });
+
+        return {
+          ok: true,
+          data: articolo,
+        } as const;
+      },
+    );
+
+    if (!result.ok) {
+      if (result.code === "CODICE_ARTICOLO_EXISTS") {
+        return buildDuplicateCodiceArticoloFailure();
+      }
+      return result;
+    }
+
+    return {
+      ok: true,
+      data: result.data,
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
 }
 
 async function updateFornitoreInTestStore(
@@ -2978,6 +3397,21 @@ async function createFornitore(
   return createFornitoreInDatabase(parsed.data);
 }
 
+async function createArticolo(
+  input: CreateArticoloInput,
+): Promise<CreateArticoloResult> {
+  const parsed = parseCreateArticoloInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return createArticoloInTestStore(parsed.data);
+  }
+
+  return createArticoloInDatabase(parsed.data);
+}
+
 async function updateFornitore(
   input: UpdateFornitoreInput,
 ): Promise<UpdateFornitoreResult> {
@@ -3118,12 +3552,14 @@ function resetAnagraficheStoreForTests(): void {
   testClienti = cloneTestClienti(baseTestClienti);
   testFornitori = cloneTestFornitori(baseTestFornitori);
   testFornitoreOrdini = cloneTestFornitoreOrdini(baseTestFornitoreOrdini);
+  testArticoli = cloneTestArticoli(baseTestArticoli);
   testRiparazioni = cloneTestRiparazioni(baseTestRiparazioni);
   testAuditLogs = cloneAuditLogs(baseTestAuditLogs);
   nextTestClienteId = computeNextId(testClienti.map((item) => item.id));
   nextTestClienteCodeSequence = computeNextClienteCodeSequence(testClienti);
   nextTestFornitoreId = computeNextId(testFornitori.map((item) => item.id));
   nextTestFornitoreCodeSequence = computeNextFornitoreCodeSequence(testFornitori);
+  nextTestArticoloId = computeNextId(testArticoli.map((item) => item.id));
   nextTestAuditLogId = computeNextId(testAuditLogs.map((item) => item.id));
 }
 
@@ -3208,6 +3644,7 @@ function ensureTestEnvironment(): void {
 export {
   createCliente,
   createFornitore,
+  createArticolo,
   getFornitoreById,
   getClienteById,
   listFornitoreOrdini,
@@ -3223,6 +3660,8 @@ export {
   type CreateClienteResult,
   type CreateFornitoreInput,
   type CreateFornitoreResult,
+  type CreateArticoloInput,
+  type CreateArticoloResult,
   type GetFornitoreByIdInput,
   type GetFornitoreByIdResult,
   type GetClienteByIdInput,

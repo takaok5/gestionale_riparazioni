@@ -1,0 +1,54 @@
+story_id: '5.1'
+title: 'Creazione Articolo Magazzino'
+source_story: 'docs/epics/epic-5-magazzino-ordini.md'
+acceptance_criteria:
+  - id: 'AC-1'
+    given: 'I am Admin'
+    when: 'POST /api/articoli con payload valido (codiceArticolo, nome, descrizione, categoria, fornitoreId, prezzoAcquisto, prezzoVendita, sogliaMinima)'
+    then: 'articolo creato con giacenza iniziale 0 e risposta 201'
+  - id: 'AC-2'
+    given: 'esiste articolo con codiceArticolo LCD-SAMS21'
+    when: 'POST /api/articoli con stesso codiceArticolo'
+    then: 'risposta 409 con error code CODICE_ARTICOLO_EXISTS'
+  - id: 'AC-3'
+    given: 'I am Admin'
+    when: 'POST /api/articoli con prezzoVendita minore di prezzoAcquisto'
+    then: 'risposta 400 con validation error prezzoVendita must be greater than prezzoAcquisto'
+  - id: 'AC-4'
+    given: 'I am Tecnico'
+    when: 'POST /api/articoli'
+    then: 'risposta 403 FORBIDDEN'
+target_modules:
+  - packages/backend/prisma/schema.prisma
+  - packages/backend/src/index.ts
+  - packages/backend/src/services/anagrafiche-service.ts
+  - packages/backend/src/middleware/auth.ts
+  - packages/backend/src/routes/fornitori.ts
+  - packages/backend/src/__tests__/fornitori-create-atdd.spec.ts
+patterns_to_follow:
+  - file:line: 'packages/backend/src/routes/fornitori.ts:232'
+    pattern: 'POST route protetta con authenticate + authorize("ADMIN") e payload esplicito prima della chiamata service.'
+  - file:line: 'packages/backend/src/routes/fornitori.ts:66'
+    pattern: 'Mappatura errore duplicato dominio -> HTTP 409 con buildErrorResponse e codice semantico.'
+  - file:line: 'packages/backend/src/routes/fornitori.ts:256'
+    pattern: 'Su successo create endpoint ritorna status 201 con payload service.'
+  - file:line: 'packages/backend/src/services/anagrafiche-service.ts:698'
+    pattern: 'Validazioni centralizzate con buildValidationFailure(field/rule/message) per errori deterministici.'
+  - file:line: 'packages/backend/src/services/anagrafiche-service.ts:2966'
+    pattern: 'Service pubblico con doppio percorso test-store/database per mantenere coerenza tra test e runtime.'
+  - file:line: 'packages/backend/src/middleware/auth.ts:113'
+    pattern: 'Autorizzazione ruolo restituisce 403 FORBIDDEN con messaggio Accesso negato.'
+dependencies:
+  - 'packages/backend/src/index.ts monta i router /api/* e va aggiornato per esporre /api/articoli.'
+  - 'packages/backend/src/routes/* dipendono dalle funzioni exportate dai service (anagrafiche-service o nuovo service dedicato).' 
+  - 'packages/backend/src/services/anagrafiche-service.ts dipende da Prisma schema/models e dal mapping errori route.'
+  - 'packages/backend/src/__tests__/fornitori-create-atdd.spec.ts mostra pattern authHeader + supertest riusabile per ATDD POST protette.'
+risks:
+  - 'Nel prisma schema non esiste un model Articolo: introdurre il modello puo impattare migrazioni, seed e riferimenti articoloId gia usati in preventivi/fatture.'
+  - 'Se la verifica univocita codiceArticolo non e atomica (service/db), possibile race condition con doppie create concorrenti.'
+  - 'La regola prezzoVendita > prezzoAcquisto deve essere applicata sia nel path test-store sia database, altrimenti divergenza tra test e produzione.'
+  - 'Aggiunta endpoint /api/articoli senza role guard coerente puo aprire accessi non autorizzati per utenti TECNICO.'
+existing_tests:
+  - packages/backend/src/__tests__/fornitori-create-atdd.spec.ts
+  - 'no existing files found for /api/articoli endpoint and dedicated articoli ATDD tests'
+created_at: '2026-02-12T14:30:43+01:00'

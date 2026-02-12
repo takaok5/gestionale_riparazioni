@@ -81,6 +81,25 @@ model Fornitore {
   updatedAt       DateTime           @updatedAt
 
   ordini          OrdineFornitore[]
+  articoli        Articolo[]
+}
+
+model Articolo {
+  id             Int       @id @default(autoincrement())
+  codiceArticolo String    @unique
+  nome           String
+  descrizione    String
+  categoria      String
+  fornitoreId    Int
+  fornitore      Fornitore @relation(fields: [fornitoreId], references: [id])
+  prezzoAcquisto Float
+  prezzoVendita  Float
+  sogliaMinima   Int
+  giacenza       Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([fornitoreId])
 }
 
 model OrdineFornitore {
