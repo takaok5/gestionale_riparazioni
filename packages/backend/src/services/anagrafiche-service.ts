@@ -1847,6 +1847,18 @@ function validateOrdineTransition(
     });
   }
 
+  if (from === to) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: `Order is already in ${from} state`,
+      details: {
+        field: "stato",
+        rule: "already_in_state",
+      },
+    };
+  }
+
   if (to === "ANNULLATO" && from === "SPEDITO" && actorRole !== "ADMIN") {
     return {
       ok: false,
@@ -1859,13 +1871,13 @@ function validateOrdineTransition(
     };
   }
 
-  if (to === "ANNULLATO" && from === "CONFERMATO" && actorRole !== "ADMIN") {
+  if (actorRole !== "ADMIN") {
     return {
       ok: false,
       code: "VALIDATION_ERROR",
-      message: "Only ADMIN can cancel order in CONFERMATO state",
+      message: "Only ADMIN can update order status",
       details: {
-        field: "stato",
+        field: "actorRole",
         rule: "forbidden_transition",
       },
     };

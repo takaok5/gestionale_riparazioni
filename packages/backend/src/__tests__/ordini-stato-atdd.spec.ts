@@ -226,4 +226,13 @@ describe("AC-7 - Blocco annullamento da SPEDITO per non Admin", () => {
     expect(response.status).toBe(200);
     expect(response.body?.data?.stato).toBe("RICEVUTO");
   });
+
+  it('Hardening: Given actor COMMERCIALE and ordine BOZZA When PATCH /api/ordini/:id/stato {"stato":"EMESSO"} Then HTTP 400 with message "Only ADMIN can update order status"', async () => {
+    const ordineId = await createOrdineBozza(7712);
+    const response = await patchStato(ordineId, "EMESSO", "COMMERCIALE", 7713);
+
+    expect(response.status).toBe(400);
+    expect(response.body?.error?.code).toBe("VALIDATION_ERROR");
+    expect(response.body?.error?.message).toBe("Only ADMIN can update order status");
+  });
 });
