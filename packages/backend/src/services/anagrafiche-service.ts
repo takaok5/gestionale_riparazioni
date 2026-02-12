@@ -135,6 +135,10 @@ interface ListArticoliAlertInput {
   _?: never;
 }
 
+interface GetArticoloByIdInput {
+  articoloId: unknown;
+}
+
 interface GetFornitoreByIdInput {
   fornitoreId: unknown;
 }
@@ -401,6 +405,12 @@ type ListArticoliAlertResult =
   | { ok: true; data: ArticoloAlertPayload }
   | ServiceUnavailableFailure;
 
+type GetArticoloByIdResult =
+  | { ok: true; data: { data: ArticoloCreatePayload } }
+  | ValidationFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
 type GetFornitoreByIdResult =
   | { ok: true; data: { data: FornitoreDetailPayload } }
   | ValidationFailure
@@ -518,6 +528,10 @@ interface ParsedListArticoliInput {
 
 interface ParsedGetFornitoreByIdInput {
   fornitoreId: number;
+}
+
+interface ParsedGetArticoloByIdInput {
+  articoloId: number;
 }
 
 interface ParsedGetClienteByIdInput {
@@ -1944,6 +1958,27 @@ function parseGetFornitoreByIdInput(
   };
 }
 
+function parseGetArticoloByIdInput(
+  input: GetArticoloByIdInput,
+):
+  | { ok: true; data: ParsedGetArticoloByIdInput }
+  | ValidationFailure {
+  const articoloId = asPositiveInteger(input.articoloId);
+  if (articoloId === null) {
+    return buildValidationFailure({
+      field: "articoloId",
+      rule: "invalid_integer",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      articoloId,
+    },
+  };
+}
+
 function parseGetClienteByIdInput(
   input: GetClienteByIdInput,
 ):
@@ -3055,6 +3090,36 @@ async function getFornitoreByIdInTestStore(
   };
 }
 
+async function getArticoloByIdInTestStore(
+  payload: ParsedGetArticoloByIdInput,
+): Promise<GetArticoloByIdResult> {
+  const target = testArticoli.find((record) => record.id === payload.articoloId);
+  if (!target) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      data: {
+        id: target.id,
+        codiceArticolo: target.codiceArticolo,
+        nome: target.nome,
+        descrizione: target.descrizione,
+        categoria: target.categoria,
+        fornitoreId: target.fornitoreId,
+        prezzoAcquisto: target.prezzoAcquisto,
+        prezzoVendita: target.prezzoVendita,
+        sogliaMinima: target.sogliaMinima,
+        giacenza: target.giacenza,
+      },
+    },
+  };
+}
+
 async function getFornitoreByIdInDatabase(
   payload: ParsedGetFornitoreByIdInput,
 ): Promise<GetFornitoreByIdResult> {
@@ -3113,6 +3178,82 @@ async function getFornitoreByIdInDatabase(
           note: row.note,
           createdAt: row.createdAt.toISOString(),
           updatedAt: row.updatedAt.toISOString(),
+        },
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function getArticoloByIdInDatabase(
+  payload: ParsedGetArticoloByIdInput,
+): Promise<GetArticoloByIdResult> {
+  try {
+    const client = getPrismaClient() as PrismaClient & {
+      articolo?: {
+        findUnique: (args: unknown) => Promise<{
+          id: number;
+          codiceArticolo: string;
+          nome: string;
+          descrizione: string;
+          categoria: string;
+          fornitoreId: number;
+          prezzoAcquisto: number;
+          prezzoVendita: number;
+          sogliaMinima: number;
+          giacenza: number;
+        } | null>;
+      };
+    };
+
+    if (!client.articolo) {
+      return {
+        ok: false,
+        code: "SERVICE_UNAVAILABLE",
+      };
+    }
+
+    const row = await client.articolo.findUnique({
+      where: { id: payload.articoloId },
+      select: {
+        id: true,
+        codiceArticolo: true,
+        nome: true,
+        descrizione: true,
+        categoria: true,
+        fornitoreId: true,
+        prezzoAcquisto: true,
+        prezzoVendita: true,
+        sogliaMinima: true,
+        giacenza: true,
+      },
+    });
+
+    if (!row) {
+      return {
+        ok: false,
+        code: "NOT_FOUND",
+      };
+    }
+
+    return {
+      ok: true,
+      data: {
+        data: {
+          id: row.id,
+          codiceArticolo: row.codiceArticolo,
+          nome: row.nome,
+          descrizione: row.descrizione,
+          categoria: row.categoria,
+          fornitoreId: row.fornitoreId,
+          prezzoAcquisto: row.prezzoAcquisto,
+          prezzoVendita: row.prezzoVendita,
+          sogliaMinima: row.sogliaMinima,
+          giacenza: row.giacenza,
         },
       },
     };
@@ -4297,6 +4438,21 @@ async function getFornitoreById(
   return getFornitoreByIdInDatabase(parsed.data);
 }
 
+async function getArticoloById(
+  input: GetArticoloByIdInput,
+): Promise<GetArticoloByIdResult> {
+  const parsed = parseGetArticoloByIdInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return getArticoloByIdInTestStore(parsed.data);
+  }
+
+  return getArticoloByIdInDatabase(parsed.data);
+}
+
 async function getClienteById(
   input: GetClienteByIdInput,
 ): Promise<GetClienteByIdResult> {
@@ -4460,6 +4616,7 @@ export {
   createFornitore,
   createArticolo,
   createArticoloMovimento,
+  getArticoloById,
   getFornitoreById,
   getClienteById,
   listFornitoreOrdini,
@@ -4481,6 +4638,8 @@ export {
   type CreateArticoloResult,
   type CreateArticoloMovimentoInput,
   type CreateArticoloMovimentoResult,
+  type GetArticoloByIdInput,
+  type GetArticoloByIdResult,
   type GetFornitoreByIdInput,
   type GetFornitoreByIdResult,
   type GetClienteByIdInput,

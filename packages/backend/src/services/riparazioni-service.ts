@@ -1,5 +1,6 @@
 import { PrismaClient, type Prisma } from "@prisma/client";
 import { getUserRoleForTests } from "./users-service.js";
+import { createArticoloMovimento, getArticoloById } from "./anagrafiche-service.js";
 
 type Priorita = "BASSA" | "NORMALE" | "ALTA";
 
@@ -48,6 +49,13 @@ interface CambiaStatoRiparazioneInput {
   actorRole: unknown;
   stato: unknown;
   note?: unknown;
+}
+
+interface CreateRiparazioneRicambioInput {
+  riparazioneId: unknown;
+  actorUserId: unknown;
+  articoloId: unknown;
+  quantita: unknown;
 }
 
 interface ValidationDetails extends Record<string, unknown> {
@@ -118,6 +126,11 @@ interface RiparazionePreventivoPayload {
 
 interface RiparazioneRicambioPayload {
   id: number;
+  articolo: {
+    id: number;
+    nome: string;
+    codiceArticolo: string;
+  };
   codiceArticolo: string;
   descrizione: string;
   quantita: number;
@@ -147,6 +160,13 @@ interface AssegnaRiparazioneTecnicoPayload {
 interface CambiaStatoRiparazionePayload {
   id: number;
   stato: string;
+}
+
+interface CreateRiparazioneRicambioPayload {
+  id: number;
+  articoloId: number;
+  quantita: number;
+  prezzoUnitario: number;
 }
 
 interface TestRiparazioneRecord extends CreatedRiparazionePayload {
@@ -188,6 +208,17 @@ type ServiceUnavailableFailure = {
   code: "SERVICE_UNAVAILABLE";
 };
 
+type ArticoloNotFoundFailure = {
+  ok: false;
+  code: "ARTICOLO_NOT_FOUND";
+};
+
+type InsufficientStockFailure = {
+  ok: false;
+  code: "INSUFFICIENT_STOCK";
+  message: string;
+};
+
 type CreateRiparazioneResult =
   | { ok: true; data: CreatedRiparazionePayload }
   | ValidationFailure
@@ -216,6 +247,14 @@ type CambiaStatoRiparazioneResult =
   | ValidationFailure
   | NotFoundFailure
   | ForbiddenFailure
+  | ServiceUnavailableFailure;
+
+type CreateRiparazioneRicambioResult =
+  | { ok: true; data: CreateRiparazioneRicambioPayload }
+  | ValidationFailure
+  | NotFoundFailure
+  | ArticoloNotFoundFailure
+  | InsufficientStockFailure
   | ServiceUnavailableFailure;
 
 interface ParsedCreateRiparazioneInput {
@@ -256,6 +295,13 @@ interface ParsedCambiaStatoRiparazioneInput {
   actorRole: string;
   stato: string;
   note?: string;
+}
+
+interface ParsedCreateRiparazioneRicambioInput {
+  riparazioneId: number;
+  actorUserId: number;
+  articoloId: number;
+  quantita: number;
 }
 
 const ALLOWED_PRIORITA: Priorita[] = ["BASSA", "NORMALE", "ALTA"];
@@ -780,6 +826,54 @@ function parseCambiaStatoRiparazioneInput(
   };
 }
 
+function parseCreateRiparazioneRicambioInput(
+  input: CreateRiparazioneRicambioInput,
+):
+  | { ok: true; data: ParsedCreateRiparazioneRicambioInput }
+  | ValidationFailure {
+  const riparazioneId = asPositiveInteger(input.riparazioneId);
+  if (riparazioneId === null) {
+    return buildValidationFailure({
+      field: "riparazioneId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const actorUserId = asPositiveInteger(input.actorUserId);
+  if (actorUserId === null) {
+    return buildValidationFailure({
+      field: "actorUserId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const articoloId = asPositiveInteger(input.articoloId);
+  if (articoloId === null) {
+    return buildValidationFailure({
+      field: "articoloId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const quantita = asPositiveInteger(input.quantita);
+  if (quantita === null) {
+    return buildValidationFailure({
+      field: "quantita",
+      rule: "invalid_integer",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      riparazioneId,
+      actorUserId,
+      articoloId,
+      quantita,
+    },
+  };
+}
+
 function isBaseTransitionAllowed(from: string, to: string): boolean {
   const allowed = BASE_ALLOWED_TRANSITIONS.get(from);
   if (!allowed) {
@@ -895,6 +989,11 @@ function buildTestRicambi(riparazioneId: number): RiparazioneRicambioPayload[] {
   return [
     {
       id: riparazioneId * 1000 + 1,
+      articolo: {
+        id: 5001,
+        nome: "Display OLED",
+        codiceArticolo: "RIC-SCH-001",
+      },
       codiceArticolo: "RIC-SCH-001",
       descrizione: "Display OLED",
       quantita: 1,
@@ -902,6 +1001,11 @@ function buildTestRicambi(riparazioneId: number): RiparazioneRicambioPayload[] {
     },
     {
       id: riparazioneId * 1000 + 2,
+      articolo: {
+        id: 5002,
+        nome: "Batteria 4500mAh",
+        codiceArticolo: "RIC-BAT-002",
+      },
       codiceArticolo: "RIC-BAT-002",
       descrizione: "Batteria 4500mAh",
       quantita: 1,
@@ -909,6 +1013,11 @@ function buildTestRicambi(riparazioneId: number): RiparazioneRicambioPayload[] {
     },
     {
       id: riparazioneId * 1000 + 3,
+      articolo: {
+        id: 5003,
+        nome: "Connettore ricarica",
+        codiceArticolo: "RIC-CON-003",
+      },
       codiceArticolo: "RIC-CON-003",
       descrizione: "Connettore ricarica",
       quantita: 1,
@@ -916,6 +1025,11 @@ function buildTestRicambi(riparazioneId: number): RiparazioneRicambioPayload[] {
     },
     {
       id: riparazioneId * 1000 + 4,
+      articolo: {
+        id: 5004,
+        nome: "Set viti telaio",
+        codiceArticolo: "RIC-VIT-004",
+      },
       codiceArticolo: "RIC-VIT-004",
       descrizione: "Set viti telaio",
       quantita: 8,
@@ -923,6 +1037,11 @@ function buildTestRicambi(riparazioneId: number): RiparazioneRicambioPayload[] {
     },
     {
       id: riparazioneId * 1000 + 5,
+      articolo: {
+        id: 5005,
+        nome: "Guarnizione impermeabile",
+        codiceArticolo: "RIC-GUA-005",
+      },
       codiceArticolo: "RIC-GUA-005",
       descrizione: "Guarnizione impermeabile",
       quantita: 1,
@@ -1323,7 +1442,8 @@ async function getRiparazioneDettaglioInDatabase(
   payload: ParsedGetRiparazioneDettaglioInput,
 ): Promise<GetRiparazioneDettaglioResult> {
   try {
-    const row = await getPrismaClient().riparazione.findUnique({
+    const prisma = getPrismaClient();
+    const row = await prisma.riparazione.findUnique({
       where: { id: payload.riparazioneId },
       select: {
         id: true,
@@ -1388,6 +1508,33 @@ async function getRiparazioneDettaglioInDatabase(
       };
     }
 
+    const articoloModel = prisma as PrismaClient & {
+      articolo?: {
+        findMany: (args: unknown) => Promise<
+          Array<{ id: number; nome: string; codiceArticolo: string }>
+        >;
+      };
+    };
+    const articoliByCodice = new Map<string, { id: number; nome: string; codiceArticolo: string }>();
+    if (articoloModel.articolo && row.ricambi.length > 0) {
+      const codici = Array.from(new Set(row.ricambi.map((entry) => entry.codiceArticolo)));
+      const articoli = await articoloModel.articolo.findMany({
+        where: {
+          codiceArticolo: {
+            in: codici,
+          },
+        },
+        select: {
+          id: true,
+          nome: true,
+          codiceArticolo: true,
+        },
+      });
+      for (const articolo of articoli) {
+        articoliByCodice.set(articolo.codiceArticolo, articolo);
+      }
+    }
+
     return {
       ok: true,
       data: {
@@ -1425,6 +1572,12 @@ async function getRiparazioneDettaglioInDatabase(
             totale: entry.totale,
           })),
           ricambi: row.ricambi.map((entry) => ({
+            articolo: {
+              id: articoliByCodice.get(entry.codiceArticolo)?.id ?? 0,
+              nome:
+                articoliByCodice.get(entry.codiceArticolo)?.nome ?? entry.descrizione,
+              codiceArticolo: entry.codiceArticolo,
+            },
             id: entry.id,
             codiceArticolo: entry.codiceArticolo,
             descrizione: entry.descrizione,
@@ -1708,6 +1861,199 @@ async function cambiaStatoRiparazioneInDatabase(
   }
 }
 
+function normalizeInsufficientStockMessage(message: string, requested: number): string {
+  const matched = message.match(/available\s+(\d+),\s*requested\s+(\d+)/i);
+  if (!matched) {
+    return `Insufficient stock for articolo: available 0, requested ${requested}`;
+  }
+  return `Insufficient stock for articolo: available ${matched[1]}, requested ${matched[2]}`;
+}
+
+async function createRiparazioneRicambioInTestStore(
+  payload: ParsedCreateRiparazioneRicambioInput,
+): Promise<CreateRiparazioneRicambioResult> {
+  const target = testRiparazioni.find((row) => row.id === payload.riparazioneId);
+  if (!target) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  const articoloResult = await getArticoloById({ articoloId: payload.articoloId });
+  if (!articoloResult.ok) {
+    if (articoloResult.code === "NOT_FOUND") {
+      return { ok: false, code: "ARTICOLO_NOT_FOUND" };
+    }
+    return articoloResult;
+  }
+
+  const movementResult = await createArticoloMovimento({
+    actorUserId: payload.actorUserId,
+    articoloId: payload.articoloId,
+    tipo: "SCARICO",
+    quantita: payload.quantita,
+    riferimento: `Riparazione ${target.codiceRiparazione}`,
+  });
+  if (!movementResult.ok) {
+    if (movementResult.code === "NOT_FOUND") {
+      return { ok: false, code: "ARTICOLO_NOT_FOUND" };
+    }
+    if (movementResult.code === "INSUFFICIENT_STOCK") {
+      return {
+        ok: false,
+        code: "INSUFFICIENT_STOCK",
+        message: normalizeInsufficientStockMessage(
+          movementResult.message ?? "",
+          payload.quantita,
+        ),
+      };
+    }
+    return movementResult;
+  }
+
+  const articolo = articoloResult.data.data;
+  const nextId =
+    target.ricambi.reduce((max, row) => Math.max(max, row.id), payload.riparazioneId * 1000) +
+    1;
+  target.ricambi.push({
+    id: nextId,
+    articolo: {
+      id: articolo.id,
+      nome: articolo.nome,
+      codiceArticolo: articolo.codiceArticolo,
+    },
+    codiceArticolo: articolo.codiceArticolo,
+    descrizione: articolo.nome,
+    quantita: payload.quantita,
+    prezzoUnitario: articolo.prezzoVendita,
+  });
+
+  return {
+    ok: true,
+    data: {
+      id: nextId,
+      articoloId: articolo.id,
+      quantita: payload.quantita,
+      prezzoUnitario: articolo.prezzoVendita,
+    },
+  };
+}
+
+async function createRiparazioneRicambioInDatabase(
+  payload: ParsedCreateRiparazioneRicambioInput,
+): Promise<CreateRiparazioneRicambioResult> {
+  try {
+    return await getPrismaClient().$transaction(async (tx: Prisma.TransactionClient) => {
+      const riparazione = await tx.riparazione.findUnique({
+        where: { id: payload.riparazioneId },
+        select: { id: true, codiceRiparazione: true },
+      });
+      if (!riparazione) {
+        return { ok: false as const, code: "NOT_FOUND" as const };
+      }
+
+      const transaction = tx as Prisma.TransactionClient & {
+        articolo?: {
+          findUnique: (args: unknown) => Promise<{
+            id: number;
+            codiceArticolo: string;
+            nome: string;
+            prezzoVendita: number;
+            giacenza: number;
+          } | null>;
+          updateMany: (args: unknown) => Promise<{ count: number }>;
+        };
+      };
+
+      if (!transaction.articolo) {
+        return { ok: false as const, code: "SERVICE_UNAVAILABLE" as const };
+      }
+
+      const articolo = await transaction.articolo.findUnique({
+        where: { id: payload.articoloId },
+        select: {
+          id: true,
+          codiceArticolo: true,
+          nome: true,
+          prezzoVendita: true,
+          giacenza: true,
+        },
+      });
+      if (!articolo) {
+        return { ok: false as const, code: "ARTICOLO_NOT_FOUND" as const };
+      }
+
+      const stockUpdate = await transaction.articolo.updateMany({
+        where: {
+          id: payload.articoloId,
+          giacenza: { gte: payload.quantita },
+        },
+        data: {
+          giacenza: { decrement: payload.quantita },
+        },
+      });
+      if (stockUpdate.count === 0) {
+        const latest = await transaction.articolo.findUnique({
+          where: { id: payload.articoloId },
+          select: { giacenza: true, id: true, codiceArticolo: true, nome: true, prezzoVendita: true },
+        });
+        return {
+          ok: false as const,
+          code: "INSUFFICIENT_STOCK" as const,
+          message: `Insufficient stock for articolo: available ${latest?.giacenza ?? 0}, requested ${payload.quantita}`,
+        };
+      }
+
+      await tx.auditLog.create({
+        data: {
+          userId: payload.actorUserId,
+          action: "UPDATE",
+          modelName: "Articolo",
+          objectId: String(payload.articoloId),
+          dettagli: {
+            new: {
+              movimento: {
+                tipo: "SCARICO",
+                quantita: payload.quantita,
+                riferimento: `Riparazione ${riparazione.codiceRiparazione}`,
+              },
+            },
+          },
+        },
+      });
+
+      const created = await tx.riparazioneRicambio.create({
+        data: {
+          riparazioneId: payload.riparazioneId,
+          codiceArticolo: articolo.codiceArticolo,
+          descrizione: articolo.nome,
+          quantita: payload.quantita,
+          prezzoUnitario: articolo.prezzoVendita,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      return {
+        ok: true as const,
+        data: {
+          id: created.id,
+          articoloId: articolo.id,
+          quantita: payload.quantita,
+          prezzoUnitario: articolo.prezzoVendita,
+        },
+      };
+    });
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
 async function createRiparazione(
   input: CreateRiparazioneInput,
 ): Promise<CreateRiparazioneResult> {
@@ -1783,6 +2129,21 @@ async function cambiaStatoRiparazione(
   return cambiaStatoRiparazioneInDatabase(parsed.data);
 }
 
+async function createRiparazioneRicambio(
+  input: CreateRiparazioneRicambioInput,
+): Promise<CreateRiparazioneRicambioResult> {
+  const parsed = parseCreateRiparazioneRicambioInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return createRiparazioneRicambioInTestStore(parsed.data);
+  }
+
+  return createRiparazioneRicambioInDatabase(parsed.data);
+}
+
 function ensureTestEnvironment(): void {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
@@ -1828,6 +2189,7 @@ function riparazioneExistsForTests(riparazioneId: number): boolean {
 export {
   assegnaRiparazioneTecnico,
   cambiaStatoRiparazione,
+  createRiparazioneRicambio,
   createRiparazione,
   getRiparazioneDettaglio,
   listRiparazioni,
@@ -1838,6 +2200,8 @@ export {
   type AssegnaRiparazioneTecnicoResult,
   type CambiaStatoRiparazioneInput,
   type CambiaStatoRiparazioneResult,
+  type CreateRiparazioneRicambioInput,
+  type CreateRiparazioneRicambioResult,
   type CreateRiparazioneInput,
   type CreateRiparazioneResult,
   type GetRiparazioneDettaglioInput,

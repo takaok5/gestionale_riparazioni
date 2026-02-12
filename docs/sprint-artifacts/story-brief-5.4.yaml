@@ -1,0 +1,34 @@
+target_modules:
+  - packages/backend/src/routes/riparazioni.ts
+  - packages/backend/src/services/riparazioni-service.ts
+  - packages/backend/src/routes/articoli.ts
+  - packages/backend/src/services/anagrafiche-service.ts
+  - packages/backend/prisma/schema.prisma
+  - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts
+
+patterns_to_follow:
+  - "packages/backend/src/routes/riparazioni.ts:254 - detail routes parse path params into typed payload, call service function, map domain failures via a dedicated responder, and return enveloped JSON from result.data"
+  - "packages/backend/src/services/riparazioni-service.ts:1326 - getRiparazioneDettaglioInDatabase uses Prisma select with nested relations and maps rows to API payload objects to keep response shape deterministic"
+  - "packages/backend/src/routes/articoli.ts:234 - movimenti endpoint uses authenticate+authorize, builds payload from params/body/user, and delegates stock/error semantics to service layer"
+  - "packages/backend/src/services/anagrafiche-service.ts:2750 - createArticoloMovimentoInDatabase wraps stock update plus movement insert in a transaction and returns domain-coded failures used by route mappers"
+  - "packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts:163 - ATDD pattern seeds deterministic data, calls API endpoint via supertest, then asserts exact array shapes/field contracts for preventivi and ricambi"
+
+dependencies:
+  - "packages/backend/src/index.ts mounts riparazioniRouter at /api/riparazioni and articoliRouter at /api/articoli"
+  - "packages/backend/src/routes/riparazioni.ts depends on riparazioni-service for detail/state/create flows"
+  - "packages/backend/src/services/riparazioni-service.ts depends on Prisma models Riparazione and RiparazioneRicambio (packages/backend/prisma/schema.prisma)"
+  - "packages/backend/src/routes/articoli.ts depends on createArticoloMovimento from anagrafiche-service for stock movements"
+  - "packages/backend/src/services/anagrafiche-service.ts is the current stock movement authority used to enforce insufficient-stock behavior"
+
+risks:
+  - "Consistency risk: linking a ricambio without an atomic stock decrement + movement creation can leave riparazione linkage and magazzino state diverged"
+  - "Contract risk: AC-3 requires GET /api/riparazioni/:id to expose ricambi with articolo {id,nome,codiceArticolo}; current payload shape uses flat fields and needs careful backward-compatible update"
+  - "Error-mapping risk: AC-2 and AC-4 require exact 400/404 semantics and messages (Insufficient stock..., ARTICOLO_NOT_FOUND); mismatches break ATDD and clients"
+  - "Price snapshot risk: prezzoUnitario must be captured at assignment time from articolo.prezzoVendita; reading dynamic price later would invalidate historical totals"
+  - "Regression risk: touching riparazioni detail projection can break existing tests for preventivi/statiHistory if select/mapping is altered incorrectly"
+
+existing_tests:
+  - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts
+  - packages/backend/src/__tests__/articoli-movimenti-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-list-filter-atdd.spec.ts

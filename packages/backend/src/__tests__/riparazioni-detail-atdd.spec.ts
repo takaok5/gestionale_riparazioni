@@ -197,8 +197,11 @@ describe("AC-3 - Preventivi e ricambi nel dettaglio", () => {
       expect(ricambio).toEqual(
         expect.objectContaining({
           id: expect.any(Number),
-          codiceArticolo: expect.any(String),
-          descrizione: expect.any(String),
+          articolo: expect.objectContaining({
+            id: expect.any(Number),
+            nome: expect.any(String),
+            codiceArticolo: expect.any(String),
+          }),
           quantita: expect.any(Number),
           prezzoUnitario: expect.any(Number),
         }),

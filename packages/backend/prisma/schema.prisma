@@ -98,6 +98,7 @@ model Articolo {
   giacenza       Int       @default(0)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  ricambiUsati   RiparazioneRicambio[]
 
   @@index([fornitoreId])
 }
@@ -207,6 +208,8 @@ model RiparazioneRicambio {
   id            Int         @id @default(autoincrement())
   riparazioneId Int
   riparazione   Riparazione @relation(fields: [riparazioneId], references: [id])
+  articoloId    Int?
+  articolo      Articolo?   @relation(fields: [articoloId], references: [id])
   codiceArticolo String
   descrizione   String
   quantita      Int
@@ -215,4 +218,5 @@ model RiparazioneRicambio {
   updatedAt     DateTime    @updatedAt
 
   @@index([riparazioneId])
+  @@index([articoloId])
 }

@@ -8,6 +8,9 @@ import {
   cambiaStatoRiparazione,
   type CambiaStatoRiparazioneInput,
   type CambiaStatoRiparazioneResult,
+  createRiparazioneRicambio,
+  type CreateRiparazioneRicambioInput,
+  type CreateRiparazioneRicambioResult,
   createRiparazione,
   type CreateRiparazioneInput,
   type CreateRiparazioneResult,
@@ -43,6 +46,11 @@ type AssegnaRiparazioneTecnicoFailure = Exclude<
 
 type CambiaStatoRiparazioneFailure = Exclude<
   CambiaStatoRiparazioneResult,
+  { ok: true; data: unknown }
+>;
+
+type CreateRiparazioneRicambioFailure = Exclude<
+  CreateRiparazioneRicambioResult,
   { ok: true; data: unknown }
 >;
 
@@ -230,6 +238,56 @@ function respondCambiaStatoRiparazioneFailure(
     );
 }
 
+function respondCreateRiparazioneRicambioFailure(
+  res: Response,
+  result: CreateRiparazioneRicambioFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Payload non valido",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "NOT_FOUND") {
+    res
+      .status(404)
+      .json(
+        buildErrorResponse("RIPARAZIONE_NOT_FOUND", "Riparazione non trovata"),
+      );
+    return;
+  }
+
+  if (result.code === "ARTICOLO_NOT_FOUND") {
+    res
+      .status(404)
+      .json(buildErrorResponse("ARTICOLO_NOT_FOUND", "ARTICOLO_NOT_FOUND"));
+    return;
+  }
+
+  if (result.code === "INSUFFICIENT_STOCK") {
+    res
+      .status(400)
+      .json(buildErrorResponse("INSUFFICIENT_STOCK", result.message));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "RIPARAZIONI_SERVICE_UNAVAILABLE",
+        "Servizio riparazioni non disponibile",
+      ),
+    );
+}
+
 riparazioniRouter.get("/", authenticate, async (req, res) => {
   const payload: ListRiparazioniInput = {
     page: req.query.page,
@@ -324,5 +382,27 @@ riparazioniRouter.post("/", authenticate, async (req, res) => {
 
   res.status(201).json(result.data);
 });
+
+riparazioniRouter.post(
+  "/:id/ricambi",
+  authenticate,
+  authorize("TECNICO", "ADMIN"),
+  async (req, res) => {
+    const payload: CreateRiparazioneRicambioInput = {
+      riparazioneId: req.params.id,
+      actorUserId: req.user?.userId,
+      articoloId: req.body?.articoloId,
+      quantita: req.body?.quantita,
+    };
+
+    const result = await createRiparazioneRicambio(payload);
+    if (!result.ok) {
+      respondCreateRiparazioneRicambioFailure(res, result);
+      return;
+    }
+
+    res.status(201).json({ data: result.data });
+  },
+);
 
 export { riparazioniRouter };
