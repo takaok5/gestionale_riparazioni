@@ -1,6 +1,18 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
+
+SERVICE_DETAILS = {
+    "sostituzione-display": {
+        "title": "Sostituzione display",
+        "summary": "Diagnosi avanzata e sostituzione display per smartphone.",
+        "description": "Ricambi originali, test touch e luminosita con collaudo finale.",
+        "price_from": "da 99 EUR",
+        "average_duration": "2-3 giorni",
+    }
+}
+
+INACTIVE_SERVICE_SLUGS = {"riparazione-legacy"}
 
 def home_view(request):
     return HttpResponse(
@@ -37,9 +49,42 @@ def home_view(request):
 """
     )
 
+def service_detail_view(request, slug):
+    normalized_slug = slug.strip().lower()
+    if normalized_slug in INACTIVE_SERVICE_SLUGS:
+        raise Http404("Service not found")
+
+    service = SERVICE_DETAILS.get(normalized_slug)
+    if service is None:
+        raise Http404("Service not found")
+
+    return HttpResponse(
+        f"""
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{service['title']} - Gestionale Riparazioni</title>
+  </head>
+  <body>
+    <main>
+      <h1>{service['title']}</h1>
+      <p>{service['summary']}</p>
+      <p>{service['description']}</p>
+      <p>{service['price_from']}</p>
+      <p>{service['average_duration']}</p>
+    </main>
+  </body>
+</html>
+"""
+    )
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('anagrafiche/', include('anagrafiche.urls', namespace='anagrafiche')),
     path('', home_view, name='home'),  # Cambiato da 'home/' a '' per la root
+    path('servizi/<slug:slug>', service_detail_view, name='service-detail'),
+    path('servizi/<slug:slug>/', service_detail_view, name='service-detail-slash'),
     path('auth/', include('authsystem.urls')),
 ]

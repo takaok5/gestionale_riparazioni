@@ -1,0 +1,47 @@
+story_id: "9.2"
+story_title: "Catalogo Servizi Pubblico"
+acceptance_criteria:
+  - "AC-1: Given 8 active services exist When I GET /api/public/services Then I receive 8 service cards with slug, title, summary, priceFrom, and averageDuration"
+  - "AC-2: Given services contain categories smartphone and laptop When I GET /api/public/services?categoria=smartphone Then I receive only smartphone-related entries"
+  - "AC-3: Given service slug sostituzione-display exists When I open /servizi/sostituzione-display Then I see full service detail page"
+  - "AC-4: Given service is marked inactive When I request its public slug Then I receive 404"
+
+target_modules:
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/index.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/anagrafiche-service.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/prisma/schema.prisma"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/frontend/src/App.tsx"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/frontend/src/main.tsx"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/gestionale_riparazioni/urls.py"
+
+patterns_to_follow:
+  - "Express router mounting pattern in packages/backend/src/index.ts:29"
+  - "Query payload parsing and list response pattern in packages/backend/src/routes/fornitori.ts:210"
+  - "Validation error mapping with buildErrorResponse in packages/backend/src/routes/fornitori.ts:115"
+  - "Category enum normalization for query filters in packages/backend/src/services/anagrafiche-service.ts:2214"
+  - "List parser with page/limit/search/categoria validation in packages/backend/src/services/anagrafiche-service.ts:2241"
+  - "Database where-builder with optional categoria filter in packages/backend/src/services/anagrafiche-service.ts:5235"
+  - "Test-vs-database execution split in service entrypoint in packages/backend/src/services/anagrafiche-service.ts:5630"
+  - "Service cards structure (title, price, average time) in packages/frontend/src/App.tsx:1"
+  - "Frontend ATDD assertion style for public vetrina sections in packages/frontend/src/__tests__/public-home-vetrina.atdd.spec.ts:21"
+  - "Django public route declaration pattern in gestionale_riparazioni/urls.py:40"
+
+dependencies:
+  - "packages/backend/src/index.ts mounts all API routers and is required to expose any new /api/public/* entrypoint"
+  - "packages/backend/src/services/anagrafiche-service.ts currently provides validated list/filter flow and test fixtures reused by existing ATDD tests"
+  - "packages/backend/prisma/schema.prisma currently has Fornitore/Articolo but no dedicated ServizioVetrina model"
+  - "packages/frontend/src/__tests__/public-home-vetrina.atdd.spec.ts imports App directly, so page-level changes must preserve render stability"
+  - "gestionale_riparazioni/urls.py currently owns public route / and may need alignment if /servizi/:slug is served by Django"
+
+risks:
+  - "No dedicated public services module exists yet in backend routes/services; creating it without reusing existing validation/error contracts can break API consistency"
+  - "Prisma schema has no service catalog entity with slug/active/category fields, so AC-1/AC-4 require model and migration decisions"
+  - "Dual-stack public surface (Django routes plus React app) can cause route ownership conflicts for /servizi/:slug"
+  - "Public endpoints must remain unauthenticated, unlike most existing routers that enforce authenticate/authorize guards"
+  - "Inactive-service 404 behavior can regress if slug lookup does not enforce attivo=true before returning details"
+
+existing_tests:
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/fornitori-list-search-atdd.spec.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/articoli-list-search-alert-atdd.spec.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/frontend/src/__tests__/public-home-vetrina.atdd.spec.ts"
+  - "no existing backend test files currently target /api/public/services"

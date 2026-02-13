@@ -36,7 +36,77 @@ const trustBlocks = [
   },
 ] as const;
 
-function App() {
+const serviceDetails = {
+  "sostituzione-display": {
+    slug: "sostituzione-display",
+    title: "Sostituzione display",
+    summary: "Diagnosi avanzata e sostituzione display per smartphone e laptop.",
+    description:
+      "Ricambi originali, test touch e luminosita, collaudo finale su sensori e fotocamere.",
+    priceFrom: "da 99 EUR",
+    averageDuration: "2-3 giorni",
+    categoria: "smartphone",
+  },
+} as const;
+
+type AppProps = {
+  path?: string;
+};
+
+function getServiceSlugFromPath(path: string): string | null {
+  const match = /^\/servizi\/([^/]+)\/?$/.exec(path);
+  if (!match) {
+    return null;
+  }
+
+  return decodeURIComponent(match[1]);
+}
+
+function App({ path = "/" }: AppProps) {
+  const detailSlug = getServiceSlugFromPath(path);
+  if (detailSlug) {
+    const detail = serviceDetails[detailSlug as keyof typeof serviceDetails];
+    if (!detail) {
+      return (
+        <div className="min-h-screen bg-slate-50 text-slate-900">
+          <main className="mx-auto max-w-screen-md px-4 py-16 sm:px-6 lg:px-8">
+            <section className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-100">
+              <h1 className="text-2xl font-bold">Servizio non disponibile</h1>
+              <p className="mt-3 text-sm text-slate-600">
+                Il servizio richiesto non e disponibile pubblicamente.
+              </p>
+            </section>
+          </main>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900">
+        <main className="mx-auto max-w-screen-md px-4 py-12 sm:px-6 lg:px-8">
+          <section className="rounded-3xl bg-white p-7 shadow-sm ring-1 ring-slate-100 sm:p-10">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              servizio: {detail.slug}
+            </p>
+            <h1 className="mt-3 text-3xl font-bold">{detail.title}</h1>
+            <p className="mt-4 text-base text-slate-600">{detail.summary}</p>
+            <p className="mt-4 text-sm text-slate-700">{detail.description}</p>
+            <dl className="mt-6 grid gap-4 rounded-2xl bg-slate-100 p-5 text-sm text-slate-800 sm:grid-cols-2">
+              <div>
+                <dt className="font-semibold">Prezzo indicativo</dt>
+                <dd>{detail.priceFrom}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold">Tempo medio</dt>
+                <dd>{detail.averageDuration}</dd>
+              </div>
+            </dl>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur">

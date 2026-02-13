@@ -181,6 +181,14 @@ interface ListClienteRiparazioniInput {
   clienteId: unknown;
 }
 
+interface ListPublicServicesInput {
+  categoria: unknown;
+}
+
+interface GetPublicServiceBySlugInput {
+  slug: unknown;
+}
+
 interface AuditLogDettagli {
   old: Record<string, unknown>;
   new: Record<string, unknown>;
@@ -233,6 +241,36 @@ interface ClienteRiparazioneItem {
   stato: string;
   dataRicezione: string;
   tipoDispositivo: string;
+}
+
+interface PublicServiceRecord {
+  slug: string;
+  title: string;
+  summary: string;
+  description: string;
+  priceFrom: string;
+  averageDuration: string;
+  categoria: string;
+  attivo: boolean;
+}
+
+interface PublicServiceListItem {
+  slug: string;
+  title: string;
+  summary: string;
+  priceFrom: string;
+  averageDuration: string;
+  categoria: string;
+}
+
+interface PublicServiceDetailPayload {
+  slug: string;
+  title: string;
+  summary: string;
+  description: string;
+  priceFrom: string;
+  averageDuration: string;
+  categoria: string;
 }
 
 interface ClienteListPayload {
@@ -508,6 +546,17 @@ type ListClienteRiparazioniResult =
   | NotFoundFailure
   | ServiceUnavailableFailure;
 
+type ListPublicServicesResult =
+  | { ok: true; data: { data: PublicServiceListItem[] } }
+  | ValidationFailure
+  | ServiceUnavailableFailure;
+
+type GetPublicServiceBySlugResult =
+  | { ok: true; data: { data: PublicServiceDetailPayload } }
+  | ValidationFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
 type ListFornitoreOrdiniResult =
   | { ok: true; data: { data: FornitoreOrdineItem[] } }
   | ValidationFailure
@@ -642,6 +691,14 @@ interface ParsedUpdateClienteInput {
 
 interface ParsedListClienteRiparazioniInput {
   clienteId: number;
+}
+
+interface ParsedListPublicServicesInput {
+  categoria?: string;
+}
+
+interface ParsedGetPublicServiceBySlugInput {
+  slug: string;
 }
 
 interface TestClienteRecord {
@@ -883,6 +940,111 @@ const baseTestAuditLogs: AuditLogListItem[] = [
         telefono: "0211122233",
       },
     },
+  },
+];
+
+const PUBLIC_SERVICE_CATEGORIES = new Set(["smartphone", "laptop"]);
+const PUBLIC_SERVICE_SLUG_PATTERN = /^[a-z0-9-]+$/;
+
+const publicServiceCatalog: PublicServiceRecord[] = [
+  {
+    slug: "sostituzione-display",
+    title: "Sostituzione display",
+    summary: "Diagnosi avanzata e sostituzione display per smartphone.",
+    description:
+      "Ricambi originali, test touch e luminosita, collaudo finale su sensori e fotocamere.",
+    priceFrom: "da 99 EUR",
+    averageDuration: "2-3 giorni",
+    categoria: "smartphone",
+    attivo: true,
+  },
+  {
+    slug: "sostituzione-batteria",
+    title: "Sostituzione batteria",
+    summary: "Ripristino autonomia con verifica cicli e salute batteria.",
+    description:
+      "Sostituzione batteria con test di carica/scarica e calibrazione finale.",
+    priceFrom: "da 69 EUR",
+    averageDuration: "1 giorno",
+    categoria: "smartphone",
+    attivo: true,
+  },
+  {
+    slug: "diagnosi-software",
+    title: "Diagnosi software",
+    summary: "Analisi blocchi, crash e consumo anomalo risorse.",
+    description:
+      "Diagnosi completa con report su app problematiche, storage e stabilita sistema.",
+    priceFrom: "da 39 EUR",
+    averageDuration: "24 ore",
+    categoria: "smartphone",
+    attivo: true,
+  },
+  {
+    slug: "recupero-dati-smartphone",
+    title: "Recupero dati smartphone",
+    summary: "Recupero foto, contatti e documenti da dispositivi danneggiati.",
+    description:
+      "Procedura assistita con imaging, analisi file system e consegna backup.",
+    priceFrom: "da 129 EUR",
+    averageDuration: "2-4 giorni",
+    categoria: "smartphone",
+    attivo: true,
+  },
+  {
+    slug: "upgrade-ssd-laptop",
+    title: "Upgrade SSD laptop",
+    summary: "Sostituzione disco con clonazione sistema operativo.",
+    description:
+      "Installazione SSD, migrazione dati e verifica prestazioni post-upgrade.",
+    priceFrom: "da 149 EUR",
+    averageDuration: "2 giorni",
+    categoria: "laptop",
+    attivo: true,
+  },
+  {
+    slug: "sostituzione-tastiera-laptop",
+    title: "Sostituzione tastiera laptop",
+    summary: "Ricambio tastiera con verifica tasti e retroilluminazione.",
+    description:
+      "Sostituzione modulo tastiera, test input completo e pulizia interna base.",
+    priceFrom: "da 89 EUR",
+    averageDuration: "1-2 giorni",
+    categoria: "laptop",
+    attivo: true,
+  },
+  {
+    slug: "pulizia-termica-laptop",
+    title: "Pulizia termica laptop",
+    summary: "Riduzione temperature con manutenzione dissipazione.",
+    description:
+      "Pulizia ventole, sostituzione pasta termica e stress test finale.",
+    priceFrom: "da 79 EUR",
+    averageDuration: "1 giorno",
+    categoria: "laptop",
+    attivo: true,
+  },
+  {
+    slug: "reinstallazione-sistema-laptop",
+    title: "Reinstallazione sistema laptop",
+    summary: "Ripristino sistema operativo con ottimizzazione driver.",
+    description:
+      "Installazione pulita, aggiornamenti sicurezza e configurazione base.",
+    priceFrom: "da 59 EUR",
+    averageDuration: "24-48 ore",
+    categoria: "laptop",
+    attivo: true,
+  },
+  {
+    slug: "riparazione-legacy",
+    title: "Riparazione legacy",
+    summary: "Servizio storico non piu esposto in catalogo pubblico.",
+    description:
+      "Servizio dismesso mantenuto solo per storico interno e non prenotabile.",
+    priceFrom: "da 49 EUR",
+    averageDuration: "variabile",
+    categoria: "smartphone",
+    attivo: false,
   },
 ];
 
@@ -5757,6 +5919,157 @@ async function listClienteRiparazioni(
   return listClienteRiparazioniInDatabase(parsed.data);
 }
 
+function normalizePublicServiceCategory(
+  value: unknown,
+): string | null | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  if (!PUBLIC_SERVICE_CATEGORIES.has(normalized)) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function parseListPublicServicesInput(
+  input: ListPublicServicesInput,
+):
+  | { ok: true; data: ParsedListPublicServicesInput }
+  | ValidationFailure {
+  const categoria = normalizePublicServiceCategory(input.categoria);
+  if (categoria === null) {
+    return buildValidationFailure({
+      field: "categoria",
+      rule: "invalid_enum",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      categoria,
+    },
+  };
+}
+
+function parseGetPublicServiceBySlugInput(
+  input: GetPublicServiceBySlugInput,
+):
+  | { ok: true; data: ParsedGetPublicServiceBySlugInput }
+  | ValidationFailure {
+  if (typeof input.slug !== "string" || !input.slug.trim()) {
+    return buildValidationFailure({
+      field: "slug",
+      rule: "invalid_string",
+    });
+  }
+
+  const normalizedSlug = input.slug.trim().toLowerCase();
+  if (!PUBLIC_SERVICE_SLUG_PATTERN.test(normalizedSlug)) {
+    return buildValidationFailure({
+      field: "slug",
+      rule: "invalid_format",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      slug: normalizedSlug,
+    },
+  };
+}
+
+async function listPublicServices(
+  input: ListPublicServicesInput,
+): Promise<ListPublicServicesResult> {
+  const parsed = parseListPublicServicesInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  try {
+    const rows = publicServiceCatalog
+      .filter((service) => service.attivo)
+      .filter((service) =>
+        parsed.data.categoria ? service.categoria === parsed.data.categoria : true,
+      )
+      .sort((left, right) => left.slug.localeCompare(right.slug))
+      .map((service) => ({
+        slug: service.slug,
+        title: service.title,
+        summary: service.summary,
+        priceFrom: service.priceFrom,
+        averageDuration: service.averageDuration,
+        categoria: service.categoria,
+      }));
+
+    return {
+      ok: true,
+      data: {
+        data: rows,
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function getPublicServiceBySlug(
+  input: GetPublicServiceBySlugInput,
+): Promise<GetPublicServiceBySlugResult> {
+  const parsed = parseGetPublicServiceBySlugInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  try {
+    const found = publicServiceCatalog.find(
+      (service) => service.slug === parsed.data.slug,
+    );
+    if (!found || !found.attivo) {
+      return {
+        ok: false,
+        code: "NOT_FOUND",
+      };
+    }
+
+    return {
+      ok: true,
+      data: {
+        data: {
+          slug: found.slug,
+          title: found.title,
+          summary: found.summary,
+          description: found.description,
+          priceFrom: found.priceFrom,
+          averageDuration: found.averageDuration,
+          categoria: found.categoria,
+        },
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
 function resetAnagraficheStoreForTests(): void {
   ensureTestEnvironment();
   testClienti = cloneTestClienti(baseTestClienti);
@@ -5948,6 +6261,8 @@ export {
   listArticoli,
   listArticoliAlert,
   listClienteRiparazioni,
+  listPublicServices,
+  getPublicServiceBySlug,
   resetAnagraficheStoreForTests,
   seedClienteForTests,
   seedFornitoreDetailScenarioForTests,
@@ -5989,4 +6304,8 @@ export {
   type ListFornitoreOrdiniResult,
   type ListClienteRiparazioniInput,
   type ListClienteRiparazioniResult,
+  type ListPublicServicesInput,
+  type ListPublicServicesResult,
+  type GetPublicServiceBySlugInput,
+  type GetPublicServiceBySlugResult,
 };

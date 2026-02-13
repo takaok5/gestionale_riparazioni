@@ -114,6 +114,23 @@ model Articolo {
   @@index([fornitoreId])
 }
 
+model ServizioVetrina {
+  id                  Int      @id @default(autoincrement())
+  slug                String   @unique
+  title               String
+  summary             String
+  description         String
+  priceFrom           String
+  averageDuration     String
+  categoria           String
+  attivo              Boolean  @default(true)
+  ordineVisualizzazione Int    @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([attivo, ordineVisualizzazione])
+}
+
 model OrdineFornitore {
   id           Int       @id @default(autoincrement())
   fornitoreId  Int

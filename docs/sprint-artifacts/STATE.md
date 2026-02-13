@@ -2,20 +2,20 @@
 
 ## Current Story
 
-**Story:** 9.1
-**Step:** 10
-**Status:** complete
+**Story:** 9.2
+**Step:** 9
+**Status:** in_progress
 
 ## Progress
 
 
-[##########] 100%
+[#########-] 90%
 
 
 ## Session
 
-- **Last activity:** 2026-02-13T23:10:33+01:00
-- **Resume from:** step 10 (completed)
+- **Last activity:** 2026-02-13T23:48:22+01:00
+- **Resume from:** step 9
 
 ---
 *Auto-updated by story-pipeline*
