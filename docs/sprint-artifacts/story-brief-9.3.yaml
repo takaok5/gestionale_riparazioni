@@ -1,0 +1,36 @@
+story_title: "Pagine Contatti e FAQ"
+acceptance_criteria:
+  - id: AC-1
+    text: "Given I open `/contatti` Then page displays phone, email, opening hours, and map/embed placeholder"
+  - id: AC-2
+    text: "Given I open `/faq` Then I see categorized questions with expandable answers"
+  - id: AC-3
+    text: "Given contact details are updated in backoffice/public config Then both pages reflect updated data without code change"
+  - id: AC-4
+    text: "Given I navigate from home to FAQ and back Then navigation remains consistent and breadcrumb/title are correct"
+target_modules:
+  - packages/frontend/src/App.tsx
+  - packages/frontend/src/__tests__/public-home-vetrina.atdd.spec.ts
+  - packages/backend/src/routes/public.ts
+  - packages/backend/src/services/anagrafiche-service.ts
+  - packages/backend/src/__tests__/public-services-api.atdd.spec.ts
+patterns_to_follow:
+  - file: packages/frontend/src/App.tsx
+    line: 119-197
+    pattern: "Hero + service/trust layout uses grid/spacing classes, CTA buttons, and flush sections; reuse this spacing and text hierarchy when rendering the /contatti and /faq flows."
+  - file: packages/backend/src/routes/public.ts
+    line: 1-116
+    pattern: "Public router handles success/failure through dedicated response helpers that emit status codes, buildErrorResponse, and keep the JSON payload shape consistent; follow the same structure for /pages/:slug and /faq."
+  - file: packages/backend/src/services/anagrafiche-service.ts
+    line: 6004-6039
+    pattern: "listPublicServices parses input, filters by categoria, sorts, maps only the published fields, and wraps results in { ok: true, data }; new contact/FAQ services should follow this validate/filter/try/catch flow."
+dependencies:
+  - "packages/frontend/src/main.tsx -> imports { App } from App.tsx and bootstraps the SPA, so new routes must coexist with the path detection before render."
+  - "packages/backend/src/index.ts -> mounts /api/public with publicRouter, so new endpoints become available through the same router once attached."
+  - "packages/backend/src/routes/public.ts -> already imports listPublicServices/getPublicServiceBySlug from services/anagrafiche-service.ts, so contact/FAQ handlers will reuse its helpers/response helpers."
+risks:
+  - "Branching App.tsx toward /contatti and /faq without isolating the service-detail logic could regress /servizi/* rendering; keep the slug matcher ahead of any new route checks."
+  - "Contact/FAQ data relying on backoffice/public config could go stale or be missing; we need validation/defaults so empty config doesn’t surface empty sections or runtime errors."
+existing_tests:
+  - packages/frontend/src/__tests__/public-home-vetrina.atdd.spec.ts
+  - packages/backend/src/__tests__/public-services-api.atdd.spec.ts
