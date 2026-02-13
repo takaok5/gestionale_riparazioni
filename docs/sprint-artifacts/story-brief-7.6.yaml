@@ -1,0 +1,34 @@
+story_id: '7.6'
+story_title: 'Pagamento Online (Stripe)'
+
+acceptance_criteria:
+  - "Given fattura id=8 with totale 244.00 EUR and stato EMESSA When I POST /api/pagamenti/crea-link/8 Then Stripe Checkout session is created, I receive 200 with { paymentUrl, sessionId }."
+  - "Given fattura stato is PAGATA When I POST /api/pagamenti/crea-link/8 Then I receive 400 with error 'Invoice is already paid'."
+  - "Given Stripe sends webhook event checkout.session.completed with metadata.fatturaId=8 When I POST /api/webhooks/stripe Then system auto-creates Pagamento entry, marks fattura.stato PAGATA, and returns 200."
+  - "Given Stripe webhook signature is invalid When I POST /api/webhooks/stripe Then I receive 400 'Invalid signature'."
+  - "Given payment already recorded for sessionId When I POST /api/webhooks/stripe with duplicate event Then system ignores duplicate and returns 200."
+
+target_modules:
+  - 'packages/backend/src/routes/fatture.ts'
+  - 'packages/backend/src/services/fatture-service.ts'
+  - 'packages/backend/src/services/stripe.service.ts (no existing file found)'
+  - 'packages/backend/src/routes/pagamenti.ts (no existing file found)'
+  - 'packages/backend/src/webhooks/stripe.ts (no existing file found)'
+
+patterns_to_follow:
+  - 'packages/backend/src/routes/fatture.ts:305 - payload construction + createPagamento call + respondCreatePagamentoFailure mapping'
+  - 'packages/backend/src/services/fatture-service.ts:641 - createPagamento validation/overpayment/result-shape handling'
+
+dependencies:
+  - 'packages/backend/src/index.ts mounts routers and must expose /api/pagamenti and /api/webhooks/stripe'
+  - 'packages/backend/src/routes/fatture.ts uses createPagamento and is the reference pattern for validation/error mapping'
+  - 'packages/backend/src/__tests__/fatture-pagamenti-atdd.spec.ts imports fatture service helpers and must remain compatible'
+
+risks:
+  - 'Race conditions between manual payments and Stripe webhook events can duplicate payments without idempotency and status checks.'
+  - 'Missing Stripe webhook secret/configuration can reject all webhook events in production.'
+  - 'Mixing Stripe-specific parsing/verification into generic modules can increase coupling and maintenance risk.'
+
+existing_tests:
+  - 'packages/backend/src/__tests__/fatture-pagamenti-atdd.spec.ts'
+  - 'packages/backend/src/__tests__/fatture-lista-dettaglio-atdd.spec.ts'
