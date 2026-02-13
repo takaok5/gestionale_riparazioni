@@ -34,6 +34,25 @@ interface GetReportMagazzinoInput {
   actorRole: unknown;
 }
 
+interface GetReportExportRiparazioniInput {
+  actorUserId: unknown;
+  actorRole: unknown;
+  dateFrom?: unknown;
+  dateTo?: unknown;
+}
+
+interface GetReportExportFinanziariInput {
+  actorUserId: unknown;
+  actorRole: unknown;
+  dateFrom?: unknown;
+  dateTo?: unknown;
+}
+
+interface GetReportExportMagazzinoInput {
+  actorUserId: unknown;
+  actorRole: unknown;
+}
+
 interface ValidationDetails extends Record<string, unknown> {
   field: string;
   rule: string;
@@ -83,6 +102,24 @@ type GetReportFinanziariResult =
 
 type GetReportMagazzinoResult =
   | { ok: true; data: ReportMagazzinoPayload }
+  | ReportFailure;
+
+interface CsvExportPayload {
+  fileName: string;
+  contentType: "text/csv";
+  csv: string;
+}
+
+type GetReportExportRiparazioniResult =
+  | { ok: true; data: CsvExportPayload }
+  | ReportFailure;
+
+type GetReportExportFinanziariResult =
+  | { ok: true; data: CsvExportPayload }
+  | ReportFailure;
+
+type GetReportExportMagazzinoResult =
+  | { ok: true; data: CsvExportPayload }
   | ReportFailure;
 
 interface ParsedInput {
@@ -526,6 +563,34 @@ function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+function csvEscape(value: unknown): string {
+  const raw = String(value ?? "");
+  const sanitized = /^[=+\-@]/.test(raw) ? `'${raw}` : raw;
+  const escaped = sanitized.replaceAll("\"", "\"\"");
+  return `"${escaped}"`;
+}
+
+function buildCsv(headers: string[], rows: string[][]): string {
+  const lines = [headers.join(",")];
+  for (const row of rows) {
+    lines.push(row.map((value) => csvEscape(value)).join(","));
+  }
+  return lines.join("\n");
+}
+
+function reportDateRangeSuffix(dateFrom?: string, dateTo?: string): string {
+  if (dateFrom && dateTo) {
+    return `${dateFrom}_${dateTo}`;
+  }
+  if (dateFrom) {
+    return `${dateFrom}_to`;
+  }
+  if (dateTo) {
+    return `to_${dateTo}`;
+  }
+  return "all";
+}
+
 async function fetchDetails(
   rows: ListedRiparazione[],
 ): Promise<{ ok: true; data: RiparazioneDettaglio[] } | ReportFailure> {
@@ -745,10 +810,273 @@ async function getReportMagazzino(
   };
 }
 
+async function getReportExportRiparazioni(
+  input: GetReportExportRiparazioniInput,
+): Promise<GetReportExportRiparazioniResult> {
+  const parsed = parseInput({
+    actorUserId: input.actorUserId,
+    actorRole: input.actorRole,
+    dateFrom: input.dateFrom,
+    dateTo: input.dateTo,
+  });
+  if (!parsed.ok) {
+    return parsed;
+  }
+  const filters = parsed.data;
+
+  if (filters.actorRole !== "ADMIN") {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      message: "Admin only",
+    };
+  }
+
+  const rowsResult = await fetchAllRiparazioni({
+    dateFrom: filters.dateFrom,
+    dateTo: filters.dateTo,
+  });
+  if (!rowsResult.ok) {
+    return rowsResult;
+  }
+
+  const detailsResult = await fetchDetails(rowsResult.data);
+  if (!detailsResult.ok) {
+    return detailsResult;
+  }
+
+  const detailsById = new Map<number, RiparazioneDettaglio>(
+    detailsResult.data.map((detail) => [detail.id, detail]),
+  );
+
+  const headers = [
+    "codiceRiparazione",
+    "cliente",
+    "tecnico",
+    "stato",
+    "dataRicezione",
+    "dataCompletamento",
+  ];
+
+  const csvRows = rowsResult.data.map((row) => {
+    const detail = detailsById.get(row.id);
+    const completionState = detail?.statiHistory
+      ?.filter((entry) => entry.stato === "COMPLETATA")
+      .sort((left, right) => right.dataOra.localeCompare(left.dataOra))[0];
+    const tecnicoName = detail?.tecnico.id && detail.tecnico.id > 0
+      ? detail.tecnico.username
+      : "";
+    return [
+      row.codiceRiparazione,
+      detail?.cliente.nome ?? "",
+      tecnicoName,
+      row.stato,
+      row.dataRicezione.slice(0, 10),
+      completionState?.dataOra.slice(0, 10) ?? "",
+    ];
+  });
+
+  return {
+    ok: true,
+    data: {
+      fileName: `report-riparazioni-${reportDateRangeSuffix(filters.dateFrom, filters.dateTo)}.csv`,
+      contentType: "text/csv",
+      csv: buildCsv(headers, csvRows),
+    },
+  };
+}
+
+async function getReportExportFinanziari(
+  input: GetReportExportFinanziariInput,
+): Promise<GetReportExportFinanziariResult> {
+  const parsed = parseInput({
+    actorUserId: input.actorUserId,
+    actorRole: input.actorRole,
+    dateFrom: input.dateFrom,
+    dateTo: input.dateTo,
+  });
+  if (!parsed.ok) {
+    return parsed;
+  }
+  const filters = parsed.data;
+
+  if (filters.actorRole !== "ADMIN") {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      message: "Admin only",
+    };
+  }
+
+  let page = 1;
+  const limit = 100;
+  const fattureRows: Array<{
+    numeroFattura: string;
+    riparazioneId: number;
+    stato: string;
+    totale: number;
+    dataEmissione: string;
+    totalePagato: number;
+    pagamenti: Array<{ dataPagamento: string }>;
+  }> = [];
+
+  while (true) {
+    const fattureResult = await listFatture({
+      page,
+      limit,
+      dataDa: filters.dateFrom,
+      dataA: filters.dateTo,
+    });
+
+    if (!fattureResult.ok) {
+      if (fattureResult.code === "VALIDATION_ERROR") {
+        return {
+          ok: false,
+          code: "VALIDATION_ERROR",
+          message: "Filtro fatture non valido",
+          details: {
+            field: fattureResult.details.field,
+            rule: fattureResult.details.rule,
+          },
+        };
+      }
+      return {
+        ok: false,
+        code: "SERVICE_UNAVAILABLE",
+        message: "Impossibile leggere le fatture",
+      };
+    }
+
+    fattureRows.push(
+      ...fattureResult.data.data.map((row) => ({
+        numeroFattura: row.numeroFattura,
+        riparazioneId: row.riparazioneId,
+        stato: row.stato,
+        totale: row.totale,
+        dataEmissione: row.dataEmissione,
+        totalePagato: row.totalePagato,
+        pagamenti: row.pagamenti,
+      })),
+    );
+    if (page >= fattureResult.data.meta.totalPages) {
+      break;
+    }
+    page += 1;
+  }
+
+  const headers = [
+    "numeroFattura",
+    "cliente",
+    "stato",
+    "totale",
+    "dataEmissione",
+    "dataPagamento",
+  ];
+  const uniqueRepairIds = [...new Set(fattureRows.map((row) => row.riparazioneId))];
+  const detailResults = await Promise.all(
+    uniqueRepairIds.map((riparazioneId) => getRiparazioneDettaglio({ riparazioneId })),
+  );
+  const clienteByRiparazioneId = new Map<number, string>();
+  for (let index = 0; index < uniqueRepairIds.length; index += 1) {
+    const result = detailResults[index];
+    if (!result.ok) {
+      return {
+        ok: false,
+        code: "SERVICE_UNAVAILABLE",
+        message: "Impossibile leggere i dettagli cliente per export finanziario",
+      };
+    }
+    clienteByRiparazioneId.set(uniqueRepairIds[index], result.data.data.cliente.nome);
+  }
+
+  const csvRows = fattureRows.map((row) => {
+    const latestPayment = [...row.pagamenti]
+      .sort((left, right) => right.dataPagamento.localeCompare(left.dataPagamento))[0];
+    return [
+      row.numeroFattura,
+      clienteByRiparazioneId.get(row.riparazioneId) ?? "",
+      row.stato,
+      row.totale.toFixed(2),
+      row.dataEmissione,
+      latestPayment?.dataPagamento ?? "",
+    ];
+  });
+
+  return {
+    ok: true,
+    data: {
+      fileName: `report-finanziari-${reportDateRangeSuffix(filters.dateFrom, filters.dateTo)}.csv`,
+      contentType: "text/csv",
+      csv: buildCsv(headers, csvRows),
+    },
+  };
+}
+
+async function getReportExportMagazzino(
+  input: GetReportExportMagazzinoInput,
+): Promise<GetReportExportMagazzinoResult> {
+  const parsed = parseInput({
+    actorUserId: input.actorUserId,
+    actorRole: input.actorRole,
+  });
+  if (!parsed.ok) {
+    return parsed;
+  }
+  const actor = parsed.data;
+
+  if (actor.actorRole !== "ADMIN") {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      message: "Admin only",
+    };
+  }
+
+  const articlesResult = await fetchAllArticoliForReport();
+  if (!articlesResult.ok) {
+    return articlesResult;
+  }
+
+  const headers = [
+    "articoloId",
+    "nome",
+    "giacenza",
+    "sogliaMinima",
+    "prezzoAcquisto",
+    "valoreGiacenza",
+  ];
+  const csvRows = articlesResult.data.map((article) => [
+    String(article.id),
+    article.nome,
+    String(article.giacenza),
+    String(article.sogliaMinima),
+    article.prezzoAcquisto.toFixed(2),
+    round2(article.giacenza * article.prezzoAcquisto).toFixed(2),
+  ]);
+
+  return {
+    ok: true,
+    data: {
+      fileName: "report-magazzino.csv",
+      contentType: "text/csv",
+      csv: buildCsv(headers, csvRows),
+    },
+  };
+}
+
 export {
+  getReportExportFinanziari,
+  getReportExportMagazzino,
+  getReportExportRiparazioni,
   getReportFinanziari,
   getReportMagazzino,
   getReportRiparazioni,
+  type GetReportExportFinanziariInput,
+  type GetReportExportFinanziariResult,
+  type GetReportExportMagazzinoInput,
+  type GetReportExportMagazzinoResult,
+  type GetReportExportRiparazioniInput,
+  type GetReportExportRiparazioniResult,
   type GetReportFinanziariInput,
   type GetReportFinanziariResult,
   type GetReportMagazzinoInput,
