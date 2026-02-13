@@ -1,2 +1,2 @@
-packages/backend/src/__tests__/public-contacts-faq-api.atdd.spec.ts
-packages/frontend/src/__tests__/public-contatti-faq-pages.atdd.spec.ts
+src/__tests__/public-contacts-faq-api.atdd.spec.ts
+src/__tests__/public-contatti-faq-pages.atdd.spec.ts

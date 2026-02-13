@@ -1,6 +1,15 @@
 ﻿import request from "supertest";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { app } from "../index.js";
+import {
+  resetAnagraficheStoreForTests,
+  seedPublicPageContentForTests,
+} from "../services/anagrafiche-service.js";
+
+beforeEach(() => {
+  process.env.NODE_ENV = "test";
+  resetAnagraficheStoreForTests();
+});
 
 describe("AC-1 - GET /api/public/pages/contatti", () => {
   it("Tests AC-1: Given public contact config contains phone=+39 02 1234 5678, email=info@centrotest.it, openingHours=Lun-Ven 09:00-18:30; Sab 09:00-13:00, and mapPlaceholder=MAP_EMBED_PENDING When an anonymous visitor requests GET /api/public/pages/contatti Then API returns HTTP 200 and data payload with contatti fields", async () => {
@@ -50,6 +59,12 @@ describe("AC-2 - GET /api/public/faq", () => {
 
 describe("AC-3 - Public config refresh without frontend code changes", () => {
   it("Tests AC-3: Given config phone is updated to +39 02 7654 3210 and endpoints expose updated payload When an anonymous visitor requests GET /api/public/pages/contatti after refresh Then response includes updated phone", async () => {
+    seedPublicPageContentForTests({
+      contacts: {
+        phone: "+39 02 7654 3210",
+      },
+    });
+
     const response = await request(app).get("/api/public/pages/contatti");
 
     expect(response.status).toBe(200);
@@ -57,6 +72,15 @@ describe("AC-3 - Public config refresh without frontend code changes", () => {
   });
 
   it("Tests AC-3: Given FAQ answer Il preventivo e gratuito? is updated to Si, sempre and endpoint exposes updated payload When an anonymous visitor requests GET /api/public/faq after refresh Then updated answer is returned", async () => {
+    seedPublicPageContentForTests({
+      faqAnswerByQuestion: [
+        {
+          question: "Il preventivo e gratuito?",
+          answer: "Si, sempre",
+        },
+      ],
+    });
+
     const response = await request(app).get("/api/public/faq");
     const rows = response.body?.data as Array<{ question?: string; answer?: string }>;
     const target = rows.find((row) => row.question === "Il preventivo e gratuito?");

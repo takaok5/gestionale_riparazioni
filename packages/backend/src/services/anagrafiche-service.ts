@@ -189,6 +189,14 @@ interface GetPublicServiceBySlugInput {
   slug: unknown;
 }
 
+interface ListPublicFaqInput {
+  _?: never;
+}
+
+interface GetPublicPageBySlugInput {
+  slug: unknown;
+}
+
 interface AuditLogDettagli {
   old: Record<string, unknown>;
   new: Record<string, unknown>;
@@ -271,6 +279,19 @@ interface PublicServiceDetailPayload {
   priceFrom: string;
   averageDuration: string;
   categoria: string;
+}
+
+interface PublicContactsPagePayload {
+  phone: string;
+  email: string;
+  openingHours: string;
+  mapPlaceholder: string;
+}
+
+interface PublicFaqItemPayload {
+  category: string;
+  question: string;
+  answer: string;
 }
 
 interface ClienteListPayload {
@@ -557,6 +578,16 @@ type GetPublicServiceBySlugResult =
   | NotFoundFailure
   | ServiceUnavailableFailure;
 
+type ListPublicFaqResult =
+  | { ok: true; data: { data: PublicFaqItemPayload[] } }
+  | ServiceUnavailableFailure;
+
+type GetPublicPageBySlugResult =
+  | { ok: true; data: { data: PublicContactsPagePayload } }
+  | ValidationFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
 type ListFornitoreOrdiniResult =
   | { ok: true; data: { data: FornitoreOrdineItem[] } }
   | ValidationFailure
@@ -698,6 +729,10 @@ interface ParsedListPublicServicesInput {
 }
 
 interface ParsedGetPublicServiceBySlugInput {
+  slug: string;
+}
+
+interface ParsedGetPublicPageBySlugInput {
   slug: string;
 }
 
@@ -1048,6 +1083,50 @@ const publicServiceCatalog: PublicServiceRecord[] = [
   },
 ];
 
+const basePublicContactsPage: PublicContactsPagePayload = {
+  phone: "+39 02 1234 5678",
+  email: "info@centrotest.it",
+  openingHours: "Lun-Ven 09:00-18:30; Sab 09:00-13:00",
+  mapPlaceholder: "Mappa in aggiornamento",
+};
+
+const basePublicFaqItems: PublicFaqItemPayload[] = [
+  {
+    category: "Accettazione",
+    question: "Quanto dura una diagnosi?",
+    answer: "24-48 ore",
+  },
+  {
+    category: "Preventivi",
+    question: "Il preventivo e gratuito?",
+    answer: "Si, salvo guasti non standard",
+  },
+];
+
+type SeedPublicPageContentForTestsInput = {
+  contacts?: Partial<PublicContactsPagePayload>;
+  faqAnswerByQuestion?: Array<{ question: string; answer: string }>;
+};
+
+function clonePublicContactsPage(
+  source: PublicContactsPagePayload,
+): PublicContactsPagePayload {
+  return {
+    phone: source.phone,
+    email: source.email,
+    openingHours: source.openingHours,
+    mapPlaceholder: source.mapPlaceholder,
+  };
+}
+
+function clonePublicFaqItems(source: PublicFaqItemPayload[]): PublicFaqItemPayload[] {
+  return source.map((item) => ({
+    category: item.category,
+    question: item.question,
+    answer: item.answer,
+  }));
+}
+
 let testClienti = cloneTestClienti(baseTestClienti);
 let testFornitori = cloneTestFornitori(baseTestFornitori);
 let testFornitoreOrdini = cloneTestFornitoreOrdini(baseTestFornitoreOrdini);
@@ -1055,6 +1134,8 @@ let testArticoli = cloneTestArticoli(baseTestArticoli);
 let testMovimentiMagazzino = cloneTestMovimentiMagazzino(baseTestMovimentiMagazzino);
 let testRiparazioni = cloneTestRiparazioni(baseTestRiparazioni);
 let testAuditLogs = cloneAuditLogs(baseTestAuditLogs);
+let publicContactsPage = clonePublicContactsPage(basePublicContactsPage);
+let publicFaqItems = clonePublicFaqItems(basePublicFaqItems);
 
 let nextTestClienteId = computeNextId(testClienti.map((item) => item.id));
 let nextTestClienteCodeSequence = computeNextClienteCodeSequence(testClienti);
@@ -5991,6 +6072,34 @@ function parseGetPublicServiceBySlugInput(
   };
 }
 
+function parseGetPublicPageBySlugInput(
+  input: GetPublicPageBySlugInput,
+):
+  | { ok: true; data: ParsedGetPublicPageBySlugInput }
+  | ValidationFailure {
+  if (typeof input.slug !== "string" || !input.slug.trim()) {
+    return buildValidationFailure({
+      field: "slug",
+      rule: "invalid_string",
+    });
+  }
+
+  const normalizedSlug = input.slug.trim().toLowerCase();
+  if (!PUBLIC_SERVICE_SLUG_PATTERN.test(normalizedSlug)) {
+    return buildValidationFailure({
+      field: "slug",
+      rule: "invalid_format",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      slug: normalizedSlug,
+    },
+  };
+}
+
 async function listPublicServices(
   input: ListPublicServicesInput,
 ): Promise<ListPublicServicesResult> {
@@ -6070,6 +6179,54 @@ async function getPublicServiceBySlug(
   }
 }
 
+async function listPublicFaq(
+  _input: ListPublicFaqInput,
+): Promise<ListPublicFaqResult> {
+  try {
+    return {
+      ok: true,
+      data: {
+        data: clonePublicFaqItems(publicFaqItems),
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function getPublicPageBySlug(
+  input: GetPublicPageBySlugInput,
+): Promise<GetPublicPageBySlugResult> {
+  const parsed = parseGetPublicPageBySlugInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (parsed.data.slug !== "contatti") {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  try {
+    return {
+      ok: true,
+      data: {
+        data: clonePublicContactsPage(publicContactsPage),
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
 function resetAnagraficheStoreForTests(): void {
   ensureTestEnvironment();
   testClienti = cloneTestClienti(baseTestClienti);
@@ -6089,6 +6246,31 @@ function resetAnagraficheStoreForTests(): void {
     testMovimentiMagazzino.map((item) => item.id),
   );
   nextTestAuditLogId = computeNextId(testAuditLogs.map((item) => item.id));
+  publicContactsPage = clonePublicContactsPage(basePublicContactsPage);
+  publicFaqItems = clonePublicFaqItems(basePublicFaqItems);
+}
+
+function seedPublicPageContentForTests(
+  input: SeedPublicPageContentForTestsInput,
+): void {
+  ensureTestEnvironment();
+
+  if (input.contacts) {
+    publicContactsPage = {
+      ...publicContactsPage,
+      ...input.contacts,
+    };
+  }
+
+  if (input.faqAnswerByQuestion && input.faqAnswerByQuestion.length > 0) {
+    const updates = new Map(
+      input.faqAnswerByQuestion.map((item) => [item.question, item.answer] as const),
+    );
+    publicFaqItems = publicFaqItems.map((item) => ({
+      ...item,
+      answer: updates.get(item.question) ?? item.answer,
+    }));
+  }
 }
 
 type SeedClienteForTestsInput = {
@@ -6263,7 +6445,10 @@ export {
   listClienteRiparazioni,
   listPublicServices,
   getPublicServiceBySlug,
+  listPublicFaq,
+  getPublicPageBySlug,
   resetAnagraficheStoreForTests,
+  seedPublicPageContentForTests,
   seedClienteForTests,
   seedFornitoreDetailScenarioForTests,
   type CreateClienteInput,
@@ -6308,4 +6493,8 @@ export {
   type ListPublicServicesResult,
   type GetPublicServiceBySlugInput,
   type GetPublicServiceBySlugResult,
+  type ListPublicFaqInput,
+  type ListPublicFaqResult,
+  type GetPublicPageBySlugInput,
+  type GetPublicPageBySlugResult,
 };

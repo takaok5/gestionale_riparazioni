@@ -45,7 +45,7 @@ describe("AC-4 - Navigazione / -> /faq -> /", () => {
   it("Tests AC-4: Given visitor reaches /faq from home link FAQ When FAQ page renders Then breadcrumb Home / FAQ and title FAQ are shown", () => {
     const html = renderPath("/faq");
 
-    expect(html).toContain("Home / FAQ");
+    expect(html).toContain(">Home</a> / FAQ");
     expect(html).toContain(">FAQ<");
   });
 

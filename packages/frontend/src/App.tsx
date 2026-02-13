@@ -49,6 +49,34 @@ const serviceDetails = {
   },
 } as const;
 
+const publicContactsPage = {
+  phone: "+39 02 1234 5678",
+  email: "info@centrotest.it",
+  openingHours: "Lun-Ven 09:00-18:30; Sab 09:00-13:00",
+  mapPlaceholder: "Mappa in aggiornamento",
+} as const;
+
+const publicFaqSections = [
+  {
+    category: "Accettazione",
+    items: [
+      {
+        question: "Quanto dura una diagnosi?",
+        answer: "24-48 ore",
+      },
+    ],
+  },
+  {
+    category: "Preventivi",
+    items: [
+      {
+        question: "Il preventivo e gratuito?",
+        answer: "Si, salvo guasti non standard",
+      },
+    ],
+  },
+] as const;
+
 type AppProps = {
   path?: string;
 };
@@ -62,8 +90,17 @@ function getServiceSlugFromPath(path: string): string | null {
   return decodeURIComponent(match[1]);
 }
 
+function normalizePath(path: string): string {
+  if (path.length > 1 && path.endsWith("/")) {
+    return path.slice(0, -1);
+  }
+
+  return path;
+}
+
 function App({ path = "/" }: AppProps) {
-  const detailSlug = getServiceSlugFromPath(path);
+  const normalizedPath = normalizePath(path);
+  const detailSlug = getServiceSlugFromPath(normalizedPath);
   if (detailSlug) {
     const detail = serviceDetails[detailSlug as keyof typeof serviceDetails];
     if (!detail) {
@@ -107,13 +144,120 @@ function App({ path = "/" }: AppProps) {
     );
   }
 
+  if (normalizedPath === "/contatti") {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900">
+        <main className="mx-auto max-w-screen-md px-4 py-10 sm:px-6 lg:px-8">
+          <nav className="text-sm text-slate-500">
+            <a href="/" className="hover:text-slate-700">
+              Home
+            </a>{" "}
+            / Contatti
+          </nav>
+
+          <section className="mt-5 rounded-3xl bg-white p-7 shadow-sm ring-1 ring-slate-100 sm:p-10">
+            <h1 className="text-3xl font-bold">Contatti</h1>
+            <p className="mt-3 text-sm text-slate-600">
+              Canali diretti per supporto rapido e aggiornamenti sulla tua richiesta.
+            </p>
+
+            <dl className="mt-6 grid gap-4 rounded-2xl bg-slate-100 p-5 text-sm text-slate-800 sm:grid-cols-2">
+              <div>
+                <dt className="font-semibold">Telefono</dt>
+                <dd>
+                  <a href="tel:+390212345678" className="underline hover:text-slate-600">
+                    {publicContactsPage.phone}
+                  </a>
+                </dd>
+              </div>
+              <div>
+                <dt className="font-semibold">Email</dt>
+                <dd>
+                  <a
+                    href="mailto:info@centrotest.it"
+                    className="underline hover:text-slate-600"
+                  >
+                    {publicContactsPage.email}
+                  </a>
+                </dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="font-semibold">Orari</dt>
+                <dd>{publicContactsPage.openingHours}</dd>
+              </div>
+            </dl>
+
+            <section className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                Mappa
+              </h2>
+              <p className="mt-2 text-sm text-slate-700">{publicContactsPage.mapPlaceholder}</p>
+            </section>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
+  if (normalizedPath === "/faq") {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900">
+        <main className="mx-auto max-w-screen-md px-4 py-10 sm:px-6 lg:px-8">
+          <nav className="text-sm text-slate-500">
+            <a href="/" className="hover:text-slate-700">
+              Home
+            </a>{" "}
+            / FAQ
+          </nav>
+
+          <section className="mt-5 rounded-3xl bg-white p-7 shadow-sm ring-1 ring-slate-100 sm:p-10">
+            <h1 className="text-3xl font-bold">FAQ</h1>
+            <p className="mt-3 text-sm text-slate-600">
+              Domande frequenti su diagnosi, tempi e processo preventivo.
+            </p>
+
+            <div className="mt-6 space-y-6">
+              {publicFaqSections.map((section) => (
+                <section key={section.category}>
+                  <h2 className="text-lg font-semibold">{section.category}</h2>
+                  <div className="mt-3 space-y-3">
+                    {section.items.map((item) => (
+                      <article
+                        key={item.question}
+                        className="rounded-2xl bg-slate-100 p-4 text-sm text-slate-800"
+                      >
+                        <h3 className="font-semibold">{item.question}</h3>
+                        <p className="mt-2">{item.answer}</p>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto max-w-screen-xl max-w-screen px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-screen-xl max-w-screen items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
             Gestionale Riparazioni
           </p>
+          <nav className="flex items-center gap-4 text-sm text-slate-600">
+            <a href="/servizi/sostituzione-display" className="hover:text-slate-900">
+              Servizi
+            </a>
+            <a href="/faq" className="hover:text-slate-900">
+              FAQ
+            </a>
+            <a href="/contatti" className="hover:text-slate-900">
+              Contatti
+            </a>
+          </nav>
         </div>
       </header>
 
