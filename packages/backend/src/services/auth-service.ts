@@ -5,8 +5,11 @@ import {
   verifyAuthToken,
   type JwtPayload,
 } from "../middleware/auth.js";
-import { getClienteById } from "./anagrafiche-service.js";
-import { createPortalAccountActivationNotifica } from "./notifiche-service.js";
+import { getClienteById, listClienteRiparazioni } from "./anagrafiche-service.js";
+import {
+  createPortalAccountActivationNotifica,
+  listNotifiche,
+} from "./notifiche-service.js";
 
 type Role = "ADMIN" | "TECNICO" | "COMMERCIALE";
 
@@ -45,6 +48,27 @@ interface PortalAuthSuccessPayload {
   };
 }
 
+interface PortalDashboardEventPayload {
+  tipo: string;
+  riferimentoId: number;
+  timestamp: string;
+  descrizione: string;
+}
+
+interface PortalDashboardPayload {
+  cliente: {
+    id: number;
+    codiceCliente: string;
+    ragioneSociale: string;
+  };
+  stats: {
+    ordiniAperti: number;
+    riparazioniAttive: number;
+    preventiviInAttesa: number;
+  };
+  eventiRecenti: PortalDashboardEventPayload[];
+}
+
 type LoginFailureCode = "INVALID_CREDENTIALS" | "ACCOUNT_DISABLED";
 type RefreshFailureCode = "INVALID_REFRESH_TOKEN" | "ACCOUNT_DISABLED";
 type PortalCreateFailureCode =
@@ -58,6 +82,7 @@ type PortalActivateFailureCode =
 type PortalLoginFailureCode = "INVALID_CREDENTIALS" | "SERVICE_UNAVAILABLE";
 type PortalRefreshFailureCode = "INVALID_REFRESH_TOKEN" | "ACCOUNT_DISABLED";
 type PortalLogoutFailureCode = "INVALID_REFRESH_TOKEN";
+type PortalDashboardFailureCode = "UNAUTHORIZED" | "SERVICE_UNAVAILABLE";
 type AuthFailureCode =
   | "INVALID_CREDENTIALS"
   | "ACCOUNT_DISABLED"
@@ -90,6 +115,10 @@ type RefreshPortalSessionResult =
 type LogoutPortalSessionResult =
   | { ok: true; data: { revoked: true } }
   | { ok: false; code: PortalLogoutFailureCode };
+
+type GetPortalDashboardResult =
+  | { ok: true; data: PortalDashboardPayload }
+  | { ok: false; code: PortalDashboardFailureCode };
 
 interface CreatePortalAccountInput {
   clienteId: number;
@@ -142,7 +171,15 @@ let portalAccounts = clonePortalAccounts(basePortalAccounts);
 const revokedPortalRefreshTokens = new Map<string, number>();
 const PORTAL_USER_ID_PREFIX = 900000;
 const PORTAL_REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const ACCESS_KIND = "access" as const;
 const REFRESH_KIND = "refresh" as const;
+const PORTAL_MAX_EVENTS = 20;
+const PORTAL_ORDINI_APERTI_STATI = new Set([
+  "IN_LAVORAZIONE",
+  "IN_ATTESA_RICAMBI",
+]);
+const PORTAL_RIPARAZIONI_ATTIVE_STATI = new Set(["IN_LAVORAZIONE"]);
+const PORTAL_PREVENTIVI_IN_ATTESA_STATI = new Set(["IN_ATTESA_RICAMBI"]);
 
 interface DbUserRecord {
   id: number;
@@ -607,9 +644,99 @@ async function logoutPortalSession(
   return { ok: true, data: { revoked: true } };
 }
 
+async function getPortalDashboard(accessToken: string): Promise<GetPortalDashboardResult> {
+  const token = accessToken.trim();
+  if (!token) {
+    return { ok: false, code: "UNAUTHORIZED" };
+  }
+
+  const payload = resolveTokenPayload(token);
+  if (!payload || payload.tokenType !== ACCESS_KIND) {
+    return { ok: false, code: "UNAUTHORIZED" };
+  }
+
+  const clienteId = resolvePortalClienteId(payload);
+  if (!clienteId) {
+    return { ok: false, code: "UNAUTHORIZED" };
+  }
+
+  const profileSummary = await buildPortalProfileSummary(clienteId);
+  const clienteResult = await getClienteById({ clienteId });
+  const clienteEmail =
+    clienteResult.ok && typeof clienteResult.data.data.email === "string"
+      ? clienteResult.data.data.email.trim().toLowerCase()
+      : "";
+
+  const riparazioniResult = await listClienteRiparazioni({ clienteId });
+  if (!riparazioniResult.ok) {
+    if (riparazioniResult.code === "NOT_FOUND") {
+      return { ok: false, code: "UNAUTHORIZED" };
+    }
+    return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  }
+
+  const riparazioni = riparazioniResult.data.data;
+  const stats = {
+    ordiniAperti: riparazioni.filter((row) => PORTAL_ORDINI_APERTI_STATI.has(row.stato)).length,
+    riparazioniAttive: riparazioni.filter((row) => PORTAL_RIPARAZIONI_ATTIVE_STATI.has(row.stato))
+      .length,
+    preventiviInAttesa: riparazioni.filter((row) =>
+      PORTAL_PREVENTIVI_IN_ATTESA_STATI.has(row.stato)
+    ).length,
+  };
+
+  const riparazioneEvents: PortalDashboardEventPayload[] = riparazioni.map((row) => ({
+    tipo: "STATO_RIPARAZIONE",
+    riferimentoId: row.id,
+    timestamp: row.dataRicezione,
+    descrizione: `Riparazione ${row.codiceRiparazione} in stato ${row.stato}`,
+  }));
+
+  let notificaEvents: PortalDashboardEventPayload[] = [];
+  const notificheResult = await listNotifiche({ page: 1, limit: PORTAL_MAX_EVENTS });
+  if (notificheResult.ok) {
+    notificaEvents = notificheResult.data
+      .filter((row) => {
+        if (!clienteEmail) {
+          return true;
+        }
+        return row.destinatario.trim().toLowerCase() === clienteEmail;
+      })
+      .map((row) => ({
+        tipo: row.tipo,
+        riferimentoId: row.riferimentoId,
+        timestamp: row.dataInvio,
+        descrizione: row.oggetto,
+      }));
+  }
+
+  const eventiRecenti = [...riparazioneEvents, ...notificaEvents]
+    .sort((left, right) => {
+      if (left.timestamp === right.timestamp) {
+        return right.riferimentoId - left.riferimentoId;
+      }
+      return right.timestamp.localeCompare(left.timestamp);
+    })
+    .slice(0, PORTAL_MAX_EVENTS);
+
+  return {
+    ok: true,
+    data: {
+      cliente: {
+        id: profileSummary.clienteId,
+        codiceCliente: profileSummary.codiceCliente,
+        ragioneSociale: profileSummary.ragioneSociale,
+      },
+      stats,
+      eventiRecenti,
+    },
+  };
+}
+
 export {
   activatePortalAccount,
   createPortalAccountForCliente,
+  getPortalDashboard,
   loginWithCredentials,
   loginPortalWithCredentials,
   logoutPortalSession,
@@ -621,6 +748,7 @@ export {
   type ActivatePortalAccountResult,
   type AuthFailureCode,
   type CreatePortalAccountResult,
+  type GetPortalDashboardResult,
   type LoginFailureCode,
   type LoginResult,
   type LoginPortalResult,

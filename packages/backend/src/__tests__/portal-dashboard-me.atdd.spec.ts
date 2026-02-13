@@ -25,21 +25,31 @@ function authHeader(role: Role, userId = 8801): string {
   return `Bearer ${buildAccessToken({ userId, role })}`;
 }
 
-async function prepareActivatedPortalSession(password = "Password123!"): Promise<string> {
+interface PortalSessionInput {
+  clienteId?: number;
+  email?: string;
+  password?: string;
+}
+
+async function prepareActivatedPortalSession(input?: PortalSessionInput): Promise<string> {
+  const clienteId = input?.clienteId ?? 5;
+  const email = input?.email ?? "cliente@test.it";
+  const password = input?.password ?? "Password123!";
+
   const createResponse = await request(app)
-    .post("/api/clienti/5/portal-account")
+    .post(`/api/clienti/${clienteId}/portal-account`)
     .set("Authorization", authHeader("COMMERCIALE", 8802))
     .send({});
   expect(createResponse.status).toBe(201);
 
   const activateResponse = await request(app)
     .post("/api/portal/auth/activate")
-    .send({ token: "portal-5-token-valid", password });
+    .send({ token: `portal-${clienteId}-token-valid`, password });
   expect(activateResponse.status).toBe(200);
 
   const loginResponse = await request(app)
     .post("/api/portal/auth/login")
-    .send({ email: "cliente@test.it", password });
+    .send({ email, password });
   expect(loginResponse.status).toBe(200);
   expect(loginResponse.body.accessToken).toEqual(expect.any(String));
 
@@ -95,7 +105,16 @@ describe("AC-1 - Dashboard counters for customer", () => {
 
 describe("AC-2 - Zero counters are numeric and never null", () => {
   it("Tests AC-2: Given customer has no active items When GET /api/portal/me Then returns zero counters", async () => {
-    const accessToken = await prepareActivatedPortalSession();
+    seedClienteForTests({
+      id: 99,
+      nome: "Cliente Zero Items",
+      codiceCliente: "CLI-000099",
+      email: "cliente-zero@test.it",
+    });
+    const accessToken = await prepareActivatedPortalSession({
+      clienteId: 99,
+      email: "cliente-zero@test.it",
+    });
 
     const response = await request(app)
       .get("/api/portal/me")
@@ -108,7 +127,16 @@ describe("AC-2 - Zero counters are numeric and never null", () => {
   });
 
   it("Tests AC-2: Given customer has no active items When GET /api/portal/me Then counters are not null", async () => {
-    const accessToken = await prepareActivatedPortalSession();
+    seedClienteForTests({
+      id: 99,
+      nome: "Cliente Zero Items",
+      codiceCliente: "CLI-000099",
+      email: "cliente-zero@test.it",
+    });
+    const accessToken = await prepareActivatedPortalSession({
+      clienteId: 99,
+      email: "cliente-zero@test.it",
+    });
 
     const response = await request(app)
       .get("/api/portal/me")

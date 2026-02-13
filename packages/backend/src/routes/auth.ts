@@ -4,6 +4,7 @@ import { verifyAuthToken } from "../middleware/auth.js";
 import { getClienteById } from "../services/anagrafiche-service.js";
 import {
   activatePortalAccount,
+  getPortalDashboard,
   loginWithCredentials,
   loginPortalWithCredentials,
   logoutPortalSession,
@@ -11,6 +12,7 @@ import {
   refreshSession,
   type AuthFailureCode,
   type ActivatePortalAccountResult,
+  type GetPortalDashboardResult,
   type LoginResult,
   type LoginPortalResult,
   type LogoutPortalSessionResult,
@@ -29,6 +31,7 @@ import {
 
 const authRouter = Router();
 const portalAuthRouter = Router();
+const portalRouter = Router();
 const ACCESS_KIND = "access" as const;
 const PORTAL_USER_ID_PREFIX = 900000;
 
@@ -211,6 +214,22 @@ function respondPortalLogoutFailure(
   res
     .status(401)
     .json(buildErrorResponse("INVALID_REFRESH_TOKEN", "Refresh token non valido"));
+}
+
+function respondPortalDashboardFailure(
+  res: Response,
+  result: Exclude<GetPortalDashboardResult, { ok: true; data: unknown }>,
+): void {
+  if (result.code === "UNAUTHORIZED") {
+    res
+      .status(401)
+      .json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(buildErrorResponse("AUTH_SERVICE_UNAVAILABLE", "Servizio autenticazione non disponibile"));
 }
 
 authRouter.post("/login", async (req, res) => {
@@ -400,4 +419,29 @@ portalAuthRouter.post("/logout", async (req, res) => {
   res.status(200).json({ data: result.data });
 });
 
-export { authRouter, portalAuthRouter };
+portalRouter.get("/me", async (req, res) => {
+  const authHeader = req.header("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  const accessJwt = authHeader.slice("Bearer ".length);
+
+  let result: GetPortalDashboardResult;
+  try {
+    result = await getPortalDashboard(accessJwt);
+  } catch (error) {
+    respondAuthServiceError(res, error);
+    return;
+  }
+
+  if (!result.ok) {
+    respondPortalDashboardFailure(res, result);
+    return;
+  }
+
+  res.status(200).json(result.data);
+});
+
+export { authRouter, portalAuthRouter, portalRouter };
