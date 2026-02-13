@@ -1,0 +1,383 @@
+
+> gestionale-riparazioni@0.1.0 test
+> npm run test --workspaces --if-present --run
+
+npm warn Unknown cli config "--run". This will stop working in the next major version of npm.
+
+> @gestionale/backend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend[39m
+
+ [32m✓[39m src/__tests__/clienti-detail-update-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 834[2mms[22m[39m
+ [32m✓[39m src/__tests__/articoli-movimenti-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1008[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-change-password.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1079[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Current password errata[2m > [22mkeeps old password valid when change fails [33m 804[2mms[22m[39m
+ [32m✓[39m src/__tests__/auth-refresh.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 1170[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Rinnovo con refresh token valido[2m > [22mreturns 200 with new accessToken and refreshToken [33m 480[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Rinnovo con refresh token valido[2m > [22mreturns user payload with id, username, email and role [33m 425[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-etichetta-atdd.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1243[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Etichetta PDF 62x100mm con QR e dati riparazione[2m > [22mTests AC-1: Given riparazione id=10 con codiceRiparazione "RIP-20260209-0001", cliente "Rossi Mario", dispositivo "Samsung Galaxy S21" When GET /api/riparazioni/10/etichetta as TECNICO Then 200 with application/pdf and attachment filename [33m 354[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Etichetta PDF 62x100mm con QR e dati riparazione[2m > [22mTests AC-1: Given riparazione id=10 with dataRicezione 2026-02-09T10:00:00.000Z When GET /api/riparazioni/10/etichetta Then PDF payload starts with %PDF and contains RIP-20260209-0001, Rossi Mario, Samsung, Galaxy S21, 09/02/2026 and QR payload RIP-20260209-0001 [33m 319[2mms[22m[39m
+ [32m✓[39m src/__tests__/preventivi-create-atdd.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1261[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Creazione preventivo con totali[2m > [22mTests AC-1: Given esiste una riparazione con id=10 When invio POST /api/preventivi con payload MANODOPERA+RICAMBIO Then viene creato preventivo in stato "BOZZA" con subtotale=200.00, iva=44.00, totale=244.00 e HTTP 201 [33m 379[2mms[22m[39m
+ [32m✓[39m src/__tests__/portal-account-activation-atdd.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 1345[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Attivazione account portale cliente[2m > [22mTests AC-4: Given token valido non scaduto When POST /api/portal/auth/activate Then 200 con data.clienteId=5 e stato ATTIVO [33m 480[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Attivazione account portale cliente[2m > [22mTests AC-4: Given attivazione riuscita When POST /api/portal/auth/login con nuove credenziali Then 200 con accessToken e refreshToken [33m 863[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-list-search-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1444[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista clienti paginata[2m > [22mtests AC-1: should return 200 with data[10] and meta {page:1,limit:10,total:25,totalPages:3} [33m 687[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista clienti paginata[2m > [22mtests AC-1: should return records ordered by id asc on page 1 [33m 397[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-detail-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1582[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-list-filter-atdd.spec.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 1732[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista riparazioni paginata[2m > [22mtests AC-1: Given 30 repairs exist When GET /api/riparazioni?page=1&limit=15 Then returns 200 with 15 rows and meta {page:1,limit:15,total:30,totalPages:2} [33m 888[2mms[22m[39m
+ [32m✓[39m src/__tests__/ordini-stato-atdd.spec.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 1906[2mms[22m[39m
+ [32m✓[39m src/__tests__/ordini-ricezione-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1915[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Given ordine SPEDITO con due voci e giacenze 3/8 When POST /api/ordini/:id/ricevi completo Then giacenze 13/13 e stato RICEVUTO[2m > [22mTests AC-1: Given ordine id=12 stato SPEDITO con voci articolo 5/7 e giacenze 3/8 When POST /api/ordini/12/ricevi con quantita 10 e 5 Then HTTP 200 e stato RICEVUTO [33m 318[2mms[22m[39m
+ [32m✓[39m src/__tests__/auth-login.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1941[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login Utente valido[2m > [22mreturns 200 with accessToken and refreshToken when credentials are valid [33m 422[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login Utente valido[2m > [22mreturns user payload with id, username, email, role [33m 398[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Account disabilitato[2m > [22mreturns 401 ACCOUNT_DISABLED for mario.disabilitato [33m 447[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Account disabilitato[2m > [22mreturns no tokens for disabled account [33m 442[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-ricevuta-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 2004[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - PDF A4 ricevuta con sezioni obbligatorie[2m > [22mTests AC-1: Given repair id=10 with full customer/device/intake data When GET /api/riparazioni/10/ricevuta as TECNICO Then 200 with application/pdf and filename ricevuta-riparazione-10.pdf [33m 371[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Accessori consegnati mostrati per elemento[2m > [22mTests AC-2: Given accessoriConsegnati has comma-separated items When GET /api/riparazioni/10/ricevuta Then PDF does not contain merged token "Caricabatterie custodia" [33m 312[2mms[22m[39m
+ [32m✓[39m src/__tests__/report-magazzino-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 2216[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - KPI report magazzino[2m > [22mTests AC-1: Given articoli with giacenze and prezzi When GET /api/report/magazzino Then returns 200 with KPI keys [33m 326[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - KPI report magazzino[2m > [22mTests AC-1: Given Display Samsung S21 with SCARICO 45 When report is returned Then top item includes articoloId=5 and quantitaUtilizzata=45 [33m 363[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Conteggio articoli esauriti[2m > [22mTests AC-2: Given articolo id=5 has giacenza 0 and sogliaMinima>0 When GET /api/report/magazzino Then articoliEsauriti is incremented [33m 366[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-annullamento-admin-atdd.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 2228[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Admin annulla da IN_LAVORAZIONE con nota[2m > [22mTests AC-1: Given ADMIN userId=1 and riparazione 10 in stato IN_LAVORAZIONE When PATCH /api/riparazioni/10/stato {"stato":"ANNULLATA","note":"Cliente ha ritirato dispositivo"} Then 200 with data.stato ANNULLATA [33m 509[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Admin annulla da IN_LAVORAZIONE con nota[2m > [22mTests AC-1: Given admin cancellation succeeds When GET /api/riparazioni/10 Then latest statiHistory row has stato ANNULLATA userId 1 note "Cliente ha ritirato dispositivo" [33m 478[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Admin annulla da RICEVUTA senza nota[2m > [22mTests AC-2: Given ADMIN userId=1 and riparazione 10 in stato RICEVUTA When PATCH /api/riparazioni/10/stato {"stato":"ANNULLATA"} Then 200 with data.stato ANNULLATA [33m 386[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Admin annulla da RICEVUTA senza nota[2m > [22mTests AC-2: Given admin cancellation without note succeeds When GET /api/riparazioni/10 Then latest statiHistory row has stato ANNULLATA userId 1 note "" [33m 325[2mms[22m[39m
+ [32m✓[39m src/__tests__/fatture-create-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 2253[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Creazione fattura da preventivo approvato[2m > [22mTests AC-1: Given preventivo id=5 APPROVATO con totale 244.00 When POST /api/fatture { riparazioneId: 10 } Then HTTP 201 con numeroFattura 2026/0001 e importi 200/44/244 [33m 406[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Creazione fattura da preventivo approvato[2m > [22mTests AC-1: Given preventivo approvato per riparazione 10 When genero fattura Then risposta include stato EMESSA, riparazioneId=10 e pdfPath non vuoto [33m 349[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Sequenza numeroFattura[2m > [22mTests AC-2: Given ultima fattura 2026/0015 e riparazione 11 approvata When POST /api/fatture { riparazioneId: 11 } Then numeroFattura 2026/0016 [33m 364[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Sequenza numeroFattura[2m > [22mTests AC-2: Given due emissioni consecutive nello stesso anno When genero fatture Then la numerazione e' crescente e senza duplicati [33m 385[2mms[22m[39m
+ [32m✓[39m src/__tests__/articoli-list-search-alert-atdd.spec.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 2326[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista paginata articoli[2m > [22mTests AC-1: Given 30 articoli exist When GET /api/articoli?page=1&limit=20 Then 200 with 20 rows and meta [33m 866[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista paginata articoli[2m > [22mTests AC-1: Given page=2 limit=10 When listing Then meta reflects pagination and deterministic boundaries [33m 637[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-stato-notifiche-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 2519[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - RICEVUTA generates email and INVIATA Notifica[2m > [22mTests AC-1: Given riparazione id=10 and cliente@test.it When PATCH /api/riparazioni/10/stato sets stato=RICEVUTA Then 200 and email subject "Riparazione Ricevuta - RIP-20260209-0001" is returned in payload [33m 454[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - RICEVUTA generates email and INVIATA Notifica[2m > [22mTests AC-1: Given transition to RICEVUTA succeeds When GET /api/notifiche?tipo=STATO_RIPARAZIONE Then latest row has stato INVIATA and riferimentoId 10 [33m 497[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - COMPLETATA sends ready-for-pickup email[2m > [22mTests AC-2: Given riparazione 10 in IN_LAVORAZIONE When PATCH /api/riparazioni/10/stato {"stato":"COMPLETATA"} Then 200 and email subject Riparazione Completata [33m 375[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - COMPLETATA sends ready-for-pickup email[2m > [22mTests AC-2: Given completion transition succeeds When GET /api/notifiche?stato=INVIATA Then notifica body contains "La sua riparazione e pronta per il ritiro" [33m 333[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-assegnazione-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 2892[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Assegnazione valida a tecnico[2m > [22mTests AC-1: Given admin and user id=7 role TECNICO When PATCH /api/riparazioni/10/assegna {tecnicoId:7} Then 200 and data.id=10 data.tecnicoId=7 [33m 506[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Assegnazione valida a tecnico[2m > [22mTests AC-1: Given assignment to tecnico id=7 succeeds When requesting detail Then riparazione 10 has tecnico.id=7 [33m 477[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Rifiuto assegnazione a utente non tecnico[2m > [22mTests AC-2: Given user id=5 role COMMERCIALE When PATCH /api/riparazioni/10/assegna {tecnicoId:5} Then 400 with VALIDATION_ERROR and message [33m 388[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Rifiuto assegnazione a utente non tecnico[2m > [22mTests AC-2: Given assignment to COMMERCIALE fails When requesting detail Then tecnico.id remains 7 [33m 344[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-stato-base-atdd.spec.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 3628[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - RICEVUTA -> IN_DIAGNOSI con storico[2m > [22mTests AC-1: Given userId=7 role TECNICO assigned to riparazione 10 in stato RICEVUTA When PATCH /api/riparazioni/10/stato with {"stato":"IN_DIAGNOSI","note":"Iniziata diagnosi"} Then 200 with data {id:10, stato:IN_DIAGNOSI} [33m 536[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - RICEVUTA -> IN_DIAGNOSI con storico[2m > [22mTests AC-1: Given transition to IN_DIAGNOSI succeeds When GET /api/riparazioni/10 Then statiHistory latest row contains stato IN_DIAGNOSI, userId 7, note "Iniziata diagnosi" [33m 480[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - IN_DIAGNOSI -> IN_LAVORAZIONE[2m > [22mTests AC-2: Given riparazione 10 in stato IN_DIAGNOSI and assigned tecnico userId=7 When PATCH /api/riparazioni/10/stato {"stato":"IN_LAVORAZIONE"} Then 200 with data.stato IN_LAVORAZIONE [33m 382[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - IN_DIAGNOSI -> IN_LAVORAZIONE[2m > [22mTests AC-2: Given transition to IN_LAVORAZIONE succeeds When GET /api/riparazioni/10 Then current stato is IN_LAVORAZIONE [33m 331[2mms[22m[39m
+ [32m✓[39m src/__tests__/fatture-pagamenti-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 3667[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Registrazione pagamento totale[2m > [22mTests AC-1: Given fattura id=8 totale 244.00 senza pagamenti When POST /api/fatture/8/pagamenti importo 244.00 Then HTTP 201 e stato PAGATA [33m 914[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Registrazione pagamento totale[2m > [22mTests AC-1: Given pagamento totale registrato When GET /api/fatture/8 Then residuo 0.00 [33m 680[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Registrazione pagamento parziale + saldo[2m > [22mTests AC-2: Given pagamento iniziale 100.00 When POST saldo 144.00 Then totalePagato 244.00 e stato PAGATA [33m 500[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Registrazione pagamento parziale + saldo[2m > [22mTests AC-2: Given due pagamenti 100+144 When GET /api/fatture/8 Then pagamenti length 2 [33m 400[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Blocco overpayment[2m > [22mTests AC-3: Given fattura gia saldata 244.00 When POST importo 10.00 Then HTTP 400 con messaggio overpayment [33m 303[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Blocco overpayment[2m > [22mTests AC-3: Given overpayment rifiutato When GET /api/fatture/8 Then numero pagamenti resta invariato [33m 328[2mms[22m[39m
+ [32m✓[39m src/__tests__/stripe-pagamenti-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 4105[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Link Stripe Checkout[2m > [22mTests AC-1: Given fattura id=8 totale 244.00 stato EMESSA When POST /api/pagamenti/crea-link/8 Then HTTP 200 con paymentUrl e sessionId [33m 937[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Link Stripe Checkout[2m > [22mTests AC-1: Given richiesta link Stripe valida When POST /api/pagamenti/crea-link/8 Then paymentUrl ha prefisso Stripe e sessionId segue pattern cs_ [33m 621[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Fattura gia pagata[2m > [22mTests AC-2: Given fattura id=8 stato PAGATA When POST /api/pagamenti/crea-link/8 Then HTTP 400 con errore Invoice is already paid [33m 500[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Fattura gia pagata[2m > [22mTests AC-2: Given fattura pagata When POST /api/pagamenti/crea-link/8 Then response non contiene paymentUrl/sessionId [33m 365[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-stato-preventivo-atdd.spec.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 4351[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - IN_DIAGNOSI -> PREVENTIVO_EMESSO[2m > [22mTests AC-1: Given riparazione 10 in stato IN_DIAGNOSI and actor TECNICO userId=7 When PATCH /api/riparazioni/10/stato with {"stato":"PREVENTIVO_EMESSO","note":"Preventivo emesso"} Then 200 with data.stato PREVENTIVO_EMESSO [33m 567[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - IN_DIAGNOSI -> PREVENTIVO_EMESSO[2m > [22mTests AC-1: Given transition to PREVENTIVO_EMESSO succeeds When GET /api/riparazioni/10 Then latest statiHistory row contains stato PREVENTIVO_EMESSO, userId 7 and note "Preventivo emesso" [33m 494[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - PREVENTIVO_EMESSO -> IN_ATTESA_APPROVAZIONE[2m > [22mTests AC-2: Given riparazione 10 in stato PREVENTIVO_EMESSO and actor TECNICO userId=7 When PATCH /api/riparazioni/10/stato with {"stato":"IN_ATTESA_APPROVAZIONE","note":"In attesa approvazione preventivo"} Then 200 with data.stato IN_ATTESA_APPROVAZIONE [33m 370[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - PREVENTIVO_EMESSO -> IN_ATTESA_APPROVAZIONE[2m > [22mTests AC-2: Given transition to IN_ATTESA_APPROVAZIONE succeeds When GET /api/riparazioni/10 Then latest statiHistory row contains stato IN_ATTESA_APPROVAZIONE, userId 7 and note "In attesa approvazione preventivo" [33m 344[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-ricambi-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 455[2mms[22m[39m
+ [32m✓[39m src/__tests__/fatture-lista-dettaglio-atdd.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 4705[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista fatture paginata[2m > [22mTests AC-1: Given 20 fatture exist When I GET /api/fatture?page=1&limit=10 Then I receive 200 with data array of 10 fatture and meta { page: 1, limit: 10, total: 20 } [33m 1793[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista fatture paginata[2m > [22mTests AC-1: Given 20 fatture exist When I GET /api/fatture?page=1&limit=10 Then response keeps deterministic first page boundaries [33m 922[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Filtro range date[2m > [22mTests AC-3: Given fatture created in February 2026 exist When I GET /api/fatture?dataDa=2026-02-01&dataA=2026-02-28 Then each row has date in requested range [33m 310[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-5 - Download PDF fattura[2m > [22mTests AC-5: Given fattura id=8 has generated PDF When I GET /api/fatture/8/pdf Then I receive PDF file with content-type application/pdf and correct filename [33m 302[2mms[22m[39m
+ [32m✓[39m src/__tests__/report-riparazioni-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 266[2mms[22m[39m
+ [32m✓[39m src/__tests__/audit-trail.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 331[2mms[22m[39m
+ [32m✓[39m src/__tests__/fornitori-list-search-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 350[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-create-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 216[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-create.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 242[2mms[22m[39m
+ [32m✓[39m src/__tests__/preventivi-notifiche-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 220[2mms[22m[39m
+ [32m✓[39m src/__tests__/articoli-create-atdd.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 221[2mms[22m[39m
+ [32m✓[39m src/__tests__/notifiche-list-atdd.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 217[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-create-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 168[2mms[22m[39m
+ [32m✓[39m src/__tests__/preventivi-update-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 154[2mms[22m[39m
+ [32m✓[39m src/__tests__/ordini-create-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 145[2mms[22m[39m
+ [32m✓[39m src/__tests__/dashboard-carico-tecnici-atdd.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 136[2mms[22m[39m
+ [32m✓[39m src/__tests__/fornitori-create-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 151[2mms[22m[39m
+ [32m✓[39m src/__tests__/preventivi-response-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 137[2mms[22m[39m
+ [32m✓[39m src/__tests__/portal-dashboard-me.atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 6036[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Dashboard counters for customer[2m > [22mTests AC-1: Given customer id=5 has 2 open orders, 1 active repair, and 1 pending quote When GET /api/portal/me with valid token Then 200 with exact stats [33m 895[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Dashboard counters for customer[2m > [22mTests AC-1: Given same customer scenario When GET /api/portal/me Then stats keys are present and numeric [33m 987[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Zero counters are numeric and never null[2m > [22mTests AC-2: Given customer has no active items When GET /api/portal/me Then returns zero counters [33m 1189[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Zero counters are numeric and never null[2m > [22mTests AC-2: Given customer has no active items When GET /api/portal/me Then counters are not null [33m 1006[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Recent events are sorted by descending timestamp[2m > [22mTests AC-3: Given customer has recent status/invoice events When GET /api/portal/me Then response has eventiRecenti array [33m 1003[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Recent events are sorted by descending timestamp[2m > [22mTests AC-3: Given customer has recent events When GET /api/portal/me Then each event has required keys and descending timestamps [33m 939[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-update-deactivate.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 150[2mms[22m[39m
+ [32m✓[39m src/__tests__/fornitori-detail-update-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 146[2mms[22m[39m
+ [32m✓[39m src/__tests__/dashboard-riparazioni-per-stato-atdd.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 137[2mms[22m[39m
+ [32m✓[39m src/__tests__/preventivi-send-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 115[2mms[22m[39m
+ [32m✓[39m src/__tests__/report-finanziari-atdd.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 84[2mms[22m[39m
+ [32m✓[39m src/__tests__/report-export-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 57[2mms[22m[39m
+ [32m✓[39m src/__tests__/dashboard-operativa-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 60[2mms[22m[39m
+ [32m✓[39m src/__tests__/portal-account-create-atdd.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+ [32m✓[39m src/__tests__/portal-account-conflict-atdd.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+ [32m✓[39m src/__tests__/portal-account-email-required-atdd.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [31m❯[39m src/__tests__/portal-documenti-download.atdd.spec.ts [2m([22m[2m8 tests[22m[2m | [22m[31m8 failed[39m[2m)[22m[33m 7348[2mms[22m[39m
+[31m   [31m×[31m AC-1 - Given fattura id=8 belongs to authenticated customer When I GET /api/portal/documenti/fattura/8/pdf Then I receive application/pdf with correct filename[2m > [22mTests AC-1: Given fattura id=8 belongs to authenticated customer When I GET /api/portal/documenti/fattura/8/pdf Then I receive 200 with pdf headers[39m[33m 1884[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-1 - Given fattura id=8 belongs to authenticated customer When I GET /api/portal/documenti/fattura/8/pdf Then I receive application/pdf with correct filename[2m > [22mTests AC-1: Given fattura id=8 belongs to authenticated customer When I GET /api/portal/documenti/fattura/8/pdf Then filename matches normalized invoice pattern[39m[33m 1536[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-2 - Given quote id=5 belongs to authenticated customer When I GET /api/portal/documenti/preventivo/5/pdf Then I receive application/pdf with correct filename[2m > [22mTests AC-2: Given quote id=5 belongs to authenticated customer When I GET /api/portal/documenti/preventivo/5/pdf Then I receive 200 with pdf headers[39m[33m 1066[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-2 - Given quote id=5 belongs to authenticated customer When I GET /api/portal/documenti/preventivo/5/pdf Then I receive application/pdf with correct filename[2m > [22mTests AC-2: Given quote id=5 belongs to authenticated customer When I GET /api/portal/documenti/preventivo/5/pdf Then filename equals preventivo-{id}.pdf[39m[33m 992[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-3 - Given requested document id belongs to another customer When I GET /api/portal/documenti/fattura/8/pdf Then I receive 403 FORBIDDEN[2m > [22mTests AC-3: Given requested document id belongs to another customer When I GET /api/portal/documenti/fattura/8/pdf Then I receive 403 with FORBIDDEN code[39m[33m 1054[2mms[22m[39m
+[31m     → expected 404 to be 403 // Object.is equality[39m
+[31m   [31m×[31m AC-3 - Given requested document id belongs to another customer When I GET /api/portal/documenti/fattura/8/pdf Then I receive 403 FORBIDDEN[2m > [22mTests AC-3: Given requested document id belongs to another customer When I GET /api/portal/documenti/fattura/8/pdf Then no PDF content is returned[39m[33m 802[2mms[22m[39m
+[31m     → expected 404 to be 403 // Object.is equality[39m
+[31m   [31m×[31m AC-4 - Given unauthenticated request When I GET /api/portal/documenti/preventivo/5/pdf Then I receive 401 Unauthorized[2m > [22mTests AC-4: Given unauthenticated request When I GET /api/portal/documenti/preventivo/5/pdf Then I receive 401 with UNAUTHORIZED code[39m[32m 9[2mms[22m[39m
+[31m     → expected 404 to be 401 // Object.is equality[39m
+[31m   [31m×[31m AC-4 - Given unauthenticated request When I GET /api/portal/documenti/preventivo/5/pdf Then I receive 401 Unauthorized[2m > [22mTests AC-4: Given unauthenticated request When I GET /api/portal/documenti/preventivo/5/pdf Then I receive token missing message[39m[32m 4[2mms[22m[39m
+[31m     → expected 404 to be 401 // Object.is equality[39m
+ [32m✓[39m src/__tests__/preventivi-detail-atdd.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m src/__tests__/portal-preventivi-risposta.atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 7537[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Given preventivo id=5 belongs to my repair and stato is INVIATO When I POST /api/portal/preventivi/5/risposta with { approvato: true } Then preventivo becomes APPROVATO, riparazione becomes APPROVATA, I receive 200[2m > [22mTests AC-1: returns 200 and APPROVATO/APPROVATA payload [33m 978[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Given preventivo id=5 belongs to my repair and stato is INVIATO When I POST /api/portal/preventivi/5/risposta with { approvato: true } Then preventivo becomes APPROVATO, riparazione becomes APPROVATA, I receive 200[2m > [22mTests AC-1: keeps response contract with ISO dataRisposta [33m 1023[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Given preventivo id=5 belongs to my repair and stato is INVIATO When I POST /api/portal/preventivi/5/risposta with { approvato: false } Then preventivo becomes RIFIUTATO, riparazione becomes ANNULLATA, I receive 200[2m > [22mTests AC-2: returns 200 and RIFIUTATO/ANNULLATA payload [33m 1173[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Given preventivo id=5 belongs to my repair and stato is INVIATO When I POST /api/portal/preventivi/5/risposta with { approvato: false } Then preventivo becomes RIFIUTATO, riparazione becomes ANNULLATA, I receive 200[2m > [22mTests AC-2: keeps preventivo detail aligned after rejection [33m 994[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Given preventivo id=5 already has stato APPROVATO When I POST /api/portal/preventivi/5/risposta Then I receive 400 with error RESPONSE_ALREADY_RECORDED[2m > [22mTests AC-3: returns 400 with RESPONSE_ALREADY_RECORDED [33m 1045[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Given preventivo id=5 already has stato APPROVATO When I POST /api/portal/preventivi/5/risposta Then I receive 400 with error RESPONSE_ALREADY_RECORDED[2m > [22mTests AC-3: keeps payload without success data on duplicate response [33m 920[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Given preventivo id=5 belongs to another customer When I POST /api/portal/preventivi/5/risposta Then I receive 403 FORBIDDEN[2m > [22mTests AC-4: returns 403 FORBIDDEN when customer does not own preventivo [33m 733[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Given preventivo id=5 belongs to another customer When I POST /api/portal/preventivi/5/risposta Then I receive 403 FORBIDDEN[2m > [22mTests AC-4: does not expose success payload fields on forbidden response [33m 669[2mms[22m[39m
+ [32m✓[39m src/__tests__/portal-ordini-list-detail.atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 8192[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Given customer id=5 has 12 orders When GET /api/portal/ordini?page=1&limit=10 Then 10 items + pagination metadata[2m > [22mTests AC-1: Given customer id=5 has 12 orders When GET /api/portal/ordini?page=1&limit=10 Then HTTP 200 and exactly 10 items [33m 1263[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Given customer id=5 has 12 orders When GET /api/portal/ordini?page=1&limit=10 Then 10 items + pagination metadata[2m > [22mTests AC-1: Given same scenario When first page is requested Then response includes deterministic pagination keys [33m 1285[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Given orders with states IN_ATTESA and IN_LAVORAZIONE exist When GET /api/portal/ordini?stato=IN_LAVORAZIONE Then only IN_LAVORAZIONE[2m > [22mTests AC-2: Given mixed states When filtered by IN_LAVORAZIONE Then every returned item has that state [33m 1190[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Given orders with states IN_ATTESA and IN_LAVORAZIONE exist When GET /api/portal/ordini?stato=IN_LAVORAZIONE Then only IN_LAVORAZIONE[2m > [22mTests AC-2: Given IN_ATTESA and IN_LAVORAZIONE exist When stato filter applied Then non matching states are excluded [33m 1165[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Given order id=20 belongs to authenticated customer When GET /api/portal/ordini/20 Then detail with stato/importi/timeline/documenti[2m > [22mTests AC-3: Given order id=20 belongs to authenticated customer When detail is requested Then HTTP 200 with required fields [33m 1069[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Given order id=20 belongs to authenticated customer When GET /api/portal/ordini/20 Then detail with stato/importi/timeline/documenti[2m > [22mTests AC-3: Given order id=20 belongs to authenticated customer When detail is requested Then timeline/documenti structures are arrays [33m 891[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Given order id=20 belongs to another customer When GET /api/portal/ordini/20 Then 403 FORBIDDEN[2m > [22mTests AC-4: Given order id=20 belongs to customer 5 When customer 99 requests it Then HTTP 403 with FORBIDDEN [33m 730[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Given order id=20 belongs to another customer When GET /api/portal/ordini/20 Then 403 FORBIDDEN[2m > [22mTests AC-4: Given forbidden detail request When customer 99 calls order 20 Then no detail payload is leaked [33m 595[2mms[22m[39m
+ [32m✓[39m src/__tests__/portal-riparazioni-list-detail.atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 8257[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Given customer id=5 has 3 repairs When GET /api/portal/riparazioni Then 200 with status + basic device details[2m > [22mTests AC-1: Given customer id=5 has exactly 3 repairs When list endpoint is requested Then returns HTTP 200 with 3 rows [33m 979[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Given customer id=5 has 3 repairs When GET /api/portal/riparazioni Then 200 with status + basic device details[2m > [22mTests AC-1: Given list payload is returned When reading row fields Then each row has stato, tipoDispositivo, marcaDispositivo, modelloDispositivo [33m 1034[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Given repairs in IN_DIAGNOSI and COMPLETATA exist When GET /api/portal/riparazioni?stato=IN_DIAGNOSI Then only diagnostics-phase repairs[2m > [22mTests AC-2: Given mixed states When stato filter IN_DIAGNOSI is applied Then every row has stato IN_DIAGNOSI [33m 1200[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Given repairs in IN_DIAGNOSI and COMPLETATA exist When GET /api/portal/riparazioni?stato=IN_DIAGNOSI Then only diagnostics-phase repairs[2m > [22mTests AC-2: Given filtered list response When checking meta Then filtered total is coherent and COMPLETATA is excluded [33m 1051[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Given repair id=10 belongs to authenticated customer When GET /api/portal/riparazioni/10 Then full detail with timeline and linked document ids[2m > [22mTests AC-3: Given repair id=10 belongs to customer 5 When detail endpoint is requested Then returns 200 with id=10 and arrays timeline/documentiCollegati [33m 1098[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Given repair id=10 belongs to authenticated customer When GET /api/portal/riparazioni/10 Then full detail with timeline and linked document ids[2m > [22mTests AC-3: Given detail payload is returned When validating object shape Then timeline and linked documents expose required keys [33m 956[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Given repair id=10 does not belong to authenticated customer When GET /api/portal/riparazioni/10 Then 403 FORBIDDEN[2m > [22mTests AC-4: Given repair id=10 belongs to customer 5 When customer 99 requests detail Then returns HTTP 403 with FORBIDDEN code [33m 736[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Given repair id=10 does not belong to authenticated customer When GET /api/portal/riparazioni/10 Then 403 FORBIDDEN[2m > [22mTests AC-4: Given forbidden detail request When response is returned Then no detail payload is exposed [33m 650[2mms[22m[39m
+   [33m[2m✓[22m[39m Hardening - Auth and validation[2m > [22mreturns 400 when riparazione id is not a positive integer [33m 545[2mms[22m[39m
+ [32m✓[39m src/__tests__/portal-auth-login-refresh-logout.atdd.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 13524[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login portale con credenziali valide[2m > [22mreturns 200 with accessToken and refreshToken [33m 871[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login portale con credenziali valide[2m > [22mreturns customer profileSummary with expected identifiers [33m 939[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Login portale con password non valida[2m > [22mreturns 401 with error code INVALID_CREDENTIALS [33m 1115[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Login portale con password non valida[2m > [22mdoes not return accessToken and refreshToken [33m 1075[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Lock temporaneo account portale[2m > [22mreturns 423 ACCOUNT_TEMPORARILY_LOCKED on attempt after threshold [33m 4215[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Lock temporaneo account portale[2m > [22mreturns Retry-After header and no tokens while account is locked [33m 2651[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Refresh token portale[2m > [22mreturns 200 with new accessToken and refreshToken [33m 497[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Refresh token portale[2m > [22minvalidates old refresh token after successful rotation [33m 495[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-5 - Logout portale con revoca refresh token[2m > [22mreturns 200 with data.revoked=true [33m 492[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-5 - Logout portale con revoca refresh token[2m > [22mreturns 401 on refresh with revoked token after logout [33m 464[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-5 - Logout portale con revoca refresh token[2m > [22mreturns 401 when logout access token header is invalid [33m 474[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 8 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-documenti-download.atdd.spec.ts[2m > [22mAC-1 - Given fattura id=8 belongs to authenticated customer When I GET /api/portal/documenti/fattura/8/pdf Then I receive application/pdf with correct filename[2m > [22mTests AC-1: Given fattura id=8 belongs to authenticated customer When I GET /api/portal/documenti/fattura/8/pdf Then I receive 200 with pdf headers
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-documenti-download.atdd.spec.ts:[2m194:29[22m[39m
+    [90m192| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [32m`Bearer [39m[36m${[39maccessToken[36m}[39m[32m`[39m)[33m;[39m
+    [90m193| [39m
+    [90m194| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m195| [39m    expect(response.headers["content-type"]).toContain("application/pd…
+    [90m196| [39m    expect(response.headers["content-disposition"]).toContain("filenam…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-documenti-download.atdd.spec.ts[2m > [22mAC-1 - Given fattura id=8 belongs to authenticated customer When I GET /api/portal/documenti/fattura/8/pdf Then I receive application/pdf with correct filename[2m > [22mTests AC-1: Given fattura id=8 belongs to authenticated customer When I GET /api/portal/documenti/fattura/8/pdf Then filename matches normalized invoice pattern
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-documenti-download.atdd.spec.ts:[2m208:29[22m[39m
+    [90m206| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [32m`Bearer [39m[36m${[39maccessToken[36m}[39m[32m`[39m)[33m;[39m
+    [90m207| [39m
+    [90m208| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m209| [39m    expect(response.headers["content-disposition"]).toMatch(/filename=…
+    [90m210| [39m    [34mexpect[39m([33mString[39m(response[33m.[39mtext [33m??[39m [32m""[39m)[33m.[39m[34mstartsWith[39m([32m"%PDF-"[39m))[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-documenti-download.atdd.spec.ts[2m > [22mAC-2 - Given quote id=5 belongs to authenticated customer When I GET /api/portal/documenti/preventivo/5/pdf Then I receive application/pdf with correct filename[2m > [22mTests AC-2: Given quote id=5 belongs to authenticated customer When I GET /api/portal/documenti/preventivo/5/pdf Then I receive 200 with pdf headers
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-documenti-download.atdd.spec.ts:[2m225:29[22m[39m
+    [90m223| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [32m`Bearer [39m[36m${[39maccessToken[36m}[39m[32m`[39m)[33m;[39m
+    [90m224| [39m
+    [90m225| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m226| [39m    expect(response.headers["content-type"]).toContain("application/pd…
+    [90m227| [39m    expect(response.headers["content-disposition"]).toContain("filenam…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-documenti-download.atdd.spec.ts[2m > [22mAC-2 - Given quote id=5 belongs to authenticated customer When I GET /api/portal/documenti/preventivo/5/pdf Then I receive application/pdf with correct filename[2m > [22mTests AC-2: Given quote id=5 belongs to authenticated customer When I GET /api/portal/documenti/preventivo/5/pdf Then filename equals preventivo-{id}.pdf
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-documenti-download.atdd.spec.ts:[2m241:29[22m[39m
+    [90m239| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [32m`Bearer [39m[36m${[39maccessToken[36m}[39m[32m`[39m)[33m;[39m
+    [90m240| [39m
+    [90m241| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m242| [39m    expect(response.headers["content-disposition"]).toContain(`filenam…
+    [90m243| [39m    [34mexpect[39m([33mString[39m(response[33m.[39mtext [33m??[39m [32m""[39m)[33m.[39m[34mstartsWith[39m([32m"%PDF-"[39m))[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-documenti-download.atdd.spec.ts[2m > [22mAC-3 - Given requested document id belongs to another customer When I GET /api/portal/documenti/fattura/8/pdf Then I receive 403 FORBIDDEN[2m > [22mTests AC-3: Given requested document id belongs to another customer When I GET /api/portal/documenti/fattura/8/pdf Then I receive 403 with FORBIDDEN code
+[31m[1mAssertionError[22m: expected 404 to be 403 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 403[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-documenti-download.atdd.spec.ts:[2m260:29[22m[39m
+    [90m258| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [32m`Bearer [39m[36m${[39maccessToken[36m}[39m[32m`[39m)[33m;[39m
+    [90m259| [39m
+    [90m260| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m403[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m261| [39m    [34mexpect[39m(response[33m.[39mbody[33m?.[39merror[33m?.[39mcode)[33m.[39m[34mtoBe[39m([32m"FORBIDDEN"[39m)[33m;[39m
+    [90m262| [39m    [34mexpect[39m(response[33m.[39mbody[33m?.[39merror[33m?.[39mmessage)[33m.[39m[34mtoBe[39m([32m"FORBIDDEN"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-documenti-download.atdd.spec.ts[2m > [22mAC-3 - Given requested document id belongs to another customer When I GET /api/portal/documenti/fattura/8/pdf Then I receive 403 FORBIDDEN[2m > [22mTests AC-3: Given requested document id belongs to another customer When I GET /api/portal/documenti/fattura/8/pdf Then no PDF content is returned
+[31m[1mAssertionError[22m: expected 404 to be 403 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 403[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-documenti-download.atdd.spec.ts:[2m277:29[22m[39m
+    [90m275| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [32m`Bearer [39m[36m${[39maccessToken[36m}[39m[32m`[39m)[33m;[39m
+    [90m276| [39m
+    [90m277| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m403[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m278| [39m    expect(response.headers["content-type"] ?? "").not.toContain("appl…
+    [90m279| [39m    [34mexpect[39m(response[33m.[39mbody)[33m.[39mnot[33m.[39m[34mtoHaveProperty[39m([32m"data.content"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-documenti-download.atdd.spec.ts[2m > [22mAC-4 - Given unauthenticated request When I GET /api/portal/documenti/preventivo/5/pdf Then I receive 401 Unauthorized[2m > [22mTests AC-4: Given unauthenticated request When I GET /api/portal/documenti/preventivo/5/pdf Then I receive 401 with UNAUTHORIZED code
+[31m[1mAssertionError[22m: expected 404 to be 401 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 401[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-documenti-download.atdd.spec.ts:[2m287:29[22m[39m
+    [90m285| [39m    const response = await request(app).get("/api/portal/documenti/pre…
+    [90m286| [39m
+    [90m287| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m401[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m288| [39m    [34mexpect[39m(response[33m.[39mbody[33m?.[39merror[33m?.[39mcode)[33m.[39m[34mtoBe[39m([32m"UNAUTHORIZED"[39m)[33m;[39m
+    [90m289| [39m    [34mexpect[39m(response[33m.[39mbody)[33m.[39mnot[33m.[39m[34mtoHaveProperty[39m([32m"data"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-documenti-download.atdd.spec.ts[2m > [22mAC-4 - Given unauthenticated request When I GET /api/portal/documenti/preventivo/5/pdf Then I receive 401 Unauthorized[2m > [22mTests AC-4: Given unauthenticated request When I GET /api/portal/documenti/preventivo/5/pdf Then I receive token missing message
+[31m[1mAssertionError[22m: expected 404 to be 401 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 401[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-documenti-download.atdd.spec.ts:[2m295:29[22m[39m
+    [90m293| [39m    const response = await request(app).get("/api/portal/documenti/pre…
+    [90m294| [39m
+    [90m295| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m401[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m296| [39m    expect(response.body?.error?.message).toBe("Token mancante o non v…
+    [90m297| [39m    expect(response.headers["content-type"] ?? "").toContain("applicat…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m56 passed[39m[22m[90m (57)[39m
+[2m      Tests [22m [1m[31m8 failed[39m[22m[2m | [22m[1m[32m491 passed[39m[22m[90m (499)[39m
+[2m   Start at [22m 20:51:13
+[2m   Duration [22m 18.71s[2m (transform 4.26s, setup 0ms, collect 208.07s, tests 110.58s, environment 17ms, prepare 18.13s)[22m
+
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error workspace @gestionale/backend@0.1.0
+npm error location C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c vitest run
+
+
+> @gestionale/frontend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/frontend[39m
+
+No test files found, exiting with code 0
+
+[2minclude: [22m[33msrc/**/*.test.ts[2m, [22msrc/**/*.spec.ts[39m
+[2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+
+
+> @gestionale/shared@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/shared[39m
+
+ [32m✓[39m src/validators/index.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 20:51:33
+[2m   Duration [22m 531ms[2m (transform 33ms, setup 0ms, collect 60ms, tests 2ms, environment 0ms, prepare 160ms)[22m
+
