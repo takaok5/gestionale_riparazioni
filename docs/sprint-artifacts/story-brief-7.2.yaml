@@ -1,0 +1,65 @@
+story_id: "7.2"
+story_title: "Invio Email Preventivo"
+source_story: "docs/epics/epic-7-notifiche-integrazioni.md"
+acceptance_criteria:
+  - id: "AC-1"
+    given: "preventivo id=5 con cliente.email disponibile"
+    when: "POST /api/preventivi/5/invia"
+    then: "email inviata con subject preventivo, allegato PDF preventivo-5.pdf, Notifica tipo PREVENTIVO creata"
+  - id: "AC-2"
+    given: "preventivo totale 244.00 EUR"
+    when: "email inviata"
+    then: "body include voci, subtotale, IVA, totale da template"
+  - id: "AC-3"
+    given: "servizio email fallisce"
+    when: "POST /api/preventivi/5/invia"
+    then: "Notifica FALLITA creata e API 500 con errore Failed to send email"
+  - id: "AC-4"
+    given: "preventivo inviato con successo"
+    when: "GET /api/notifiche?tipo=PREVENTIVO"
+    then: "record Notifica con destinatario, dataInvio, stato"
+
+target_modules:
+  - "packages/backend/src/routes/preventivi.ts"
+  - "packages/backend/src/services/preventivi-service.ts"
+  - "packages/backend/src/services/notifiche-service.ts"
+  - "packages/backend/src/routes/notifiche.ts"
+  - "packages/backend/src/__tests__/preventivi-send-atdd.spec.ts"
+  - "packages/backend/src/__tests__/riparazioni-stato-notifiche-atdd.spec.ts"
+
+patterns_to_follow:
+  - pattern: "Route-level failure mapping con buildErrorResponse e status code specifici"
+    example: "packages/backend/src/routes/preventivi.ts:153"
+  - pattern: "Flusso invio preventivo con validazioni, try/catch su invio email, e aggiornamento stato atomico"
+    example: "packages/backend/src/services/preventivi-service.ts:1120"
+  - pattern: "Filtro notifiche per query params tipo/stato centralizzato nel service"
+    example: "packages/backend/src/services/notifiche-service.ts:157"
+  - pattern: "ATDD per endpoint con Given/When/Then nel titolo test e assert su body/error"
+    example: "packages/backend/src/__tests__/preventivi-send-atdd.spec.ts:39"
+
+dependencies:
+  - module: "packages/backend/src/services/preventivi-service.ts"
+    used_by:
+      - "packages/backend/src/routes/preventivi.ts"
+      - "packages/backend/src/__tests__/preventivi-send-atdd.spec.ts"
+  - module: "packages/backend/src/services/notifiche-service.ts"
+    used_by:
+      - "packages/backend/src/routes/notifiche.ts"
+      - "packages/backend/src/services/riparazioni-service.ts"
+      - "packages/backend/src/__tests__/riparazioni-stato-notifiche-atdd.spec.ts"
+  - module: "packages/backend/prisma/schema.prisma"
+    used_by:
+      - "packages/backend/src/services/preventivi-service.ts"
+      - "packages/backend/src/services/notifiche-service.ts"
+
+risks:
+  - "Regressione sul flusso esistente di invio preventivo (stato INVIATO/IN_ATTESA_APPROVAZIONE) se si aggiunge creazione Notifica senza transazione coerente."
+  - "Mismatch tra modello Notifica Prisma (tipo PREVENTIVO) e implementazione in-memory del notifiche-service che oggi tipizza solo STATO_RIPARAZIONE."
+  - "Duplicazione notifiche PREVENTIVO in caso di retry/failure se non viene definita chiaramente idempotenza dell'endpoint invia."
+  - "Template body email preventivo potrebbe divergere dai dati reali (voci/subtotale/IVA/totale) se costruito separatamente dal payload persistito."
+
+existing_tests:
+  - "packages/backend/src/__tests__/preventivi-send-atdd.spec.ts"
+  - "packages/backend/src/__tests__/preventivi-detail-atdd.spec.ts"
+  - "packages/backend/src/__tests__/riparazioni-stato-notifiche-atdd.spec.ts"
+  - "packages/backend/src/__tests__/riparazioni-stato-preventivo-atdd.spec.ts"

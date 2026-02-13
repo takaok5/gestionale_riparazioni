@@ -1,4 +1,5 @@
 import { PrismaClient, type Prisma } from "@prisma/client";
+import { createPreventivoNotifica } from "./notifiche-service.js";
 import { riparazioneExistsForTests } from "./riparazioni-service.js";
 
 interface CreatePreventivoInput {
@@ -987,6 +988,17 @@ function generatePreventivoPdfDocument(preventivoId: number): string {
   return `preventivo-${preventivoId}.pdf`;
 }
 
+function createPreventivoAttachmentPath(preventivoId: number): string {
+  return `/generated/preventivi/${generatePreventivoPdfDocument(preventivoId)}`;
+}
+
+function getTestCodiceRiparazione(riparazioneId: number): string {
+  if (riparazioneId === 10) {
+    return "RIP-20260209-0001";
+  }
+  return `RIP-${String(riparazioneId).padStart(10, "0")}`;
+}
+
 async function sendPreventivoEmail(input: {
   preventivoId: number;
   to: string;
@@ -1045,6 +1057,22 @@ async function inviaPreventivoInTestStore(
       pdfDocument,
     });
   } catch {
+    await createPreventivoNotifica({
+      preventivoId: target.id,
+      codiceRiparazione: getTestCodiceRiparazione(target.riparazioneId),
+      destinatario: customerEmail,
+      voci: target.voci.map((voce) => ({
+        tipo: voce.tipo,
+        descrizione: voce.descrizione,
+        quantita: voce.quantita,
+        prezzoUnitario: voce.prezzoUnitario,
+      })),
+      subtotale: target.subtotale,
+      iva: target.iva,
+      totale: target.totale,
+      allegatoPath: createPreventivoAttachmentPath(target.id),
+      stato: "FALLITA",
+    });
     return {
       ok: false,
       code: "EMAIL_SEND_FAILED",
@@ -1057,6 +1085,22 @@ async function inviaPreventivoInTestStore(
   target.dataInvio = sentAt;
   target.dataRisposta = null;
   testRiparazioneStatoById.set(target.riparazioneId, "IN_ATTESA_APPROVAZIONE");
+  await createPreventivoNotifica({
+    preventivoId: target.id,
+    codiceRiparazione: getTestCodiceRiparazione(target.riparazioneId),
+    destinatario: customerEmail,
+    voci: target.voci.map((voce) => ({
+      tipo: voce.tipo,
+      descrizione: voce.descrizione,
+      quantita: voce.quantita,
+      prezzoUnitario: voce.prezzoUnitario,
+    })),
+    subtotale: target.subtotale,
+    iva: target.iva,
+    totale: target.totale,
+    allegatoPath: createPreventivoAttachmentPath(target.id),
+    stato: "INVIATA",
+  });
 
   return {
     ok: true,
@@ -1542,13 +1586,19 @@ function seedDefaultTestPreventivi(): PreventivoPayload[] {
         {
           tipo: "MANODOPERA",
           descrizione: "Diagnosi iniziale",
+          quantita: 2,
+          prezzoUnitario: 90,
+        },
+        {
+          tipo: "RICAMBIO",
+          descrizione: "Display compatibile",
           quantita: 1,
-          prezzoUnitario: 50,
+          prezzoUnitario: 20,
         },
       ],
-      subtotale: 50,
-      iva: 11,
-      totale: 61,
+      subtotale: 200,
+      iva: 44,
+      totale: 244,
     },
     {
       id: 21,

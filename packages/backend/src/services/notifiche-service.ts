@@ -1,4 +1,4 @@
-type NotificaTipo = "STATO_RIPARAZIONE";
+type NotificaTipo = "STATO_RIPARAZIONE" | "PREVENTIVO";
 type NotificaStato = "INVIATA" | "FALLITA";
 
 interface CreateRiparazioneStatoNotificaInput {
@@ -15,9 +15,27 @@ interface NotificaPayload {
   oggetto: string;
   contenuto: string;
   stato: NotificaStato;
-  riferimentoTipo: "RIPARAZIONE";
+  riferimentoTipo: "RIPARAZIONE" | "PREVENTIVO";
   riferimentoId: number;
   dataInvio: string;
+  allegato?: string;
+}
+
+interface CreatePreventivoNotificaInput {
+  preventivoId: number;
+  codiceRiparazione: string;
+  destinatario: string;
+  voci: Array<{
+    tipo: string;
+    descrizione: string;
+    quantita: number;
+    prezzoUnitario: number;
+  }>;
+  subtotale: number;
+  iva: number;
+  totale: number;
+  allegatoPath: string;
+  stato: NotificaStato;
 }
 
 interface ListNotificheInput {
@@ -150,6 +168,50 @@ async function createRiparazioneStatoNotifica(
   return { ...notification };
 }
 
+function formatCurrency(value: number): string {
+  return value.toFixed(2);
+}
+
+function buildPreventivoBody(input: CreatePreventivoNotificaInput): string {
+  const voci = input.voci
+    .map(
+      (voce) =>
+        `- ${voce.tipo}: ${voce.descrizione} x${voce.quantita} (${formatCurrency(voce.prezzoUnitario)})`,
+    )
+    .join("\n");
+
+  return [
+    "Dettaglio preventivo:",
+    "voci:",
+    voci,
+    `subtotale: ${formatCurrency(input.subtotale)}`,
+    `IVA: ${formatCurrency(input.iva)}`,
+    `totale: ${formatCurrency(input.totale)}`,
+  ].join("\n");
+}
+
+async function createPreventivoNotifica(
+  input: CreatePreventivoNotificaInput,
+): Promise<NotificaPayload> {
+  const dataInvio = new Date().toISOString();
+  const notification: NotificaPayload = {
+    id: nextNotificaId,
+    tipo: "PREVENTIVO",
+    destinatario: input.destinatario,
+    oggetto: `Preventivo - ${input.codiceRiparazione}`,
+    contenuto: buildPreventivoBody(input),
+    stato: input.stato,
+    riferimentoTipo: "PREVENTIVO",
+    riferimentoId: input.preventivoId,
+    dataInvio,
+    allegato: input.allegatoPath,
+  };
+
+  nextNotificaId += 1;
+  testNotifiche.push(notification);
+  return { ...notification };
+}
+
 async function listNotifiche(input: ListNotificheInput): Promise<ListNotificheResult> {
   const page = parsePositiveInteger(input.page) ?? DEFAULT_PAGE;
   const parsedLimit = parsePositiveInteger(input.limit) ?? DEFAULT_LIMIT;
@@ -183,6 +245,7 @@ async function listNotifiche(input: ListNotificheInput): Promise<ListNotificheRe
 }
 
 export {
+  createPreventivoNotifica,
   createRiparazioneStatoNotifica,
   listNotifiche,
   resetNotificheStoreForTests,
