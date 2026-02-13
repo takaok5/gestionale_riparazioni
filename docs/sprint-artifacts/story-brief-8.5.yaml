@@ -1,0 +1,26 @@
+story_id: "8.5"
+story_title: "Lista e Dettaglio Riparazioni Cliente"
+acceptance_criteria:
+  - "AC-1: Given customer id=5 has 3 repairs When I GET /api/portal/riparazioni Then I receive all 3 with current stato and basic device details"
+  - "AC-2: Given repairs in IN_DIAGNOSI and COMPLETATA exist When I GET /api/portal/riparazioni?stato=IN_DIAGNOSI Then I receive only diagnostics-phase repairs"
+  - "AC-3: Given repair id=10 belongs to authenticated customer When I GET /api/portal/riparazioni/10 Then I receive full detail with timeline and linked quote/invoice ids"
+  - "AC-4: Given repair id=10 does not belong to authenticated customer When I GET /api/portal/riparazioni/10 Then I receive 403 \"FORBIDDEN\""
+target_modules:
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/routes/auth.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/auth-service.ts"
+patterns_to_follow:
+  - "Portal bearer-token guard + controller pattern for GET /api/portal/ordini in packages/backend/src/routes/auth.ts:511"
+  - "Token validation + listRiparazioni customer filtering in packages/backend/src/services/auth-service.ts:824"
+  - "Ownership check before detail responses (403) in packages/backend/src/services/auth-service.ts:876"
+dependencies:
+  - "packages/backend/src/index.ts:6 imports { portalRouter } from routes/auth.ts and mounts it at /api/portal, so new endpoints live under that same mount"
+  - "packages/backend/src/routes/auth.ts:4-22 imports portal helpers from services/auth-service.ts; reuse the same helpers for the riparazioni endpoints"
+  - "packages/backend/src/services/auth-service.ts:3 imports { getRiparazioneDettaglio, listRiparazioni } from services/riparazioni-service.ts to feed the portal payloads"
+risks:
+  - "Customer filtering omitted in /api/portal/riparazioni would expose other customers' repairs and timeline/history"
+  - "Detail endpoint must keep the cliente ownership guard (compare dettaglio.cliente.id with the token payload) or AC-4 will leak data"
+  - "Pagination meta must be consistent with the cliente-scoped list; reusing parseListRiparazioniInput ensures page/limit/total stay in sync"
+existing_tests:
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/portal-ordini-list-detail.atdd.spec.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/portal-dashboard-me.atdd.spec.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/riparazioni-list-filter-atdd.spec.ts"

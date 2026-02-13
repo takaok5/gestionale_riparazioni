@@ -6,7 +6,9 @@ import {
   activatePortalAccount,
   getPortalDashboard,
   getPortalOrdineDettaglio,
+  getPortalRiparazioneDettaglio,
   listPortalOrdini,
+  listPortalRiparazioni,
   loginWithCredentials,
   loginPortalWithCredentials,
   logoutPortalSession,
@@ -16,9 +18,11 @@ import {
   type ActivatePortalAccountResult,
   type GetPortalDashboardResult,
   type GetPortalOrdineDettaglioResult,
+  type GetPortalRiparazioneDettaglioResult,
   type LoginResult,
   type LoginPortalResult,
   type ListPortalOrdiniResult,
+  type ListPortalRiparazioniResult,
   type LogoutPortalSessionResult,
   type RefreshPortalSessionResult,
   type RefreshSessionResult,
@@ -259,6 +263,29 @@ function respondPortalOrdiniListFailure(
     .json(buildErrorResponse("AUTH_SERVICE_UNAVAILABLE", "Servizio autenticazione non disponibile"));
 }
 
+function respondPortalRiparazioniListFailure(
+  res: Response,
+  result: Exclude<ListPortalRiparazioniResult, { ok: true; data: unknown }>,
+): void {
+  if (result.code === "UNAUTHORIZED") {
+    res
+      .status(401)
+      .json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(buildErrorResponse("VALIDATION_ERROR", "Parametri non validi"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(buildErrorResponse("AUTH_SERVICE_UNAVAILABLE", "Servizio autenticazione non disponibile"));
+}
+
 function respondPortalOrdineDettaglioFailure(
   res: Response,
   result: Exclude<GetPortalOrdineDettaglioResult, { ok: true; data: unknown }>,
@@ -288,6 +315,43 @@ function respondPortalOrdineDettaglioFailure(
     res
       .status(404)
       .json(buildErrorResponse("ORDINE_NOT_FOUND", "Ordine non trovato"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(buildErrorResponse("AUTH_SERVICE_UNAVAILABLE", "Servizio autenticazione non disponibile"));
+}
+
+function respondPortalRiparazioneDettaglioFailure(
+  res: Response,
+  result: Exclude<GetPortalRiparazioneDettaglioResult, { ok: true; data: unknown }>,
+): void {
+  if (result.code === "UNAUTHORIZED") {
+    res
+      .status(401)
+      .json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(buildErrorResponse("VALIDATION_ERROR", "Parametri non validi"));
+    return;
+  }
+
+  if (result.code === "FORBIDDEN") {
+    res
+      .status(403)
+      .json(buildErrorResponse("FORBIDDEN", "FORBIDDEN"));
+    return;
+  }
+
+  if (result.code === "NOT_FOUND") {
+    res
+      .status(404)
+      .json(buildErrorResponse("RIPARAZIONE_NOT_FOUND", "Riparazione non trovata"));
     return;
   }
 
@@ -506,6 +570,60 @@ portalRouter.get("/me", async (req, res) => {
   }
 
   res.status(200).json(result.data);
+});
+
+portalRouter.get("/riparazioni", async (req, res) => {
+  const authHeader = req.header("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  const accessJwt = authHeader.slice("Bearer ".length);
+
+  let result: ListPortalRiparazioniResult;
+  try {
+    result = await listPortalRiparazioni(accessJwt, {
+      page: req.query.page,
+      limit: req.query.limit,
+      stato: req.query.stato,
+    });
+  } catch (error) {
+    respondAuthServiceError(res, error);
+    return;
+  }
+
+  if (!result.ok) {
+    respondPortalRiparazioniListFailure(res, result);
+    return;
+  }
+
+  res.status(200).json(result.data);
+});
+
+portalRouter.get("/riparazioni/:id", async (req, res) => {
+  const authHeader = req.header("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  const accessJwt = authHeader.slice("Bearer ".length);
+
+  let result: GetPortalRiparazioneDettaglioResult;
+  try {
+    result = await getPortalRiparazioneDettaglio(accessJwt, req.params.id);
+  } catch (error) {
+    respondAuthServiceError(res, error);
+    return;
+  }
+
+  if (!result.ok) {
+    respondPortalRiparazioneDettaglioFailure(res, result);
+    return;
+  }
+
+  res.status(200).json({ data: result.data });
 });
 
 portalRouter.get("/ordini", async (req, res) => {

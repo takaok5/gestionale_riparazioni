@@ -76,6 +76,8 @@ interface PortalOrdiniListItemPayload {
   stato: string;
   dataOrdine: string;
   tipoDispositivo: string;
+  marcaDispositivo: string;
+  modelloDispositivo: string;
 }
 
 interface PortalOrdiniListPayload {
@@ -108,6 +110,26 @@ interface PortalOrdineDettaglioPayload {
   };
   timeline: PortalOrdineTimelineItemPayload[];
   documentiCollegati: PortalOrdineDocumentoPayload[];
+}
+
+interface PortalRiparazioniListItemPayload {
+  id: number;
+  codiceRiparazione: string;
+  stato: string;
+  dataRicezione: string;
+  tipoDispositivo: string;
+  marcaDispositivo: string;
+  modelloDispositivo: string;
+}
+
+interface PortalRiparazioniListPayload {
+  data: PortalRiparazioniListItemPayload[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 type LoginFailureCode = "INVALID_CREDENTIALS" | "ACCOUNT_DISABLED";
@@ -175,6 +197,12 @@ type GetPortalOrdineDettaglioResult =
   | { ok: true; data: PortalOrdineDettaglioPayload }
   | { ok: false; code: PortalOrdiniFailureCode };
 
+type ListPortalRiparazioniResult =
+  | { ok: true; data: PortalRiparazioniListPayload }
+  | { ok: false; code: PortalOrdiniFailureCode };
+
+type GetPortalRiparazioneDettaglioResult = GetPortalOrdineDettaglioResult;
+
 interface CreatePortalAccountInput {
   clienteId: number;
   email: string | null;
@@ -191,6 +219,12 @@ interface PortalLoginCredentials {
 }
 
 interface PortalOrdiniQueryInput {
+  page: unknown;
+  limit: unknown;
+  stato: unknown;
+}
+
+interface PortalRiparazioniQueryInput {
   page: unknown;
   limit: unknown;
   stato: unknown;
@@ -825,17 +859,52 @@ async function listPortalOrdini(
   accessToken: string,
   query: PortalOrdiniQueryInput,
 ): Promise<ListPortalOrdiniResult> {
+  const riparazioniResult = await listPortalRiparazioni(accessToken, query);
+  if (!riparazioniResult.ok) {
+    return riparazioniResult;
+  }
+
+  return {
+    ok: true,
+    data: {
+      data: riparazioniResult.data.data.map((row) => ({
+        id: row.id,
+        codiceOrdine: row.codiceRiparazione,
+        stato: row.stato,
+        dataOrdine: row.dataRicezione,
+        tipoDispositivo: row.tipoDispositivo,
+        marcaDispositivo: row.marcaDispositivo,
+        modelloDispositivo: row.modelloDispositivo,
+      })),
+      meta: riparazioniResult.data.meta,
+    },
+  };
+}
+
+function resolvePortalClienteIdFromAccessToken(accessToken: string): number | null {
   const token = accessToken.trim();
   if (!token) {
-    return { ok: false, code: "UNAUTHORIZED" };
+    return null;
   }
 
   const payload = resolveTokenPayload(token);
   if (!payload || payload.tokenType !== ACCESS_KIND) {
-    return { ok: false, code: "UNAUTHORIZED" };
+    return null;
   }
 
   const clienteId = resolvePortalClienteId(payload);
+  if (!clienteId) {
+    return null;
+  }
+
+  return clienteId;
+}
+
+async function listPortalRiparazioni(
+  accessToken: string,
+  query: PortalRiparazioniQueryInput,
+): Promise<ListPortalRiparazioniResult> {
+  const clienteId = resolvePortalClienteIdFromAccessToken(accessToken);
   if (!clienteId) {
     return { ok: false, code: "UNAUTHORIZED" };
   }
@@ -863,42 +932,34 @@ async function listPortalOrdini(
     data: {
       data: riparazioniResult.data.data.map((row) => ({
         id: row.id,
-        codiceOrdine: row.codiceRiparazione,
+        codiceRiparazione: row.codiceRiparazione,
         stato: row.stato,
-        dataOrdine: row.dataRicezione,
+        dataRicezione: row.dataRicezione,
         tipoDispositivo: row.tipoDispositivo,
+        marcaDispositivo: row.marcaDispositivo,
+        modelloDispositivo: row.modelloDispositivo,
       })),
       meta: riparazioniResult.data.meta,
     },
   };
 }
 
-async function getPortalOrdineDettaglio(
+async function loadPortalRiparazioneDettaglio(
   accessToken: string,
-  ordineId: unknown,
-): Promise<GetPortalOrdineDettaglioResult> {
-  const token = accessToken.trim();
-  if (!token) {
-    return { ok: false, code: "UNAUTHORIZED" };
-  }
-
-  const payload = resolveTokenPayload(token);
-  if (!payload || payload.tokenType !== ACCESS_KIND) {
-    return { ok: false, code: "UNAUTHORIZED" };
-  }
-
-  const clienteId = resolvePortalClienteId(payload);
+  riparazioneId: unknown,
+): Promise<GetPortalRiparazioneDettaglioResult> {
+  const clienteId = resolvePortalClienteIdFromAccessToken(accessToken);
   if (!clienteId) {
     return { ok: false, code: "UNAUTHORIZED" };
   }
 
-  const parsedOrdineId = asPositiveInteger(ordineId);
-  if (parsedOrdineId === null) {
+  const parsedRiparazioneId = asPositiveInteger(riparazioneId);
+  if (parsedRiparazioneId === null) {
     return { ok: false, code: "VALIDATION_ERROR" };
   }
 
   const dettaglioResult = await getRiparazioneDettaglio({
-    riparazioneId: parsedOrdineId,
+    riparazioneId: parsedRiparazioneId,
   });
   if (!dettaglioResult.ok) {
     if (dettaglioResult.code === "VALIDATION_ERROR") {
@@ -952,12 +1013,28 @@ async function getPortalOrdineDettaglio(
   };
 }
 
+async function getPortalOrdineDettaglio(
+  accessToken: string,
+  ordineId: unknown,
+): Promise<GetPortalOrdineDettaglioResult> {
+  return loadPortalRiparazioneDettaglio(accessToken, ordineId);
+}
+
+async function getPortalRiparazioneDettaglio(
+  accessToken: string,
+  riparazioneId: unknown,
+): Promise<GetPortalRiparazioneDettaglioResult> {
+  return loadPortalRiparazioneDettaglio(accessToken, riparazioneId);
+}
+
 export {
   activatePortalAccount,
   createPortalAccountForCliente,
   getPortalDashboard,
   getPortalOrdineDettaglio,
+  getPortalRiparazioneDettaglio,
   listPortalOrdini,
+  listPortalRiparazioni,
   loginWithCredentials,
   loginPortalWithCredentials,
   logoutPortalSession,
@@ -971,10 +1048,12 @@ export {
   type CreatePortalAccountResult,
   type GetPortalDashboardResult,
   type GetPortalOrdineDettaglioResult,
+  type GetPortalRiparazioneDettaglioResult,
   type LoginFailureCode,
   type LoginResult,
   type LoginPortalResult,
   type ListPortalOrdiniResult,
+  type ListPortalRiparazioniResult,
   type LogoutPortalSessionResult,
   type PortalActivateFailureCode,
   type PortalCreateFailureCode,
