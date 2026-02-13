@@ -13,7 +13,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "test:e2e": "npx playwright test"
+    "test:e2e": "npx playwright test",
+    "lighthouse:9.1": "lighthouse http://127.0.0.1:4173/ --only-categories=performance --emulated-form-factor=mobile --throttling-method=simulate --chrome-flags=\"--headless\" --output=json --output-path=docs/sprint-artifacts/lighthouse-9.1.json"
   },
   "devDependencies": {
     "typescript": "^5.7.0"

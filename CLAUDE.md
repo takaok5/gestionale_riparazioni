@@ -21,6 +21,7 @@ npm run typecheck      # TypeScript check
 npm run lint           # Lint tutti i package
 npm run test           # Tutti i test
 npm run test:e2e       # Playwright E2E
+npm run lighthouse:9.1 # Lighthouse mobile check per Story 9.1
 ```
 
 ## Structure

@@ -1,0 +1,37 @@
+target_modules:
+  - gestionale_riparazioni/urls.py
+  - packages/frontend/src/App.tsx
+  - packages/frontend/src/main.tsx
+  - packages/frontend/src/index.css
+
+patterns_to_follow:
+  - pattern: "`urlpatterns` currently binds `/` to `home_view` with `@login_required`, so routing is centralized and authentication-aware."
+    file: gestionale_riparazioni/urls.py
+    line: "6-14"
+    why: "Any change to the homepage should happen here to keep `/` in the same urlpatterns block while removing the guard that blocks anonymous visitors."
+  - pattern: "Vite entrypoint imports `App` + `index.css` and renders the tree inside `ReactDOM.createRoot` with `StrictMode`."
+    file: packages/frontend/src/main.tsx
+    line: "1-10"
+    why: "Hero/trust sections must live inside this existing App tree so the build pipeline + CSS stays consistent."
+  - pattern: "Frontend spec enumerates hero + service highlights + trust blocks + CTAs for HomePage/ServiziPage (FR-016)."
+    file: docs/frontend-spec.md
+    line: "203-207"
+    why: "The marketing sections we add must match this agreed structure and CTA text to satisfy Flow 8."
+  - pattern: "Portal auth router exposes rate-limited `/api/portal/auth/login` with profile summary enrichment."
+    file: packages/backend/src/routes/auth.ts
+    line: "550-626"
+    why: "When the CTA sends visitors to `/portale/login`, reuse this existing API surface rather than inventing a different login endpoint."
+
+dependencies:
+  - packages/frontend/src/main.tsx
+  - packages/backend/src/index.ts
+  - packages/backend/src/routes/auth.ts
+
+risks:
+  - "Root view is still decorated with `@login_required` (gestionale_riparazioni/urls.py:6-13), so `/` currently redirects to login and cannot serve a public hero unless we relax the guard."
+  - "CTA must resolve to `/portale/login`, but no client route/template exists yet and the only related backend paths are `/auth/login/` + `/api/portal/auth/login`, so we risk broken navigation if the new SPA route is not in sync with the auth-stack."
+
+existing_tests:
+  - packages/backend/src/__tests__/portal-auth-login-refresh-logout.atdd.spec.ts
+  - packages/backend/src/__tests__/portal-account-activation-atdd.spec.ts
+  - packages/backend/src/__tests__/portal-dashboard-me.atdd.spec.ts
