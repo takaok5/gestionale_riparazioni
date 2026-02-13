@@ -38,7 +38,7 @@ interface AuthSuccessPayload {
 interface PortalAuthSuccessPayload {
   accessToken: string;
   refreshToken: string;
-  profileSummary: {
+  profileSummary?: {
     clienteId: number;
     codiceCliente: string;
     ragioneSociale: string;
@@ -450,15 +450,7 @@ async function loginPortalWithCredentials(
   }
 
   const tokens = issueAuthTokens({ userId: 900000 + account.clienteId, role: "COMMERCIALE" });
-  const profileSummary = await buildPortalProfileSummary(account.clienteId);
-
-  return {
-    ok: true,
-    data: {
-      ...tokens,
-      profileSummary,
-    },
-  };
+  return { ok: true, data: tokens };
 }
 
 function resolvePortalClienteId(payload: JwtPayload): number | null {

@@ -1,6 +1,7 @@
-import { Router, type Response } from "express";
+import { Router, type RequestHandler, type Response } from "express";
 import { buildErrorResponse } from "../lib/errors.js";
 import { verifyAuthToken } from "../middleware/auth.js";
+import { getClienteById } from "../services/anagrafiche-service.js";
 import {
   activatePortalAccount,
   loginWithCredentials,
@@ -29,6 +30,7 @@ import {
 const authRouter = Router();
 const portalAuthRouter = Router();
 const ACCESS_KIND = "access" as const;
+const PORTAL_USER_ID_PREFIX = 900000;
 
 function readBodyString(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -65,6 +67,71 @@ function resolvePortalRateLimitKey(ip: string, email: string): string {
   const normalizedEmail = email.trim().toLowerCase();
   return `${ip}|${normalizedEmail || "unknown-email"}`;
 }
+
+async function buildPortalProfileSummaryFromAccessToken(accessToken: string): Promise<{
+  clienteId: number;
+  codiceCliente: string;
+  ragioneSociale: string;
+}> {
+  const verification = verifyAuthToken(accessToken);
+  if (
+    !verification.ok
+    || verification.payload.role !== "COMMERCIALE"
+    || verification.payload.tokenType !== ACCESS_KIND
+  ) {
+    throw new Error("INVALID_PORTAL_ACCESS_TOKEN");
+  }
+
+  const clienteId = verification.payload.userId - PORTAL_USER_ID_PREFIX;
+  if (!Number.isInteger(clienteId) || clienteId <= 0) {
+    throw new Error("INVALID_PORTAL_ACCESS_TOKEN");
+  }
+
+  const fallback = {
+    clienteId,
+    codiceCliente: `CLI-${String(clienteId).padStart(6, "0")}`,
+    ragioneSociale: `Cliente ${clienteId}`,
+  };
+
+  try {
+    const clienteResult = await getClienteById({ clienteId });
+    if (!clienteResult.ok) {
+      return fallback;
+    }
+
+    const detail = clienteResult.data.data;
+    return {
+      clienteId,
+      codiceCliente: detail.codiceCliente,
+      ragioneSociale: detail.ragioneSociale ?? detail.nome,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+const portalLoginRateLimitGuard: RequestHandler = (req, res, next) => {
+  const ip = resolveClientIp(req.header("x-forwarded-for"), req.ip || "0.0.0.0");
+  const emailInput = readBodyString(req.body?.email);
+  const rateLimitKey = resolvePortalRateLimitKey(ip, emailInput);
+  res.locals.portalRateLimitKey = rateLimitKey;
+
+  const retryAfter = getRetryAfterSecondsForKey(rateLimitKey, portalLoginPolicy);
+  if (retryAfter === null) {
+    next();
+    return;
+  }
+
+  res.setHeader("Retry-After", String(retryAfter));
+  res
+    .status(423)
+    .json(
+      buildErrorResponse(
+        "ACCOUNT_TEMPORARILY_LOCKED",
+        "Account temporaneamente bloccato per troppi tentativi falliti",
+      ),
+    );
+};
 
 function respondAuthServiceError(res: Response, error: unknown): void {
   if (error instanceof Error && error.message === "JWT_SECRET_MISSING") {
@@ -226,26 +293,13 @@ portalAuthRouter.post("/activate", async (req, res) => {
   res.status(200).json({ data: result.data });
 });
 
+portalAuthRouter.use("/login", portalLoginRateLimitGuard);
+
 portalAuthRouter.post("/login", async (req, res) => {
-  const ip = resolveClientIp(req.header("x-forwarded-for"), req.ip || "0.0.0.0");
   const payload = {
     email: typeof req.body?.email === "string" ? req.body.email : "",
     password: typeof req.body?.password === "string" ? req.body.password : "",
   };
-  const rateLimitKey = resolvePortalRateLimitKey(ip, payload.email);
-  const retryAfter = getRetryAfterSecondsForKey(rateLimitKey, portalLoginPolicy);
-  if (retryAfter !== null) {
-    res.setHeader("Retry-After", String(retryAfter));
-    res
-      .status(423)
-      .json(
-        buildErrorResponse(
-          "ACCOUNT_TEMPORARILY_LOCKED",
-          "Account temporaneamente bloccato per troppi tentativi falliti",
-        ),
-      );
-    return;
-  }
 
   let result: LoginPortalResult;
   try {
@@ -257,14 +311,42 @@ portalAuthRouter.post("/login", async (req, res) => {
 
   if (!result.ok) {
     if (result.code === "INVALID_CREDENTIALS") {
+      const rateLimitKey =
+        typeof res.locals.portalRateLimitKey === "string"
+          ? res.locals.portalRateLimitKey
+          : resolvePortalRateLimitKey(
+              resolveClientIp(req.header("x-forwarded-for"), req.ip || "0.0.0.0"),
+              payload.email,
+            );
       registerFailedAttemptForKey(rateLimitKey, portalLoginPolicy);
     }
     respondPortalLoginFailure(res, result);
     return;
   }
 
+  const rateLimitKey =
+    typeof res.locals.portalRateLimitKey === "string"
+      ? res.locals.portalRateLimitKey
+      : resolvePortalRateLimitKey(
+          resolveClientIp(req.header("x-forwarded-for"), req.ip || "0.0.0.0"),
+          payload.email,
+        );
   clearFailedAttemptsForKey(rateLimitKey);
-  res.status(200).json(result.data);
+
+  let profileSummary: Awaited<
+    ReturnType<typeof buildPortalProfileSummaryFromAccessToken>
+  >;
+  try {
+    profileSummary = await buildPortalProfileSummaryFromAccessToken(result.data.accessToken);
+  } catch (error) {
+    respondAuthServiceError(res, error);
+    return;
+  }
+
+  res.status(200).json({
+    ...result.data,
+    profileSummary,
+  });
 });
 
 portalAuthRouter.post("/refresh", async (req, res) => {
