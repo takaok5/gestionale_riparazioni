@@ -6,6 +6,7 @@ import {
   type JwtPayload,
 } from "../middleware/auth.js";
 import { getClienteById, listClienteRiparazioni } from "./anagrafiche-service.js";
+import { getRiparazioneDettaglio, listRiparazioni } from "./riparazioni-service.js";
 import {
   createPortalAccountActivationNotifica,
   listNotifiche,
@@ -69,6 +70,46 @@ interface PortalDashboardPayload {
   eventiRecenti: PortalDashboardEventPayload[];
 }
 
+interface PortalOrdiniListItemPayload {
+  id: number;
+  codiceOrdine: string;
+  stato: string;
+  dataOrdine: string;
+  tipoDispositivo: string;
+}
+
+interface PortalOrdiniListPayload {
+  data: PortalOrdiniListItemPayload[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+interface PortalOrdineTimelineItemPayload {
+  stato: string;
+  dataOra: string;
+}
+
+interface PortalOrdineDocumentoPayload {
+  tipo: string;
+  riferimentoId: number;
+}
+
+interface PortalOrdineDettaglioPayload {
+  id: number;
+  stato: string;
+  importi: {
+    totalePreventivi: number;
+    totalePagato: number;
+    saldoResiduo: number;
+  };
+  timeline: PortalOrdineTimelineItemPayload[];
+  documentiCollegati: PortalOrdineDocumentoPayload[];
+}
+
 type LoginFailureCode = "INVALID_CREDENTIALS" | "ACCOUNT_DISABLED";
 type RefreshFailureCode = "INVALID_REFRESH_TOKEN" | "ACCOUNT_DISABLED";
 type PortalCreateFailureCode =
@@ -83,6 +124,12 @@ type PortalLoginFailureCode = "INVALID_CREDENTIALS" | "SERVICE_UNAVAILABLE";
 type PortalRefreshFailureCode = "INVALID_REFRESH_TOKEN" | "ACCOUNT_DISABLED";
 type PortalLogoutFailureCode = "INVALID_REFRESH_TOKEN";
 type PortalDashboardFailureCode = "UNAUTHORIZED" | "SERVICE_UNAVAILABLE";
+type PortalOrdiniFailureCode =
+  | "UNAUTHORIZED"
+  | "VALIDATION_ERROR"
+  | "FORBIDDEN"
+  | "NOT_FOUND"
+  | "SERVICE_UNAVAILABLE";
 type AuthFailureCode =
   | "INVALID_CREDENTIALS"
   | "ACCOUNT_DISABLED"
@@ -120,6 +167,14 @@ type GetPortalDashboardResult =
   | { ok: true; data: PortalDashboardPayload }
   | { ok: false; code: PortalDashboardFailureCode };
 
+type ListPortalOrdiniResult =
+  | { ok: true; data: PortalOrdiniListPayload }
+  | { ok: false; code: PortalOrdiniFailureCode };
+
+type GetPortalOrdineDettaglioResult =
+  | { ok: true; data: PortalOrdineDettaglioPayload }
+  | { ok: false; code: PortalOrdiniFailureCode };
+
 interface CreatePortalAccountInput {
   clienteId: number;
   email: string | null;
@@ -133,6 +188,12 @@ interface ActivatePortalAccountInput {
 interface PortalLoginCredentials {
   email: string;
   password: string;
+}
+
+interface PortalOrdiniQueryInput {
+  page: unknown;
+  limit: unknown;
+  stato: unknown;
 }
 
 type PortalAccountStatus = "INVITATO" | "ATTIVO";
@@ -507,6 +568,23 @@ function resolvePortalClienteId(payload: JwtPayload): number | null {
   return clienteId;
 }
 
+function asPositiveInteger(value: unknown): number | null {
+  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isInteger(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return null;
+}
+
+function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 function cleanupRevokedPortalRefreshTokens(now = Date.now()): void {
   for (const [token, expiresAt] of revokedPortalRefreshTokens.entries()) {
     if (expiresAt <= now) {
@@ -743,10 +821,143 @@ async function getPortalDashboard(accessToken: string): Promise<GetPortalDashboa
   };
 }
 
+async function listPortalOrdini(
+  accessToken: string,
+  query: PortalOrdiniQueryInput,
+): Promise<ListPortalOrdiniResult> {
+  const token = accessToken.trim();
+  if (!token) {
+    return { ok: false, code: "UNAUTHORIZED" };
+  }
+
+  const payload = resolveTokenPayload(token);
+  if (!payload || payload.tokenType !== ACCESS_KIND) {
+    return { ok: false, code: "UNAUTHORIZED" };
+  }
+
+  const clienteId = resolvePortalClienteId(payload);
+  if (!clienteId) {
+    return { ok: false, code: "UNAUTHORIZED" };
+  }
+
+  const riparazioniResult = await listRiparazioni({
+    page: query.page,
+    limit: query.limit,
+    stato: query.stato,
+    clienteId,
+    tecnicoId: undefined,
+    priorita: undefined,
+    dataRicezioneDa: undefined,
+    dataRicezioneA: undefined,
+    search: undefined,
+  });
+  if (!riparazioniResult.ok) {
+    if (riparazioniResult.code === "VALIDATION_ERROR") {
+      return { ok: false, code: "VALIDATION_ERROR" };
+    }
+    return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  }
+
+  return {
+    ok: true,
+    data: {
+      data: riparazioniResult.data.data.map((row) => ({
+        id: row.id,
+        codiceOrdine: row.codiceRiparazione,
+        stato: row.stato,
+        dataOrdine: row.dataRicezione,
+        tipoDispositivo: row.tipoDispositivo,
+      })),
+      meta: riparazioniResult.data.meta,
+    },
+  };
+}
+
+async function getPortalOrdineDettaglio(
+  accessToken: string,
+  ordineId: unknown,
+): Promise<GetPortalOrdineDettaglioResult> {
+  const token = accessToken.trim();
+  if (!token) {
+    return { ok: false, code: "UNAUTHORIZED" };
+  }
+
+  const payload = resolveTokenPayload(token);
+  if (!payload || payload.tokenType !== ACCESS_KIND) {
+    return { ok: false, code: "UNAUTHORIZED" };
+  }
+
+  const clienteId = resolvePortalClienteId(payload);
+  if (!clienteId) {
+    return { ok: false, code: "UNAUTHORIZED" };
+  }
+
+  const parsedOrdineId = asPositiveInteger(ordineId);
+  if (parsedOrdineId === null) {
+    return { ok: false, code: "VALIDATION_ERROR" };
+  }
+
+  const dettaglioResult = await getRiparazioneDettaglio({
+    riparazioneId: parsedOrdineId,
+  });
+  if (!dettaglioResult.ok) {
+    if (dettaglioResult.code === "VALIDATION_ERROR") {
+      return { ok: false, code: "VALIDATION_ERROR" };
+    }
+    if (dettaglioResult.code === "NOT_FOUND") {
+      return { ok: false, code: "NOT_FOUND" };
+    }
+    return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  }
+
+  const dettaglio = dettaglioResult.data.data;
+  if (dettaglio.cliente.id !== clienteId) {
+    return { ok: false, code: "FORBIDDEN" };
+  }
+
+  const totalePreventivi = roundCurrency(
+    dettaglio.preventivi.reduce((sum, item) => sum + item.totale, 0),
+  );
+  const totalePagato = 0;
+  const saldoResiduo = roundCurrency(totalePreventivi - totalePagato);
+  const timeline =
+    dettaglio.statiHistory.length > 0
+      ? dettaglio.statiHistory.map((item) => ({
+          stato: item.stato,
+          dataOra: item.dataOra,
+        }))
+      : [
+          {
+            stato: dettaglio.stato,
+            dataOra: new Date().toISOString(),
+          },
+        ];
+
+  return {
+    ok: true,
+    data: {
+      id: dettaglio.id,
+      stato: dettaglio.stato,
+      importi: {
+        totalePreventivi,
+        totalePagato,
+        saldoResiduo,
+      },
+      timeline,
+      documentiCollegati: dettaglio.preventivi.map((item) => ({
+        tipo: "PREVENTIVO",
+        riferimentoId: item.id,
+      })),
+    },
+  };
+}
+
 export {
   activatePortalAccount,
   createPortalAccountForCliente,
   getPortalDashboard,
+  getPortalOrdineDettaglio,
+  listPortalOrdini,
   loginWithCredentials,
   loginPortalWithCredentials,
   logoutPortalSession,
@@ -759,12 +970,15 @@ export {
   type AuthFailureCode,
   type CreatePortalAccountResult,
   type GetPortalDashboardResult,
+  type GetPortalOrdineDettaglioResult,
   type LoginFailureCode,
   type LoginResult,
   type LoginPortalResult,
+  type ListPortalOrdiniResult,
   type LogoutPortalSessionResult,
   type PortalActivateFailureCode,
   type PortalCreateFailureCode,
+  type PortalOrdiniFailureCode,
   type PortalLoginFailureCode,
   type PortalLogoutFailureCode,
   type PortalRefreshFailureCode,

@@ -1,0 +1,1 @@
+src/__tests__/portal-ordini-list-detail.atdd.spec.ts

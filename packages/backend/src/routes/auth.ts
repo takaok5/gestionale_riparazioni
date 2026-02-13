@@ -5,6 +5,8 @@ import { getClienteById } from "../services/anagrafiche-service.js";
 import {
   activatePortalAccount,
   getPortalDashboard,
+  getPortalOrdineDettaglio,
+  listPortalOrdini,
   loginWithCredentials,
   loginPortalWithCredentials,
   logoutPortalSession,
@@ -13,8 +15,10 @@ import {
   type AuthFailureCode,
   type ActivatePortalAccountResult,
   type GetPortalDashboardResult,
+  type GetPortalOrdineDettaglioResult,
   type LoginResult,
   type LoginPortalResult,
+  type ListPortalOrdiniResult,
   type LogoutPortalSessionResult,
   type RefreshPortalSessionResult,
   type RefreshSessionResult,
@@ -224,6 +228,66 @@ function respondPortalDashboardFailure(
     res
       .status(401)
       .json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(buildErrorResponse("AUTH_SERVICE_UNAVAILABLE", "Servizio autenticazione non disponibile"));
+}
+
+function respondPortalOrdiniListFailure(
+  res: Response,
+  result: Exclude<ListPortalOrdiniResult, { ok: true; data: unknown }>,
+): void {
+  if (result.code === "UNAUTHORIZED") {
+    res
+      .status(401)
+      .json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(buildErrorResponse("VALIDATION_ERROR", "Parametri non validi"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(buildErrorResponse("AUTH_SERVICE_UNAVAILABLE", "Servizio autenticazione non disponibile"));
+}
+
+function respondPortalOrdineDettaglioFailure(
+  res: Response,
+  result: Exclude<GetPortalOrdineDettaglioResult, { ok: true; data: unknown }>,
+): void {
+  if (result.code === "UNAUTHORIZED") {
+    res
+      .status(401)
+      .json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(buildErrorResponse("VALIDATION_ERROR", "Parametri non validi"));
+    return;
+  }
+
+  if (result.code === "FORBIDDEN") {
+    res
+      .status(403)
+      .json(buildErrorResponse("FORBIDDEN", "FORBIDDEN"));
+    return;
+  }
+
+  if (result.code === "NOT_FOUND") {
+    res
+      .status(404)
+      .json(buildErrorResponse("ORDINE_NOT_FOUND", "Ordine non trovato"));
     return;
   }
 
@@ -442,6 +506,60 @@ portalRouter.get("/me", async (req, res) => {
   }
 
   res.status(200).json(result.data);
+});
+
+portalRouter.get("/ordini", async (req, res) => {
+  const authHeader = req.header("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  const accessJwt = authHeader.slice("Bearer ".length);
+
+  let result: ListPortalOrdiniResult;
+  try {
+    result = await listPortalOrdini(accessJwt, {
+      page: req.query.page,
+      limit: req.query.limit,
+      stato: req.query.stato,
+    });
+  } catch (error) {
+    respondAuthServiceError(res, error);
+    return;
+  }
+
+  if (!result.ok) {
+    respondPortalOrdiniListFailure(res, result);
+    return;
+  }
+
+  res.status(200).json(result.data);
+});
+
+portalRouter.get("/ordini/:id", async (req, res) => {
+  const authHeader = req.header("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  const accessJwt = authHeader.slice("Bearer ".length);
+
+  let result: GetPortalOrdineDettaglioResult;
+  try {
+    result = await getPortalOrdineDettaglio(accessJwt, req.params.id);
+  } catch (error) {
+    respondAuthServiceError(res, error);
+    return;
+  }
+
+  if (!result.ok) {
+    respondPortalOrdineDettaglioFailure(res, result);
+    return;
+  }
+
+  res.status(200).json({ data: result.data });
 });
 
 export { authRouter, portalAuthRouter, portalRouter };

@@ -38,6 +38,7 @@ interface ListRiparazioniInput {
   page: unknown;
   limit: unknown;
   stato: unknown;
+  clienteId?: unknown;
   tecnicoId: unknown;
   priorita: unknown;
   dataRicezioneDa: unknown;
@@ -305,6 +306,7 @@ interface ParsedListRiparazioniInput {
   page: number;
   limit: number;
   stato?: string;
+  clienteId?: number;
   tecnicoId?: number;
   priorita?: Priorita;
   dataRicezioneDa?: Date;
@@ -644,6 +646,18 @@ function parseListRiparazioniInput(
     });
   }
 
+  let clienteId: number | undefined;
+  if (input.clienteId !== undefined && input.clienteId !== null) {
+    const parsedClienteId = asPositiveInteger(input.clienteId);
+    if (parsedClienteId === null) {
+      return buildValidationFailure({
+        field: "clienteId",
+        rule: "invalid_integer",
+      });
+    }
+    clienteId = parsedClienteId;
+  }
+
   let tecnicoId: number | undefined;
   if (input.tecnicoId !== undefined && input.tecnicoId !== null) {
     const parsedTecnicoId = asPositiveInteger(input.tecnicoId);
@@ -721,6 +735,7 @@ function parseListRiparazioniInput(
       page,
       limit,
       stato,
+      clienteId,
       tecnicoId,
       priorita,
       dataRicezioneDa,
@@ -1362,6 +1377,10 @@ async function listRiparazioniInTestStore(
 
   const filtered = testRiparazioni
     .filter((row) => {
+      if (payload.clienteId !== undefined && row.clienteId !== payload.clienteId) {
+        return false;
+      }
+
       if (payload.stato && row.stato !== payload.stato) {
         return false;
       }
@@ -1437,6 +1456,10 @@ async function listRiparazioniInDatabase(
 
     if (payload.stato) {
       where.stato = payload.stato;
+    }
+
+    if (payload.clienteId !== undefined) {
+      where.clienteId = payload.clienteId;
     }
 
     if (payload.tecnicoId !== undefined) {

@@ -1,0 +1,41 @@
+﻿story_id: "8.4"
+story_title: "Lista e Dettaglio Ordini Cliente"
+acceptance_criteria:
+  - "AC-1: GET /api/portal/ordini?page=1&limit=10 returns 10 items and pagination metadata"
+  - "AC-2: GET /api/portal/ordini?stato=IN_LAVORAZIONE returns only matching state"
+  - "AC-3: GET /api/portal/ordini/20 returns detail with stato, importi, timeline, linked documents when owned"
+  - "AC-4: GET /api/portal/ordini/20 returns 403 FORBIDDEN when order belongs to another customer"
+
+target_modules:
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/routes/auth.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/auth-service.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/anagrafiche-service.ts"
+
+patterns_to_follow:
+  - "Portal route bearer-token guard + service call pattern in packages/backend/src/routes/auth.ts:422"
+  - "Portal failure mapping to HTTP status through responder helpers in packages/backend/src/routes/auth.ts:219"
+  - "List endpoint query-to-payload mapping with page/limit/stato in packages/backend/src/routes/riparazioni.ts:379"
+  - "Validation of page/limit and enum filters in service parser in packages/backend/src/services/riparazioni-service.ts:604"
+  - "Pagination meta shape {page, limit, total, totalPages} in packages/backend/src/services/riparazioni-service.ts:1422"
+  - "Detail timeline and linked economic fields mapping (statiHistory/preventivi/ricambi) in packages/backend/src/services/riparazioni-service.ts:1590"
+  - "Portal access-token validation and customer resolution in packages/backend/src/services/auth-service.ts:651"
+
+dependencies:
+  - "packages/backend/src/index.ts:5 imports portalRouter from routes/auth.ts and mounts /api/portal at packages/backend/src/index.ts:32"
+  - "packages/backend/src/routes/auth.ts:5 imports portal service functions from services/auth-service.ts"
+  - "packages/backend/src/services/auth-service.ts:8 imports getClienteById and listClienteRiparazioni from services/anagrafiche-service.ts"
+  - "packages/backend/src/routes/clienti.ts:256 uses listClienteRiparazioni from services/anagrafiche-service.ts"
+  - "packages/backend/src/__tests__/portal-dashboard-me.atdd.spec.ts:9 uses resetPortalAccountsForTests from services/auth-service.ts"
+
+risks:
+  - "Domain mismatch risk: 'ordini cliente' in story may map to riparazioni domain currently used by portal dashboard stats. Wrong mapping can break functional expectations."
+  - "Authorization regression risk: using generic detail services without owner check can leak another customer's data (AC-4)."
+  - "Pagination correctness risk: if customer filter is applied after pagination slicing, metadata and page content become inconsistent."
+  - "Contract risk: extending listClienteRiparazioni input/output may impact existing callers (routes/clienti.ts and tests)."
+  - "Data-shape risk: linked documents/importi in AC-3 may require joining preventivi/fatture beyond current lightweight list payload."
+
+existing_tests:
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/portal-dashboard-me.atdd.spec.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/portal-auth-login-refresh-logout.atdd.spec.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/riparazioni-list-filter-atdd.spec.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts"
