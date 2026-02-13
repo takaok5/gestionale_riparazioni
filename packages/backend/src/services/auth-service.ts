@@ -180,6 +180,10 @@ const PORTAL_ORDINI_APERTI_STATI = new Set([
 ]);
 const PORTAL_RIPARAZIONI_ATTIVE_STATI = new Set(["IN_LAVORAZIONE"]);
 const PORTAL_PREVENTIVI_IN_ATTESA_STATI = new Set(["IN_ATTESA_RICAMBI"]);
+const PORTAL_ALLOWED_NOTIFICA_TIPI = new Set([
+  "STATO_RIPARAZIONE",
+  "PREVENTIVO",
+]);
 
 interface DbUserRecord {
   id: number;
@@ -694,30 +698,36 @@ async function getPortalDashboard(accessToken: string): Promise<GetPortalDashboa
 
   let notificaEvents: PortalDashboardEventPayload[] = [];
   const notificheResult = await listNotifiche({ page: 1, limit: PORTAL_MAX_EVENTS });
-  if (notificheResult.ok) {
+  if (notificheResult.ok && clienteEmail) {
     notificaEvents = notificheResult.data
       .filter((row) => {
-        if (!clienteEmail) {
-          return true;
-        }
-        return row.destinatario.trim().toLowerCase() === clienteEmail;
+        const destinatario = row.destinatario.trim().toLowerCase();
+        return destinatario === clienteEmail && PORTAL_ALLOWED_NOTIFICA_TIPI.has(row.tipo);
       })
       .map((row) => ({
         tipo: row.tipo,
         riferimentoId: row.riferimentoId,
         timestamp: row.dataInvio,
-        descrizione: row.oggetto,
+        descrizione: row.contenuto,
       }));
   }
 
-  const eventiRecenti = [...riparazioneEvents, ...notificaEvents]
+  const sortedEvents = [...riparazioneEvents, ...notificaEvents]
     .sort((left, right) => {
       if (left.timestamp === right.timestamp) {
         return right.riferimentoId - left.riferimentoId;
       }
       return right.timestamp.localeCompare(left.timestamp);
     })
-    .slice(0, PORTAL_MAX_EVENTS);
+    .slice(0, PORTAL_MAX_EVENTS * 2);
+  const uniqueEvents = new Map<string, PortalDashboardEventPayload>();
+  for (const event of sortedEvents) {
+    const key = `${event.tipo}:${event.riferimentoId}:${event.timestamp}`;
+    if (!uniqueEvents.has(key)) {
+      uniqueEvents.set(key, event);
+    }
+  }
+  const eventiRecenti = Array.from(uniqueEvents.values()).slice(0, PORTAL_MAX_EVENTS);
 
   return {
     ok: true,
