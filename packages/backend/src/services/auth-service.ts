@@ -328,7 +328,7 @@ async function refreshSession(refreshToken: string): Promise<RefreshSessionResul
     return { ok: false, code: "INVALID_REFRESH_TOKEN" };
   }
 
-  if (payload.tokenType !== REFRESH_KIND) {
+  if (payload.tokenType !== "refresh") {
     return { ok: false, code: "INVALID_REFRESH_TOKEN" };
   }
 
@@ -449,10 +449,7 @@ async function loginPortalWithCredentials(
     return { ok: false, code: "INVALID_CREDENTIALS" };
   }
 
-  const tokens = issueAuthTokens({
-    userId: PORTAL_USER_ID_PREFIX + account.clienteId,
-    role: "COMMERCIALE",
-  });
+  const tokens = issueAuthTokens({ userId: 900000 + account.clienteId, role: "COMMERCIALE" });
   const profileSummary = await buildPortalProfileSummary(account.clienteId);
 
   return {

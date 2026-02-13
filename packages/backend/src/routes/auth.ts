@@ -185,11 +185,12 @@ authRouter.post("/login", async (req, res) => {
 });
 
 authRouter.post("/refresh", async (req, res) => {
-  const refreshInput = readBodyString(req.body?.refreshToken);
+  const refreshToken =
+    typeof req.body?.refreshToken === "string" ? req.body.refreshToken : "";
 
   let result: RefreshSessionResult;
   try {
-    result = await refreshSession(refreshInput);
+    result = await refreshSession(refreshToken);
   } catch (error) {
     respondAuthServiceError(res, error);
     return;
@@ -205,8 +206,8 @@ authRouter.post("/refresh", async (req, res) => {
 
 portalAuthRouter.post("/activate", async (req, res) => {
   const payload = {
-    token: readBodyString(req.body?.token),
-    password: readBodyString(req.body?.password),
+    token: typeof req.body?.token === "string" ? req.body.token : "",
+    password: typeof req.body?.password === "string" ? req.body.password : "",
   };
 
   let result: ActivatePortalAccountResult;
@@ -228,8 +229,8 @@ portalAuthRouter.post("/activate", async (req, res) => {
 portalAuthRouter.post("/login", async (req, res) => {
   const ip = resolveClientIp(req.header("x-forwarded-for"), req.ip || "0.0.0.0");
   const payload = {
-    email: readBodyString(req.body?.email),
-    password: readBodyString(req.body?.password),
+    email: typeof req.body?.email === "string" ? req.body.email : "",
+    password: typeof req.body?.password === "string" ? req.body.password : "",
   };
   const rateLimitKey = resolvePortalRateLimitKey(ip, payload.email);
   const retryAfter = getRetryAfterSecondsForKey(rateLimitKey, portalLoginPolicy);
