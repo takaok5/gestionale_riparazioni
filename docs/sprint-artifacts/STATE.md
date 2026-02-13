@@ -1,4 +1,4 @@
-# Pipeline State
+ï»¿# Pipeline State
 
 ## Current Story
 
@@ -9,7 +9,7 @@
 ## Progress
 
 `
-[¦¦¦¦¦¦¦¦¦¦] 100%
+[##########] 100%
 `
 
 ## Session
