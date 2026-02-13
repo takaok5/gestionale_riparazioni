@@ -1,20 +1,29 @@
 import { Router, type Response } from "express";
 import { buildErrorResponse } from "../lib/errors.js";
+import { verifyAuthToken } from "../middleware/auth.js";
 import {
   activatePortalAccount,
   loginWithCredentials,
   loginPortalWithCredentials,
+  logoutPortalSession,
+  refreshPortalSession,
   refreshSession,
   type AuthFailureCode,
   type ActivatePortalAccountResult,
   type LoginResult,
   type LoginPortalResult,
+  type LogoutPortalSessionResult,
+  type RefreshPortalSessionResult,
   type RefreshSessionResult,
 } from "../services/auth-service.js";
 import {
   clearFailedAttempts,
+  clearFailedAttemptsForKey,
   getRetryAfterSeconds,
+  getRetryAfterSecondsForKey,
   registerFailedAttempt,
+  registerFailedAttemptForKey,
+  type RateLimitPolicy,
 } from "../services/login-rate-limit.js";
 
 const authRouter = Router();
@@ -39,6 +48,17 @@ function getErrorMessage(code: AuthFailureCode): string {
   }
 
   return "Credenziali non valide";
+}
+
+const portalLoginPolicy: RateLimitPolicy = {
+  maxFailedAttempts: 10,
+  windowMs: 15 * 60 * 1000,
+  retryAfterCapSeconds: 15 * 60,
+};
+
+function resolvePortalRateLimitKey(ip: string, email: string): string {
+  const normalizedEmail = email.trim().toLowerCase();
+  return `${ip}|${normalizedEmail || "unknown-email"}`;
 }
 
 function respondAuthServiceError(res: Response, error: unknown): void {
@@ -94,6 +114,31 @@ function respondPortalLoginFailure(
   res
     .status(500)
     .json(buildErrorResponse("AUTH_SERVICE_UNAVAILABLE", "Servizio autenticazione non disponibile"));
+}
+
+function respondPortalRefreshFailure(
+  res: Response,
+  result: Exclude<RefreshPortalSessionResult, { ok: true; data: unknown }>,
+): void {
+  if (result.code === "ACCOUNT_DISABLED") {
+    res
+      .status(401)
+      .json(buildErrorResponse("ACCOUNT_DISABLED", "Account disabilitato"));
+    return;
+  }
+
+  res
+    .status(401)
+    .json(buildErrorResponse("INVALID_REFRESH_TOKEN", "Refresh token non valido"));
+}
+
+function respondPortalLogoutFailure(
+  res: Response,
+  _result: Exclude<LogoutPortalSessionResult, { ok: true; data: unknown }>,
+): void {
+  res
+    .status(401)
+    .json(buildErrorResponse("INVALID_REFRESH_TOKEN", "Refresh token non valido"));
 }
 
 authRouter.post("/login", async (req, res) => {
@@ -177,10 +222,25 @@ portalAuthRouter.post("/activate", async (req, res) => {
 });
 
 portalAuthRouter.post("/login", async (req, res) => {
+  const ip = resolveClientIp(req.header("x-forwarded-for"), req.ip || "0.0.0.0");
   const payload = {
     email: typeof req.body?.email === "string" ? req.body.email : "",
     password: typeof req.body?.password === "string" ? req.body.password : "",
   };
+  const rateLimitKey = resolvePortalRateLimitKey(ip, payload.email);
+  const retryAfter = getRetryAfterSecondsForKey(rateLimitKey, portalLoginPolicy);
+  if (retryAfter !== null) {
+    res.setHeader("Retry-After", String(retryAfter));
+    res
+      .status(423)
+      .json(
+        buildErrorResponse(
+          "ACCOUNT_TEMPORARILY_LOCKED",
+          "Account temporaneamente bloccato per troppi tentativi falliti",
+        ),
+      );
+    return;
+  }
 
   let result: LoginPortalResult;
   try {
@@ -191,11 +251,67 @@ portalAuthRouter.post("/login", async (req, res) => {
   }
 
   if (!result.ok) {
+    if (result.code === "INVALID_CREDENTIALS") {
+      registerFailedAttemptForKey(rateLimitKey, portalLoginPolicy);
+    }
     respondPortalLoginFailure(res, result);
     return;
   }
 
+  clearFailedAttemptsForKey(rateLimitKey);
   res.status(200).json(result.data);
+});
+
+portalAuthRouter.post("/refresh", async (req, res) => {
+  const refreshToken =
+    typeof req.body?.refreshToken === "string" ? req.body.refreshToken : "";
+
+  let result: RefreshPortalSessionResult;
+  try {
+    result = await refreshPortalSession(refreshToken);
+  } catch (error) {
+    respondAuthServiceError(res, error);
+    return;
+  }
+
+  if (!result.ok) {
+    respondPortalRefreshFailure(res, result);
+    return;
+  }
+
+  res.status(200).json(result.data);
+});
+
+portalAuthRouter.post("/logout", async (req, res) => {
+  const authHeader = req.header("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+  const accessToken = authHeader.slice("Bearer ".length);
+  const verification = verifyAuthToken(accessToken);
+  if (!verification.ok || verification.payload.tokenType !== "access") {
+    res.status(401).json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  const refreshToken =
+    typeof req.body?.refreshToken === "string" ? req.body.refreshToken : "";
+
+  let result: LogoutPortalSessionResult;
+  try {
+    result = await logoutPortalSession(refreshToken);
+  } catch (error) {
+    respondAuthServiceError(res, error);
+    return;
+  }
+
+  if (!result.ok) {
+    respondPortalLogoutFailure(res, result);
+    return;
+  }
+
+  res.status(200).json({ data: result.data });
 });
 
 export { authRouter, portalAuthRouter };

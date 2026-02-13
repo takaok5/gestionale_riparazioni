@@ -1,54 +1,87 @@
-const MAX_FAILED_ATTEMPTS = 5;
-const RATE_LIMIT_WINDOW_MS = 60_000;
+type RateLimitPolicy = {
+  maxFailedAttempts: number;
+  windowMs: number;
+  retryAfterCapSeconds: number;
+};
 
-const failedAttemptsByIp = new Map<string, number[]>();
+const DEFAULT_POLICY: RateLimitPolicy = {
+  maxFailedAttempts: 5,
+  windowMs: 60_000,
+  retryAfterCapSeconds: 60,
+};
 
-function trimWindow(attempts: number[], now: number): number[] {
-  const minTimestamp = now - RATE_LIMIT_WINDOW_MS;
+const failedAttemptsByKey = new Map<string, number[]>();
+
+function trimWindow(attempts: number[], now: number, windowMs: number): number[] {
+  const minTimestamp = now - windowMs;
   return attempts.filter((ts) => ts >= minTimestamp);
 }
 
-function getRetryAfterSeconds(ip: string, now = Date.now()): number | null {
-  const attempts = failedAttemptsByIp.get(ip);
+function getRetryAfterSecondsForKey(
+  key: string,
+  policy: RateLimitPolicy,
+  now = Date.now(),
+): number | null {
+  const attempts = failedAttemptsByKey.get(key);
   if (!attempts || attempts.length === 0) {
     return null;
   }
 
-  const inWindowAttempts = trimWindow(attempts, now);
+  const inWindowAttempts = trimWindow(attempts, now, policy.windowMs);
   if (inWindowAttempts.length === 0) {
-    failedAttemptsByIp.delete(ip);
+    failedAttemptsByKey.delete(key);
     return null;
   }
-  failedAttemptsByIp.set(ip, inWindowAttempts);
+  failedAttemptsByKey.set(key, inWindowAttempts);
 
-  if (inWindowAttempts.length < MAX_FAILED_ATTEMPTS) {
+  if (inWindowAttempts.length < policy.maxFailedAttempts) {
     return null;
   }
 
   const oldestTimestamp = inWindowAttempts[0];
-  const remainingMs = Math.max(0, oldestTimestamp + RATE_LIMIT_WINDOW_MS - now);
+  const remainingMs = Math.max(0, oldestTimestamp + policy.windowMs - now);
   const retryAfterSeconds = Math.ceil(remainingMs / 1000);
 
-  return Math.min(60, Math.max(1, retryAfterSeconds));
+  return Math.min(policy.retryAfterCapSeconds, Math.max(1, retryAfterSeconds));
+}
+
+function registerFailedAttemptForKey(
+  key: string,
+  policy: RateLimitPolicy,
+  now = Date.now(),
+): void {
+  const currentAttempts = failedAttemptsByKey.get(key) ?? [];
+  currentAttempts.push(now);
+  failedAttemptsByKey.set(key, trimWindow(currentAttempts, now, policy.windowMs));
+}
+
+function clearFailedAttemptsForKey(key: string): void {
+  failedAttemptsByKey.delete(key);
+}
+
+function getRetryAfterSeconds(ip: string, now = Date.now()): number | null {
+  return getRetryAfterSecondsForKey(ip, DEFAULT_POLICY, now);
 }
 
 function registerFailedAttempt(ip: string, now = Date.now()): void {
-  const currentAttempts = failedAttemptsByIp.get(ip) ?? [];
-  currentAttempts.push(now);
-  failedAttemptsByIp.set(ip, trimWindow(currentAttempts, now));
+  registerFailedAttemptForKey(ip, DEFAULT_POLICY, now);
 }
 
 function clearFailedAttempts(ip: string): void {
-  failedAttemptsByIp.delete(ip);
+  clearFailedAttemptsForKey(ip);
 }
 
 function resetRateLimiter(): void {
-  failedAttemptsByIp.clear();
+  failedAttemptsByKey.clear();
 }
 
 export {
   clearFailedAttempts,
+  clearFailedAttemptsForKey,
   getRetryAfterSeconds,
+  getRetryAfterSecondsForKey,
   registerFailedAttempt,
+  registerFailedAttemptForKey,
   resetRateLimiter,
+  type RateLimitPolicy,
 };

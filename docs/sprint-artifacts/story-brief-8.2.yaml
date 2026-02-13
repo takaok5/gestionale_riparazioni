@@ -1,0 +1,69 @@
+﻿story_id: '8.2'
+story_title: 'Login, Refresh e Logout Portale Cliente'
+
+target_modules:
+  - path: 'packages/backend/src/routes/auth.ts'
+    reason: 'Espone /api/portal/auth/login e /api/auth/refresh; va esteso per /api/portal/auth/refresh e /api/portal/auth/logout con mapping errori AC.'
+  - path: 'packages/backend/src/services/auth-service.ts'
+    reason: 'Contiene login/refresh/portal login e token issuance; punto centrale per token rotation, invalidazione refresh token e summary cliente.'
+  - path: 'packages/backend/src/services/login-rate-limit.ts'
+    reason: 'Implementa tentativi falliti; da adeguare alla policy 10 tentativi / 15 minuti con lock temporaneo (423).'
+  - path: 'packages/backend/src/middleware/auth.ts'
+    reason: 'Gestione JWT access/refresh e validazione token type; probabile estensione per revoca/blacklist refresh token.'
+  - path: 'packages/backend/src/routes/clienti.ts'
+    reason: 'Dipendenza diretta da story 8.1 per provisioning account portale usato dal login 8.2.'
+
+patterns_to_follow:
+  - pattern: 'Route sottile + servizio applicativo con error mapping consistente.'
+    example: 'packages/backend/src/routes/auth.ts:137'
+  - pattern: 'Rate limit con retry-after header e codice errore strutturato.'
+    example: 'packages/backend/src/routes/auth.ts:99'
+  - pattern: 'Validazione credenziali + account state prima di emettere token.'
+    example: 'packages/backend/src/services/auth-service.ts:258'
+  - pattern: 'Refresh flow: validate refresh token type, poi issue nuovi token.'
+    example: 'packages/backend/src/services/auth-service.ts:298'
+  - pattern: 'Token utility centralizzata (sign/verify) in middleware auth.'
+    example: 'packages/backend/src/middleware/auth.ts:60'
+  - pattern: 'Test API con supertest + vitest su status, payload e error code.'
+    example: 'packages/backend/src/__tests__/auth-login.spec.ts:10'
+  - pattern: 'Test refresh con casi valid/missing/expired/malformed.'
+    example: 'packages/backend/src/__tests__/auth-refresh.spec.ts:24'
+
+dependencies:
+  - module: 'packages/backend/src/routes/auth.ts'
+    used_by:
+      - 'packages/backend/src/index.ts:33'
+      - 'packages/backend/src/__tests__/auth-login.spec.ts:1'
+      - 'packages/backend/src/__tests__/auth-refresh.spec.ts:1'
+  - module: 'packages/backend/src/services/auth-service.ts'
+    used_by:
+      - 'packages/backend/src/routes/auth.ts:13'
+      - 'packages/backend/src/routes/clienti.ts:4'
+      - 'packages/backend/src/__tests__/portal-account-activation-atdd.spec.ts:38'
+  - module: 'packages/backend/src/services/login-rate-limit.ts'
+    used_by:
+      - 'packages/backend/src/routes/auth.ts:18'
+      - 'packages/backend/src/__tests__/auth-login.spec.ts:1'
+  - module: 'packages/backend/src/middleware/auth.ts'
+    used_by:
+      - 'packages/backend/src/services/auth-service.ts:1'
+      - 'packages/backend/src/routes/users.ts:3'
+      - 'packages/backend/src/routes/clienti.ts:7'
+  - module: 'packages/backend/src/routes/clienti.ts'
+    used_by:
+      - 'packages/backend/src/index.ts:25'
+      - 'packages/backend/src/__tests__/portal-account-create-atdd.spec.ts:38'
+
+risks:
+  - 'Mismatch AC vs implementazione attuale: rate limiter corrente 5/min invece di 10/15min con lock 423 (rischio regressioni auth globale).'
+  - 'Refresh token oggi stateless: invalidare il vecchio token richiede store persistente o versione token; senza questo AC-4 non e verificabile in modo robusto.'
+  - 'Portal login attuale non restituisce customer profile summary completo; rischio AC-1 non soddisfatto lato payload.'
+  - 'Rate limit in-memory non condiviso tra istanze/processi; lockout incoerente in produzione multi-instance.'
+  - 'Aggiunta logout/revoca puo impattare flussi auth backoffice se si tocca logica comune in auth-service.'
+
+existing_tests:
+  - 'packages/backend/src/__tests__/auth-login.spec.ts'
+  - 'packages/backend/src/__tests__/auth-refresh.spec.ts'
+  - 'packages/backend/src/__tests__/portal-account-activation-atdd.spec.ts'
+  - 'packages/backend/src/__tests__/portal-account-create-atdd.spec.ts'
+  - 'packages/backend/src/__tests__/portal-account-conflict-atdd.spec.ts'

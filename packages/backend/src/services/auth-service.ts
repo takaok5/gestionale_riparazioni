@@ -5,6 +5,7 @@ import {
   verifyAuthToken,
   type JwtPayload,
 } from "../middleware/auth.js";
+import { getClienteById } from "./anagrafiche-service.js";
 import { createPortalAccountActivationNotifica } from "./notifiche-service.js";
 
 type Role = "ADMIN" | "TECNICO" | "COMMERCIALE";
@@ -37,6 +38,11 @@ interface AuthSuccessPayload {
 interface PortalAuthSuccessPayload {
   accessToken: string;
   refreshToken: string;
+  profileSummary: {
+    clienteId: number;
+    codiceCliente: string;
+    ragioneSociale: string;
+  };
 }
 
 type LoginFailureCode = "INVALID_CREDENTIALS" | "ACCOUNT_DISABLED";
@@ -50,6 +56,8 @@ type PortalActivateFailureCode =
   | "WEAK_PASSWORD"
   | "SERVICE_UNAVAILABLE";
 type PortalLoginFailureCode = "INVALID_CREDENTIALS" | "SERVICE_UNAVAILABLE";
+type PortalRefreshFailureCode = "INVALID_REFRESH_TOKEN" | "ACCOUNT_DISABLED";
+type PortalLogoutFailureCode = "INVALID_REFRESH_TOKEN";
 type AuthFailureCode =
   | "INVALID_CREDENTIALS"
   | "ACCOUNT_DISABLED"
@@ -74,6 +82,14 @@ type ActivatePortalAccountResult =
 type LoginPortalResult =
   | { ok: true; data: PortalAuthSuccessPayload }
   | { ok: false; code: PortalLoginFailureCode };
+
+type RefreshPortalSessionResult =
+  | { ok: true; data: PortalAuthSuccessPayload }
+  | { ok: false; code: PortalRefreshFailureCode };
+
+type LogoutPortalSessionResult =
+  | { ok: true; data: { revoked: true } }
+  | { ok: false; code: PortalLogoutFailureCode };
 
 interface CreatePortalAccountInput {
   clienteId: number;
@@ -123,6 +139,9 @@ const baseSeededUsers: AuthUserRecord[] = [
 let seededUsers = cloneAuthUsers(baseSeededUsers);
 const basePortalAccounts: PortalAccountRecord[] = [];
 let portalAccounts = clonePortalAccounts(basePortalAccounts);
+const revokedPortalRefreshTokens = new Map<string, number>();
+const PORTAL_USER_ID_PREFIX = 900000;
+const PORTAL_REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface DbUserRecord {
   id: number;
@@ -232,6 +251,7 @@ function resetAuthUsersForTests(): void {
   ensureTestEnvironment();
   seededUsers = cloneAuthUsers(baseSeededUsers);
   portalAccounts = clonePortalAccounts(basePortalAccounts);
+  revokedPortalRefreshTokens.clear();
 }
 
 function setAuthUserPasswordHashForTests(
@@ -253,6 +273,7 @@ function setAuthUserPasswordHashForTests(
 function resetPortalAccountsForTests(): void {
   ensureTestEnvironment();
   portalAccounts = clonePortalAccounts(basePortalAccounts);
+  revokedPortalRefreshTokens.clear();
 }
 
 async function loginWithCredentials(
@@ -427,8 +448,173 @@ async function loginPortalWithCredentials(
     return { ok: false, code: "INVALID_CREDENTIALS" };
   }
 
-  const tokens = issueAuthTokens({ userId: 900000 + account.clienteId, role: "COMMERCIALE" });
-  return { ok: true, data: tokens };
+  const tokens = issueAuthTokens({
+    userId: PORTAL_USER_ID_PREFIX + account.clienteId,
+    role: "COMMERCIALE",
+  });
+  const profileSummary = await buildPortalProfileSummary(account.clienteId);
+
+  return {
+    ok: true,
+    data: {
+      ...tokens,
+      profileSummary,
+    },
+  };
+}
+
+function resolvePortalClienteId(payload: JwtPayload): number | null {
+  if (payload.role !== "COMMERCIALE") {
+    return null;
+  }
+
+  const clienteId = payload.userId - PORTAL_USER_ID_PREFIX;
+  if (!Number.isInteger(clienteId) || clienteId <= 0) {
+    return null;
+  }
+
+  return clienteId;
+}
+
+function cleanupRevokedPortalRefreshTokens(now = Date.now()): void {
+  for (const [token, expiresAt] of revokedPortalRefreshTokens.entries()) {
+    if (expiresAt <= now) {
+      revokedPortalRefreshTokens.delete(token);
+    }
+  }
+}
+
+function resolveRevocationExpiryMs(payload: JwtPayload): number {
+  const exp = (payload as JwtPayload & { exp?: number }).exp;
+  if (typeof exp === "number" && Number.isFinite(exp)) {
+    return exp * 1000;
+  }
+
+  return Date.now() + PORTAL_REFRESH_TOKEN_TTL_MS;
+}
+
+function isPortalRefreshTokenRevoked(token: string): boolean {
+  cleanupRevokedPortalRefreshTokens();
+  return revokedPortalRefreshTokens.has(token);
+}
+
+function markPortalRefreshTokenRevoked(token: string, payload: JwtPayload): void {
+  cleanupRevokedPortalRefreshTokens();
+  revokedPortalRefreshTokens.set(token, resolveRevocationExpiryMs(payload));
+}
+
+async function findPortalAccountByClienteId(
+  clienteId: number,
+): Promise<PortalAccountRecord | undefined> {
+  return portalAccounts.find((item) => item.clienteId === clienteId);
+}
+
+async function buildPortalProfileSummary(clienteId: number): Promise<{
+  clienteId: number;
+  codiceCliente: string;
+  ragioneSociale: string;
+}> {
+  const fallback = {
+    clienteId,
+    codiceCliente: `CLI-${String(clienteId).padStart(6, "0")}`,
+    ragioneSociale: `Cliente ${clienteId}`,
+  };
+
+  try {
+    const clienteResult = await getClienteById({ clienteId });
+    if (!clienteResult.ok) {
+      return fallback;
+    }
+
+    const detail = clienteResult.data.data;
+    const ragioneSociale = detail.ragioneSociale ?? detail.nome;
+    return {
+      clienteId,
+      codiceCliente: detail.codiceCliente,
+      ragioneSociale,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+async function refreshPortalSession(
+  refreshToken: string,
+): Promise<RefreshPortalSessionResult> {
+  const token = refreshToken.trim();
+  if (!token) {
+    return { ok: false, code: "INVALID_REFRESH_TOKEN" };
+  }
+
+  if (isPortalRefreshTokenRevoked(token)) {
+    return { ok: false, code: "INVALID_REFRESH_TOKEN" };
+  }
+
+  const payload = resolveTokenPayload(token);
+  if (!payload || payload.tokenType !== "refresh") {
+    return { ok: false, code: "INVALID_REFRESH_TOKEN" };
+  }
+
+  const clienteId = resolvePortalClienteId(payload);
+  if (!clienteId) {
+    return { ok: false, code: "INVALID_REFRESH_TOKEN" };
+  }
+
+  const account = await findPortalAccountByClienteId(clienteId);
+  if (!account) {
+    return { ok: false, code: "INVALID_REFRESH_TOKEN" };
+  }
+
+  if (account.status !== "ATTIVO" || !account.passwordHash) {
+    return { ok: false, code: "ACCOUNT_DISABLED" };
+  }
+
+  markPortalRefreshTokenRevoked(token, payload);
+  const tokens = issueAuthTokens({
+    userId: PORTAL_USER_ID_PREFIX + account.clienteId,
+    role: "COMMERCIALE",
+  });
+  const profileSummary = await buildPortalProfileSummary(account.clienteId);
+
+  return {
+    ok: true,
+    data: {
+      ...tokens,
+      profileSummary,
+    },
+  };
+}
+
+async function logoutPortalSession(
+  refreshToken: string,
+): Promise<LogoutPortalSessionResult> {
+  const token = refreshToken.trim();
+  if (!token) {
+    return { ok: false, code: "INVALID_REFRESH_TOKEN" };
+  }
+
+  if (isPortalRefreshTokenRevoked(token)) {
+    return { ok: false, code: "INVALID_REFRESH_TOKEN" };
+  }
+
+  const payload = resolveTokenPayload(token);
+  if (!payload || payload.tokenType !== "refresh") {
+    return { ok: false, code: "INVALID_REFRESH_TOKEN" };
+  }
+
+  const clienteId = resolvePortalClienteId(payload);
+  if (!clienteId) {
+    return { ok: false, code: "INVALID_REFRESH_TOKEN" };
+  }
+
+  const account = await findPortalAccountByClienteId(clienteId);
+  if (!account || account.status !== "ATTIVO") {
+    return { ok: false, code: "INVALID_REFRESH_TOKEN" };
+  }
+
+  markPortalRefreshTokenRevoked(token, payload);
+
+  return { ok: true, data: { revoked: true } };
 }
 
 export {
@@ -436,7 +622,9 @@ export {
   createPortalAccountForCliente,
   loginWithCredentials,
   loginPortalWithCredentials,
+  logoutPortalSession,
   refreshSession,
+  refreshPortalSession,
   resetAuthUsersForTests,
   resetPortalAccountsForTests,
   setAuthUserPasswordHashForTests,
@@ -446,9 +634,13 @@ export {
   type LoginFailureCode,
   type LoginResult,
   type LoginPortalResult,
+  type LogoutPortalSessionResult,
   type PortalActivateFailureCode,
   type PortalCreateFailureCode,
   type PortalLoginFailureCode,
+  type PortalLogoutFailureCode,
+  type PortalRefreshFailureCode,
+  type RefreshPortalSessionResult,
   type RefreshFailureCode,
   type RefreshSessionResult,
 };
