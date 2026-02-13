@@ -23,7 +23,7 @@ function authHeader(role: Role, userId = 8801): string {
   return `Bearer ${buildAccessToken({ userId, role })}`;
 }
 
-async function prepareActivatedPortalAccount(password = "Password123!"): Promise<void> {
+async function prepareActivatedPortalAccount(pwd = "Password123!"): Promise<void> {
   const createResponse = await request(app)
     .post("/api/clienti/5/portal-account")
     .set("Authorization", authHeader("COMMERCIALE", 8802))
@@ -32,7 +32,7 @@ async function prepareActivatedPortalAccount(password = "Password123!"): Promise
 
   const activateResponse = await request(app)
     .post("/api/portal/auth/activate")
-    .send({ token: "portal-5-token-valid", password });
+    .send({ token: "portal-5-token-valid", password: pwd });
   expect(activateResponse.status).toBe(200);
 }
 
