@@ -1,8 +1,8 @@
 story_id: '6.3'
 status: 'in_progress'
-currentStep: 4
-completedSteps: [1, 2, 3]
-lastTaskCompleted: 'story-created'
+currentStep: 5
+completedSteps: [1, 2, 3, 4]
+lastTaskCompleted: 'story-validated'
 worktree: false
 started_at: '2026-02-13T13:50:38+00:00'
-timestamp: '9+01:00'
+timestamp: '0+01:00'
