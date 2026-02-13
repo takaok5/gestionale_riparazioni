@@ -24,6 +24,16 @@ enum CategoriaFornitore {
   ALTRO
 }
 
+enum TipoNotifica {
+  STATO_RIPARAZIONE
+  PREVENTIVO
+}
+
+enum StatoNotifica {
+  INVIATA
+  FALLITA
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   username  String   @unique
@@ -171,10 +181,32 @@ model Riparazione {
   statiHistory     RiparazioneStatoHistory[]
   preventivi       RiparazionePreventivo[]
   ricambi          RiparazioneRicambio[]
+  notifiche        Notifica[]
 
   @@index([clienteId])
   @@index([tecnicoId])
   @@index([dataRicezione])
+}
+
+model Notifica {
+  id             Int          @id @default(autoincrement())
+  tipo           TipoNotifica
+  destinatario   String
+  oggetto        String
+  contenuto      String
+  stato          StatoNotifica
+  riferimentoTipo String
+  riferimentoId  Int
+  dataInvio      DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  riparazioneId  Int?
+  riparazione    Riparazione? @relation(fields: [riparazioneId], references: [id])
+
+  @@index([tipo])
+  @@index([stato])
+  @@index([riferimentoId])
+  @@index([riparazioneId])
 }
 
 model RiparazioneStatoHistory {

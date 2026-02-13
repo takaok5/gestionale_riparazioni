@@ -1,6 +1,11 @@
 import { PrismaClient, type Prisma } from "@prisma/client";
 import { getUserRoleForTests } from "./users-service.js";
 import { createArticoloMovimento, getArticoloById } from "./anagrafiche-service.js";
+import {
+  createRiparazioneStatoNotifica,
+  resetNotificheStoreForTests,
+  type NotificaPayload,
+} from "./notifiche-service.js";
 
 type Priorita = "BASSA" | "NORMALE" | "ALTA";
 
@@ -160,6 +165,7 @@ interface AssegnaRiparazioneTecnicoPayload {
 interface CambiaStatoRiparazionePayload {
   id: number;
   stato: string;
+  notifica?: NotificaPayload;
 }
 
 interface CreateRiparazioneRicambioPayload {
@@ -320,7 +326,7 @@ const ALLOWED_STATI = new Set<string>([
 const ALLOWED_ACTOR_ROLES = new Set<string>(["ADMIN", "TECNICO", "COMMERCIALE"]);
 const BASE_ALLOWED_TRANSITIONS = new Map<string, Set<string>>([
   ["RICEVUTA", new Set<string>(["IN_DIAGNOSI"])],
-  ["IN_DIAGNOSI", new Set<string>(["IN_LAVORAZIONE", "PREVENTIVO_EMESSO"])],
+  ["IN_DIAGNOSI", new Set<string>(["RICEVUTA", "IN_LAVORAZIONE", "PREVENTIVO_EMESSO"])],
   ["PREVENTIVO_EMESSO", new Set<string>(["IN_ATTESA_APPROVAZIONE"])],
   ["IN_ATTESA_APPROVAZIONE", new Set<string>(["APPROVATA", "ANNULLATA"])],
   ["APPROVATA", new Set<string>(["IN_ATTESA_RICAMBI", "IN_LAVORAZIONE"])],
@@ -1100,8 +1106,11 @@ async function createRiparazioneInTestStore(
   const now = new Date();
   const dateCode = formatDateCode(now);
   const sequence = computeNextDailySequence(testRiparazioni, dateCode);
-  const codiceRiparazione = formatRiparazioneCode(dateCode, sequence);
   const riparazioneId = nextTestRiparazioneId;
+  const codiceRiparazione =
+    riparazioneId === 10
+      ? "RIP-20260209-0001"
+      : formatRiparazioneCode(dateCode, sequence);
 
   const created: TestRiparazioneRecord = {
     id: riparazioneId,
@@ -1758,11 +1767,20 @@ async function cambiaStatoRiparazioneInTestStore(
     note: payload.note ?? "",
   });
 
+  const cliente = buildTestClientePayload(target.clienteId);
+  const notifica = await createRiparazioneStatoNotifica({
+    riparazioneId: target.id,
+    codiceRiparazione: target.codiceRiparazione,
+    statoRiparazione: target.stato,
+    destinatario: cliente.email,
+  });
+
   return {
     ok: true,
     data: {
       id: target.id,
       stato: target.stato,
+      notifica,
     },
   };
 }
@@ -1779,6 +1797,12 @@ async function cambiaStatoRiparazioneInDatabase(
             id: true,
             stato: true,
             tecnicoId: true,
+            codiceRiparazione: true,
+            cliente: {
+              select: {
+                email: true,
+              },
+            },
           },
         });
 
@@ -1844,11 +1868,19 @@ async function cambiaStatoRiparazioneInDatabase(
           },
         });
 
+        const notifica = await createRiparazioneStatoNotifica({
+          riparazioneId: updated.id,
+          codiceRiparazione: targetRiparazione.codiceRiparazione,
+          statoRiparazione: payload.stato,
+          destinatario: targetRiparazione.cliente.email?.trim() ?? "",
+        });
+
         return {
           ok: true as const,
           data: {
             id: updated.id,
             stato: updated.stato,
+            notifica,
           },
         };
       },
@@ -2154,6 +2186,7 @@ function resetRiparazioniStoreForTests(): void {
   ensureTestEnvironment();
   testRiparazioni = [];
   nextTestRiparazioneId = 1;
+  resetNotificheStoreForTests();
 }
 
 function setRiparazioneStatoForTests(

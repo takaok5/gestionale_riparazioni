@@ -109,6 +109,8 @@ describe("AC-1 - RICEVUTA -> IN_DIAGNOSI con storico", () => {
     expect(response.status).toBe(200);
     expect(response.body?.data?.id).toBe(10);
     expect(response.body?.data?.stato).toBe("IN_DIAGNOSI");
+    expect(response.body?.data?.notifica?.tipo).toBe("STATO_RIPARAZIONE");
+    expect(response.body?.data?.notifica?.stato).toBe("INVIATA");
   });
 
   it('Tests AC-1: Given transition to IN_DIAGNOSI succeeds When GET /api/riparazioni/10 Then statiHistory latest row contains stato IN_DIAGNOSI, userId 7, note "Iniziata diagnosi"', async () => {
@@ -152,6 +154,8 @@ describe("AC-2 - IN_DIAGNOSI -> IN_LAVORAZIONE", () => {
     expect(response.status).toBe(200);
     expect(response.body?.data?.id).toBe(10);
     expect(response.body?.data?.stato).toBe("IN_LAVORAZIONE");
+    expect(response.body?.data?.notifica?.tipo).toBe("STATO_RIPARAZIONE");
+    expect(response.body?.data?.notifica?.stato).toBe("INVIATA");
   });
 
   it("Tests AC-2: Given transition to IN_LAVORAZIONE succeeds When GET /api/riparazioni/10 Then current stato is IN_LAVORAZIONE", async () => {
@@ -187,6 +191,8 @@ describe("AC-3 - IN_LAVORAZIONE -> COMPLETATA", () => {
     expect(response.status).toBe(200);
     expect(response.body?.data?.id).toBe(10);
     expect(response.body?.data?.stato).toBe("COMPLETATA");
+    expect(response.body?.data?.notifica?.oggetto).toBe("Riparazione Completata");
+    expect(response.body?.data?.notifica?.stato).toBe("INVIATA");
   });
 
   it("Tests AC-3: Given transition to COMPLETATA succeeds When GET /api/riparazioni/10 Then current stato is COMPLETATA", async () => {
@@ -222,6 +228,8 @@ describe("AC-4 - COMPLETATA -> CONSEGNATA", () => {
     expect(response.status).toBe(200);
     expect(response.body?.data?.id).toBe(10);
     expect(response.body?.data?.stato).toBe("CONSEGNATA");
+    expect(response.body?.data?.notifica?.oggetto).toBe("Riparazione Consegnata");
+    expect(response.body?.data?.notifica?.stato).toBe("INVIATA");
   });
 
   it("Tests AC-4: Given transition to CONSEGNATA succeeds When GET /api/riparazioni/10 Then current stato is CONSEGNATA", async () => {

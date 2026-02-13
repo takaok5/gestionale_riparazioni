@@ -1,0 +1,20 @@
+target_modules:
+  - packages/backend/prisma/schema.prisma
+  - packages/backend/src/services/riparazioni-service.ts
+  - packages/backend/src/routes/riparazioni.ts
+patterns_to_follow:
+  - packages/backend/src/routes/preventivi.ts:177-180 -> When the email helper throws EMAIL_SEND_FAILED the route still reaches buildErrorResponse("EMAIL_SEND_FAILED", message) so PATCH /api/riparazioni/:id/stato should surface the same error shape if the notification dispatch fails.
+  - packages/backend/src/services/preventivi-service.ts:990-1055 -> sendPreventivoEmail wraps the send in a try/catch with test-only failure toggles (shouldFailTestEmail) and is invoked inside a transaction that still persists the preventivo even if the helper throws; match that structure when extracting the status-change email helper and toggling FALLITA vs INVIATA.
+  - docs/architecture.md:460-472 -> The Notifica blueprint (tipo, destinatario, oggetto, contenuto, stato, riferimentoTipo/Id, timestamp) plus the append-only constraint is the schema we must reproduce in Prisma and the Notifica inserts that accompany every stato update.
+dependencies:
+  - packages/backend/src/routes/riparazioni.ts -> imports cambiaStatoRiparazione from services/riparazioni-service.ts, so extending the service will affect the PATCH handler payload and response paths.
+  - packages/backend/src/index.ts -> wires up /api/riparazioni via riparazioniRouter, so any changes to routing or payload shape will surface in the app and must stay backwards compatible.
+  - packages/backend/src/__tests__/riparazioni-stato-base-atdd.spec.ts -> exercises the PATCH /api/riparazioni/:id/stato flow and already verifies history entries; it needs augmenting to cover Notifica creation and email failure handling once the service emits new records.
+risks:
+  - Adding synchronous email dispatch into cambiaStatoRiparazione risks rolling back the riparazione update when the helper throws; we must isolate the notification log/email send so the state transition and Notifica row still persist even if the mail service reports FALLITA (AC-4 requirement).
+  - Without a dispatch queue the status-change endpoint could be slowed by the email send, which is already mocked in preventivi-service via process.env toggles; a real service may time out if the client waits for the SMTP call, so we should keep the helper lean or swap to background delivery later.
+  - The Notifica log will grow on every riparazione state change; we need to keep it append-only, ensure timestamp/index coverage (per architecture), and guard against concurrent inserts that could create duplicate records for the same transition.
+existing_tests:
+  - packages/backend/src/__tests__/riparazioni-stato-base-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts
+  - packages/backend/src/__tests__/preventivi-send-atdd.spec.ts
