@@ -3,19 +3,19 @@
 ## Current Story
 
 **Story:** 8.3
-**Step:** 2
+**Step:** 3
 **Status:** in_progress
 
 ## Progress
 
 `
-[#         ] 10%
+[##        ] 20%
 `
 
 ## Session
 
-- **Last activity:** 2026-02-13T17:11:25.3529514+01:00
-- **Resume from:** step 2
+- **Last activity:** 2026-02-13T17:19:20.4465287+01:00
+- **Resume from:** step 3
 
 ---
 *Auto-updated by story-pipeline*

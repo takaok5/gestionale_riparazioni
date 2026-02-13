@@ -1,0 +1,51 @@
+story_id: '8.3'
+story_title: 'Dashboard Cliente'
+source_story: 'docs/epics/epic-8-portale-clienti.md'
+
+target_modules:
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/index.ts'
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/routes/auth.ts'
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/middleware/auth.ts'
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/auth-service.ts'
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/anagrafiche-service.ts'
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/riparazioni-service.ts'
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/preventivi-service.ts'
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/notifiche-service.ts'
+
+patterns_to_follow:
+  - pattern: 'Route -> service -> error envelope con buildErrorResponse e status mapping'
+    reference: 'packages/backend/src/routes/dashboard.ts:25'
+  - pattern: 'Route portale con guardie specifiche e gestione errori 401/423'
+    reference: 'packages/backend/src/routes/auth.ts:113'
+  - pattern: 'Event feed ordinato per timestamp decrescente prima del return'
+    reference: 'packages/backend/src/services/notifiche-service.ts:271'
+
+dependencies:
+  - 'packages/backend/src/index.ts importa e monta i router /api/portal/*'
+  - 'packages/backend/src/routes/auth.ts usa packages/backend/src/services/auth-service.ts'
+  - 'packages/backend/src/services/auth-service.ts usa packages/backend/src/middleware/auth.ts'
+  - 'packages/backend/src/routes/dashboard.ts usa packages/backend/src/services/dashboard-service.ts'
+  - 'packages/backend/src/services/dashboard-service.ts usa riparazioni/anagrafiche/fatture services'
+  - 'packages/backend/src/routes/clienti.ts usa packages/backend/src/services/auth-service.ts'
+
+risks:
+  - 'Possibile degrado performance se i tre contatori vengono calcolati con query separate non ottimizzate.'
+  - 'Rischio autorizzativo: il route /api/portal/me deve accettare solo token portale validi e rifiutare token non portale.'
+  - 'Rischio consistenza timeline: eventi da fonti diverse possono risultare duplicati o non ordinati senza normalizzazione timestamp.'
+  - 'Nessun componente frontend portale implementato: mismatch payload backend/frontend possibile se non allineato prima di QA.'
+
+existing_tests:
+  - 'packages/backend/src/__tests__/portal-auth-login-refresh-logout.atdd.spec.ts'
+  - 'packages/backend/src/__tests__/portal-account-activation-atdd.spec.ts'
+  - 'packages/backend/src/__tests__/portal-account-create-atdd.spec.ts'
+  - 'packages/backend/src/__tests__/portal-account-conflict-atdd.spec.ts'
+  - 'packages/backend/src/__tests__/portal-account-email-required-atdd.spec.ts'
+  - 'packages/backend/src/__tests__/dashboard-operativa-atdd.spec.ts'
+  - 'packages/backend/src/__tests__/dashboard-carico-tecnici-atdd.spec.ts'
+  - 'packages/backend/src/__tests__/dashboard-riparazioni-per-stato-atdd.spec.ts'
+
+acceptance_criteria:
+  - 'AC-1: GET /api/portal/me restituisce stats ordiniAperti=2, riparazioniAttive=1, preventiviInAttesa=1 nel caso di esempio.'
+  - 'AC-2: GET /api/portal/me restituisce contatori a zero (mai null) quando non ci sono elementi attivi.'
+  - 'AC-3: GET /api/portal/me include eventi recenti ordinati per timestamp desc.'
+  - 'AC-4: GET /api/portal/me senza autenticazione restituisce 401 Unauthorized.'
