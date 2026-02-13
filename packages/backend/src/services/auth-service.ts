@@ -935,6 +935,28 @@ function resolvePortalClienteIdFromAccessToken(accessToken: string): number | nu
   return clienteId;
 }
 
+async function ensurePortalOwnsRiparazione(
+  clienteId: number,
+  riparazioneId: number,
+): Promise<{ ok: true } | { ok: false; code: PortalOrdiniFailureCode }> {
+  const riparazioneResult = await getRiparazioneDettaglio({ riparazioneId });
+  if (!riparazioneResult.ok) {
+    if (riparazioneResult.code === "VALIDATION_ERROR") {
+      return { ok: false, code: "VALIDATION_ERROR" };
+    }
+    if (riparazioneResult.code === "NOT_FOUND") {
+      return { ok: false, code: "NOT_FOUND" };
+    }
+    return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  }
+
+  if (riparazioneResult.data.data.cliente.id !== clienteId) {
+    return { ok: false, code: "FORBIDDEN" };
+  }
+
+  return { ok: true };
+}
+
 async function listPortalRiparazioni(
   accessToken: string,
   query: PortalRiparazioniQueryInput,
@@ -1082,21 +1104,12 @@ async function getPortalFatturaPdf(
     return { ok: false, code: "SERVICE_UNAVAILABLE" };
   }
 
-  const riparazioneResult = await getRiparazioneDettaglio({
-    riparazioneId: fatturaResult.data.riparazioneId,
-  });
-  if (!riparazioneResult.ok) {
-    if (riparazioneResult.code === "VALIDATION_ERROR") {
-      return { ok: false, code: "VALIDATION_ERROR" };
-    }
-    if (riparazioneResult.code === "NOT_FOUND") {
-      return { ok: false, code: "NOT_FOUND" };
-    }
-    return { ok: false, code: "SERVICE_UNAVAILABLE" };
-  }
-
-  if (riparazioneResult.data.data.cliente.id !== clienteId) {
-    return { ok: false, code: "FORBIDDEN" };
+  const ownershipCheck = await ensurePortalOwnsRiparazione(
+    clienteId,
+    fatturaResult.data.riparazioneId,
+  );
+  if (!ownershipCheck.ok) {
+    return ownershipCheck;
   }
 
   const fatturaPdfResult = await getFatturaPdf({ fatturaId });
@@ -1136,21 +1149,12 @@ async function getPortalPreventivoPdf(
     return { ok: false, code: "SERVICE_UNAVAILABLE" };
   }
 
-  const riparazioneResult = await getRiparazioneDettaglio({
-    riparazioneId: preventivoResult.data.data.riparazioneId,
-  });
-  if (!riparazioneResult.ok) {
-    if (riparazioneResult.code === "VALIDATION_ERROR") {
-      return { ok: false, code: "VALIDATION_ERROR" };
-    }
-    if (riparazioneResult.code === "NOT_FOUND") {
-      return { ok: false, code: "NOT_FOUND" };
-    }
-    return { ok: false, code: "SERVICE_UNAVAILABLE" };
-  }
-
-  if (riparazioneResult.data.data.cliente.id !== clienteId) {
-    return { ok: false, code: "FORBIDDEN" };
+  const ownershipCheck = await ensurePortalOwnsRiparazione(
+    clienteId,
+    preventivoResult.data.data.riparazioneId,
+  );
+  if (!ownershipCheck.ok) {
+    return ownershipCheck;
   }
 
   const preventivoPdfResult = await getPreventivoPdf({

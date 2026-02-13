@@ -297,3 +297,35 @@ describe("AC-4 - Given unauthenticated request When I GET /api/portal/documenti/
     expect(response.headers["content-type"] ?? "").toContain("application/json");
   });
 });
+
+describe("Hardening - Portal document download contracts", () => {
+  it("returns 400 VALIDATION_ERROR when document id is not a positive integer", async () => {
+    await seedFattureUntil(2);
+    const accessToken = await prepareActivatedPortalSession({ clienteId: 5, email: "cliente@test.it" });
+
+    const response = await request(app)
+      .get("/api/portal/documenti/fattura/not-a-number/pdf")
+      .set("Authorization", `Bearer ${accessToken}`);
+
+    expect(response.status).toBe(400);
+    expect(response.body?.error?.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 403 FORBIDDEN when preventivo belongs to another customer", async () => {
+    const riparazioneId = await createRiparazione(50, 5);
+    const preventivoId = await createPreventivo(riparazioneId, 9890);
+
+    const accessToken = await prepareActivatedPortalSession({
+      clienteId: 99,
+      email: "cliente99@test.it",
+    });
+
+    const response = await request(app)
+      .get(`/api/portal/documenti/preventivo/${preventivoId}/pdf`)
+      .set("Authorization", `Bearer ${accessToken}`);
+
+    expect(response.status).toBe(403);
+    expect(response.body?.error?.code).toBe("FORBIDDEN");
+    expect(response.headers["content-type"] ?? "").not.toContain("application/pdf");
+  });
+});
