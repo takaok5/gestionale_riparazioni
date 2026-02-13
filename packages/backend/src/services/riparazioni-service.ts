@@ -1,11 +1,16 @@
 import { PrismaClient, type Prisma } from "@prisma/client";
 import { getUserRoleForTests } from "./users-service.js";
-import { createArticoloMovimento, getArticoloById } from "./anagrafiche-service.js";
+import {
+  createArticoloMovimento,
+  getArticoloById,
+  getClienteById,
+} from "./anagrafiche-service.js";
 import {
   createRiparazioneStatoNotifica,
   resetNotificheStoreForTests,
   type NotificaPayload,
 } from "./notifiche-service.js";
+import { buildRiparazioneEtichettaPdf } from "./riparazioni-etichetta-pdf.js";
 
 type Priorita = "BASSA" | "NORMALE" | "ALTA";
 
@@ -40,6 +45,10 @@ interface ListRiparazioniInput {
 }
 
 interface GetRiparazioneDettaglioInput {
+  riparazioneId: unknown;
+}
+
+interface GetRiparazioneEtichettaPdfInput {
   riparazioneId: unknown;
 }
 
@@ -241,6 +250,12 @@ type GetRiparazioneDettaglioResult =
   | NotFoundFailure
   | ServiceUnavailableFailure;
 
+type GetRiparazioneEtichettaPdfResult =
+  | { ok: true; data: { fileName: string; content: Buffer } }
+  | ValidationFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
 type AssegnaRiparazioneTecnicoResult =
   | { ok: true; data: AssegnaRiparazioneTecnicoPayload }
   | ValidationFailure
@@ -287,6 +302,10 @@ interface ParsedListRiparazioniInput {
 }
 
 interface ParsedGetRiparazioneDettaglioInput {
+  riparazioneId: number;
+}
+
+interface ParsedGetRiparazioneEtichettaPdfInput {
   riparazioneId: number;
 }
 
@@ -713,6 +732,47 @@ function parseGetRiparazioneDettaglioInput(
       riparazioneId,
     },
   };
+}
+
+function parseGetRiparazioneEtichettaPdfInput(
+  input: GetRiparazioneEtichettaPdfInput,
+):
+  | { ok: true; data: ParsedGetRiparazioneEtichettaPdfInput }
+  | ValidationFailure {
+  const riparazioneId = asPositiveInteger(input.riparazioneId);
+  if (riparazioneId === null) {
+    return buildValidationFailure({
+      field: "riparazioneId",
+      rule: "invalid_integer",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      riparazioneId,
+    },
+  };
+}
+
+function resolveClienteLabel(nome: string | null | undefined, codiceCliente: string): string {
+  if (typeof nome === "string" && nome.trim()) {
+    return nome.trim();
+  }
+
+  return codiceCliente;
+}
+
+function formatDateForLabel(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const year = String(date.getUTCFullYear());
+  return `${day}/${month}/${year}`;
 }
 
 function parseAssegnaRiparazioneTecnicoInput(
@@ -1604,6 +1664,116 @@ async function getRiparazioneDettaglioInDatabase(
   }
 }
 
+async function getRiparazioneEtichettaPdfInTestStore(
+  payload: ParsedGetRiparazioneEtichettaPdfInput,
+): Promise<GetRiparazioneEtichettaPdfResult> {
+  const target = testRiparazioni.find((row) => row.id === payload.riparazioneId);
+  if (!target) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  const clienteResult = await getClienteById({ clienteId: target.clienteId });
+  if (!clienteResult.ok) {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+
+  const clienteLabel = resolveClienteLabel(
+    clienteResult.data.data.nome,
+    clienteResult.data.data.codiceCliente,
+  );
+
+  try {
+    const pdfBuffer = await buildRiparazioneEtichettaPdf({
+      codiceRiparazione: target.codiceRiparazione,
+      cliente: clienteLabel,
+      marca: target.marcaDispositivo,
+      modello: target.modelloDispositivo,
+      dataRicezione: formatDateForLabel(target.dataRicezione),
+      qrPayload: target.codiceRiparazione,
+    });
+
+    return {
+      ok: true,
+      data: {
+        fileName: `etichetta-riparazione-${target.id}.pdf`,
+        content: pdfBuffer,
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function getRiparazioneEtichettaPdfInDatabase(
+  payload: ParsedGetRiparazioneEtichettaPdfInput,
+): Promise<GetRiparazioneEtichettaPdfResult> {
+  try {
+    const prisma = getPrismaClient();
+    const row = await prisma.riparazione.findUnique({
+      where: { id: payload.riparazioneId },
+      select: {
+        id: true,
+        clienteId: true,
+        codiceRiparazione: true,
+        dataRicezione: true,
+        marcaDispositivo: true,
+        modelloDispositivo: true,
+      },
+    });
+
+    if (!row) {
+      return {
+        ok: false,
+        code: "NOT_FOUND",
+      };
+    }
+
+    const clienteResult = await getClienteById({ clienteId: row.clienteId });
+    if (!clienteResult.ok) {
+      return {
+        ok: false,
+        code: "SERVICE_UNAVAILABLE",
+      };
+    }
+
+    const clienteLabel = resolveClienteLabel(
+      clienteResult.data.data.nome,
+      clienteResult.data.data.codiceCliente,
+    );
+
+    const pdfBuffer = await buildRiparazioneEtichettaPdf({
+      codiceRiparazione: row.codiceRiparazione,
+      cliente: clienteLabel,
+      marca: row.marcaDispositivo,
+      modello: row.modelloDispositivo,
+      dataRicezione: formatDateForLabel(row.dataRicezione.toISOString()),
+      qrPayload: row.codiceRiparazione,
+    });
+
+    return {
+      ok: true,
+      data: {
+        fileName: `etichetta-riparazione-${row.id}.pdf`,
+        content: pdfBuffer,
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
 async function assegnaRiparazioneTecnicoInTestStore(
   payload: ParsedAssegnaRiparazioneTecnicoInput,
 ): Promise<AssegnaRiparazioneTecnicoResult> {
@@ -2131,6 +2301,21 @@ async function getRiparazioneDettaglio(
   return getRiparazioneDettaglioInDatabase(parsed.data);
 }
 
+async function getRiparazioneEtichettaPdf(
+  input: GetRiparazioneEtichettaPdfInput,
+): Promise<GetRiparazioneEtichettaPdfResult> {
+  const parsed = parseGetRiparazioneEtichettaPdfInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return getRiparazioneEtichettaPdfInTestStore(parsed.data);
+  }
+
+  return getRiparazioneEtichettaPdfInDatabase(parsed.data);
+}
+
 async function assegnaRiparazioneTecnico(
   input: AssegnaRiparazioneTecnicoInput,
 ): Promise<AssegnaRiparazioneTecnicoResult> {
@@ -2225,6 +2410,7 @@ export {
   createRiparazioneRicambio,
   createRiparazione,
   getRiparazioneDettaglio,
+  getRiparazioneEtichettaPdf,
   listRiparazioni,
   resetRiparazioniStoreForTests,
   riparazioneExistsForTests,
@@ -2239,6 +2425,8 @@ export {
   type CreateRiparazioneResult,
   type GetRiparazioneDettaglioInput,
   type GetRiparazioneDettaglioResult,
+  type GetRiparazioneEtichettaPdfInput,
+  type GetRiparazioneEtichettaPdfResult,
   type ListRiparazioniInput,
   type ListRiparazioniResult,
 };
