@@ -1,0 +1,4 @@
+packages/backend/src/__tests__/portal-account-activation-atdd.spec.ts
+packages/backend/src/__tests__/portal-account-conflict-atdd.spec.ts
+packages/backend/src/__tests__/portal-account-create-atdd.spec.ts
+packages/backend/src/__tests__/portal-account-email-required-atdd.spec.ts

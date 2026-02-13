@@ -5,6 +5,7 @@ import {
   verifyAuthToken,
   type JwtPayload,
 } from "../middleware/auth.js";
+import { createPortalAccountActivationNotifica } from "./notifiche-service.js";
 
 type Role = "ADMIN" | "TECNICO" | "COMMERCIALE";
 
@@ -33,8 +34,22 @@ interface AuthSuccessPayload {
   };
 }
 
+interface PortalAuthSuccessPayload {
+  accessToken: string;
+  refreshToken: string;
+}
+
 type LoginFailureCode = "INVALID_CREDENTIALS" | "ACCOUNT_DISABLED";
 type RefreshFailureCode = "INVALID_REFRESH_TOKEN" | "ACCOUNT_DISABLED";
+type PortalCreateFailureCode =
+  | "CUSTOMER_EMAIL_REQUIRED"
+  | "PORTAL_ACCOUNT_ALREADY_EXISTS"
+  | "SERVICE_UNAVAILABLE";
+type PortalActivateFailureCode =
+  | "INVALID_ACTIVATION_TOKEN"
+  | "WEAK_PASSWORD"
+  | "SERVICE_UNAVAILABLE";
+type PortalLoginFailureCode = "INVALID_CREDENTIALS" | "SERVICE_UNAVAILABLE";
 type AuthFailureCode =
   | "INVALID_CREDENTIALS"
   | "ACCOUNT_DISABLED"
@@ -47,6 +62,43 @@ type LoginResult =
 type RefreshSessionResult =
   | { ok: true; data: AuthSuccessPayload }
   | { ok: false; code: RefreshFailureCode };
+
+type CreatePortalAccountResult =
+  | { ok: true; data: { clienteId: number; stato: "INVITATO" } }
+  | { ok: false; code: PortalCreateFailureCode };
+
+type ActivatePortalAccountResult =
+  | { ok: true; data: { clienteId: number; stato: "ATTIVO" } }
+  | { ok: false; code: PortalActivateFailureCode };
+
+type LoginPortalResult =
+  | { ok: true; data: PortalAuthSuccessPayload }
+  | { ok: false; code: PortalLoginFailureCode };
+
+interface CreatePortalAccountInput {
+  clienteId: number;
+  email: string | null;
+}
+
+interface ActivatePortalAccountInput {
+  token: string;
+  password: string;
+}
+
+interface PortalLoginCredentials {
+  email: string;
+  password: string;
+}
+
+type PortalAccountStatus = "INVITATO" | "ATTIVO";
+interface PortalAccountRecord {
+  clienteId: number;
+  email: string;
+  status: PortalAccountStatus;
+  activationToken: string;
+  activationTokenExpiresAt: string;
+  passwordHash: string | null;
+}
 
 let prismaClient: PrismaClient | null = null;
 
@@ -69,6 +121,8 @@ const baseSeededUsers: AuthUserRecord[] = [
   },
 ];
 let seededUsers = cloneAuthUsers(baseSeededUsers);
+const basePortalAccounts: PortalAccountRecord[] = [];
+let portalAccounts = clonePortalAccounts(basePortalAccounts);
 
 interface DbUserRecord {
   id: number;
@@ -164,6 +218,10 @@ function cloneAuthUsers(source: AuthUserRecord[]): AuthUserRecord[] {
   return source.map((user) => ({ ...user }));
 }
 
+function clonePortalAccounts(source: PortalAccountRecord[]): PortalAccountRecord[] {
+  return source.map((item) => ({ ...item }));
+}
+
 function ensureTestEnvironment(): void {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
@@ -173,6 +231,7 @@ function ensureTestEnvironment(): void {
 function resetAuthUsersForTests(): void {
   ensureTestEnvironment();
   seededUsers = cloneAuthUsers(baseSeededUsers);
+  portalAccounts = clonePortalAccounts(basePortalAccounts);
 }
 
 function setAuthUserPasswordHashForTests(
@@ -189,6 +248,11 @@ function setAuthUserPasswordHashForTests(
     ...seededUsers[targetIndex],
     passwordHash,
   };
+}
+
+function resetPortalAccountsForTests(): void {
+  ensureTestEnvironment();
+  portalAccounts = clonePortalAccounts(basePortalAccounts);
 }
 
 async function loginWithCredentials(
@@ -258,14 +322,133 @@ async function refreshSession(refreshToken: string): Promise<RefreshSessionResul
   return { ok: true, data: buildAuthSuccessPayload(user) };
 }
 
+async function createPortalAccountForCliente(
+  input: CreatePortalAccountInput,
+): Promise<CreatePortalAccountResult> {
+  const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
+  if (!email) {
+    return { ok: false, code: "CUSTOMER_EMAIL_REQUIRED" };
+  }
+
+  const existing = portalAccounts.find((item) => item.clienteId === input.clienteId);
+  if (existing) {
+    return { ok: false, code: "PORTAL_ACCOUNT_ALREADY_EXISTS" };
+  }
+
+  const activationToken = `portal-${input.clienteId}-token-valid`;
+  const activationTokenExpiresAt = new Date(
+    Date.now() + 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const nextRecord: PortalAccountRecord = {
+    clienteId: input.clienteId,
+    email,
+    status: "INVITATO",
+    activationToken,
+    activationTokenExpiresAt,
+    passwordHash: null,
+  };
+
+  portalAccounts.push(nextRecord);
+
+  const notification = await createPortalAccountActivationNotifica({
+    clienteId: input.clienteId,
+    destinatario: email,
+  });
+  if (notification.stato === "FALLITA") {
+    portalAccounts = portalAccounts.filter((item) => item.clienteId !== input.clienteId);
+    return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  }
+
+  return {
+    ok: true,
+    data: {
+      clienteId: input.clienteId,
+      stato: "INVITATO",
+    },
+  };
+}
+
+async function activatePortalAccount(
+  input: ActivatePortalAccountInput,
+): Promise<ActivatePortalAccountResult> {
+  const token = input.token.trim();
+  const password = input.password;
+  if (!token) {
+    return { ok: false, code: "INVALID_ACTIVATION_TOKEN" };
+  }
+  if (password.length < 8) {
+    return { ok: false, code: "WEAK_PASSWORD" };
+  }
+
+  const now = Date.now();
+  const targetIndex = portalAccounts.findIndex((item) => item.activationToken === token);
+  if (targetIndex === -1) {
+    return { ok: false, code: "INVALID_ACTIVATION_TOKEN" };
+  }
+
+  const account = portalAccounts[targetIndex];
+  const expiresAt = Date.parse(account.activationTokenExpiresAt);
+  if (Number.isNaN(expiresAt) || expiresAt < now) {
+    return { ok: false, code: "INVALID_ACTIVATION_TOKEN" };
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  portalAccounts[targetIndex] = {
+    ...account,
+    status: "ATTIVO",
+    passwordHash,
+  };
+
+  return {
+    ok: true,
+    data: {
+      clienteId: account.clienteId,
+      stato: "ATTIVO",
+    },
+  };
+}
+
+async function loginPortalWithCredentials(
+  credentials: PortalLoginCredentials,
+): Promise<LoginPortalResult> {
+  const email = credentials.email.trim().toLowerCase();
+  const password = credentials.password;
+  if (!email || !password) {
+    return { ok: false, code: "INVALID_CREDENTIALS" };
+  }
+
+  const account = portalAccounts.find((item) => item.email === email);
+  if (!account || account.status !== "ATTIVO" || !account.passwordHash) {
+    return { ok: false, code: "INVALID_CREDENTIALS" };
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, account.passwordHash);
+  if (!isPasswordValid) {
+    return { ok: false, code: "INVALID_CREDENTIALS" };
+  }
+
+  const tokens = issueAuthTokens({ userId: 900000 + account.clienteId, role: "COMMERCIALE" });
+  return { ok: true, data: tokens };
+}
+
 export {
+  activatePortalAccount,
+  createPortalAccountForCliente,
   loginWithCredentials,
+  loginPortalWithCredentials,
   refreshSession,
   resetAuthUsersForTests,
+  resetPortalAccountsForTests,
   setAuthUserPasswordHashForTests,
+  type ActivatePortalAccountResult,
   type AuthFailureCode,
+  type CreatePortalAccountResult,
   type LoginFailureCode,
   type LoginResult,
+  type LoginPortalResult,
+  type PortalActivateFailureCode,
+  type PortalCreateFailureCode,
+  type PortalLoginFailureCode,
   type RefreshFailureCode,
   type RefreshSessionResult,
 };

@@ -1,6 +1,10 @@
 import { Router, type Response } from "express";
 import { buildErrorResponse } from "../lib/errors.js";
-import { authenticate } from "../middleware/auth.js";
+import {
+  createPortalAccountForCliente,
+  type CreatePortalAccountResult,
+} from "../services/auth-service.js";
+import { authenticate, authorize } from "../middleware/auth.js";
 import {
   createCliente,
   getClienteById,
@@ -27,6 +31,10 @@ type GetClienteByIdFailure = Exclude<GetClienteByIdResult, { ok: true; data: unk
 type UpdateClienteFailure = Exclude<UpdateClienteResult, { ok: true; data: unknown }>;
 type ListClienteRiparazioniFailure = Exclude<
   ListClienteRiparazioniResult,
+  { ok: true; data: unknown }
+>;
+type CreatePortalAccountFailure = Exclude<
+  CreatePortalAccountResult,
   { ok: true; data: unknown }
 >;
 
@@ -169,6 +177,29 @@ function respondListClienteRiparazioniFailure(
     .json(buildErrorResponse("ANAGRAFICHE_SERVICE_UNAVAILABLE", "Servizio anagrafiche non disponibile"));
 }
 
+function respondCreatePortalAccountFailure(
+  res: Response,
+  result: CreatePortalAccountFailure,
+): void {
+  if (result.code === "CUSTOMER_EMAIL_REQUIRED") {
+    res
+      .status(400)
+      .json(buildErrorResponse("CUSTOMER_EMAIL_REQUIRED", "Customer email is required"));
+    return;
+  }
+
+  if (result.code === "PORTAL_ACCOUNT_ALREADY_EXISTS") {
+    res
+      .status(409)
+      .json(buildErrorResponse("PORTAL_ACCOUNT_ALREADY_EXISTS", "Portal account already exists"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(buildErrorResponse("AUTH_SERVICE_UNAVAILABLE", "Servizio autenticazione non disponibile"));
+}
+
 clientiRouter.get("/", authenticate, async (req, res) => {
   const payload: ListClientiInput = {
     page: req.query.page,
@@ -255,6 +286,26 @@ clientiRouter.post("/", authenticate, async (req, res) => {
   }
 
   res.status(201).json(result.data);
+});
+
+clientiRouter.post("/:id/portal-account", authenticate, authorize("ADMIN", "COMMERCIALE"), async (req, res) => {
+  const clienteResult = await getClienteById({ clienteId: req.params.id });
+  if (!clienteResult.ok) {
+    respondGetClienteByIdFailure(res, clienteResult);
+    return;
+  }
+
+  const result = await createPortalAccountForCliente({
+    clienteId: clienteResult.data.data.id,
+    email: clienteResult.data.data.email,
+  });
+
+  if (!result.ok) {
+    respondCreatePortalAccountFailure(res, result);
+    return;
+  }
+
+  res.status(201).json({ data: result.data });
 });
 
 export { clientiRouter };

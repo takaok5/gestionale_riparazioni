@@ -1,4 +1,4 @@
-type NotificaTipo = "STATO_RIPARAZIONE" | "PREVENTIVO";
+type NotificaTipo = "STATO_RIPARAZIONE" | "PREVENTIVO" | "PORTAL_ACCOUNT_ATTIVAZIONE";
 type NotificaStato = "INVIATA" | "FALLITA";
 
 interface CreateRiparazioneStatoNotificaInput {
@@ -15,7 +15,7 @@ interface NotificaPayload {
   oggetto: string;
   contenuto: string;
   stato: NotificaStato;
-  riferimentoTipo: "RIPARAZIONE" | "PREVENTIVO";
+  riferimentoTipo: "RIPARAZIONE" | "PREVENTIVO" | "PORTAL_ACCOUNT";
   riferimentoId: number;
   dataInvio: string;
   allegato?: string;
@@ -36,6 +36,11 @@ interface CreatePreventivoNotificaInput {
   totale: number;
   allegatoPath: string;
   stato: NotificaStato;
+}
+
+interface CreatePortalAccountActivationNotificaInput {
+  clienteId: number;
+  destinatario: string;
 }
 
 interface ListNotificheInput {
@@ -59,6 +64,7 @@ interface ListNotificheResult {
 }
 
 const TEST_FAIL_RIPARAZIONI_EMAIL_ENV = "TEST_FAIL_RIPARAZIONI_EMAIL";
+const TEST_FAIL_PORTAL_EMAIL_ENV = "TEST_FAIL_PORTAL_EMAIL";
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -113,6 +119,10 @@ function buildBody(statoRiparazione: string, codiceRiparazione: string): string 
 
 function shouldFailRiparazioneEmail(): boolean {
   return process.env.NODE_ENV === "test" && process.env[TEST_FAIL_RIPARAZIONI_EMAIL_ENV] === "1";
+}
+
+function shouldFailPortalEmail(): boolean {
+  return process.env.NODE_ENV === "test" && process.env[TEST_FAIL_PORTAL_EMAIL_ENV] === "1";
 }
 
 function parsePositiveInteger(value: unknown): number | null {
@@ -236,6 +246,28 @@ async function createPreventivoNotifica(
   return { ...notification };
 }
 
+async function createPortalAccountActivationNotifica(
+  input: CreatePortalAccountActivationNotificaInput,
+): Promise<NotificaPayload> {
+  const dataInvio = new Date().toISOString();
+  const notification: NotificaPayload = {
+    id: nextNotificaId,
+    tipo: "PORTAL_ACCOUNT_ATTIVAZIONE",
+    destinatario: input.destinatario,
+    oggetto: "Attivazione account portale",
+    contenuto:
+      "Usa il token di attivazione ricevuto per impostare la password e completare l'accesso al portale clienti.",
+    stato: shouldFailPortalEmail() ? "FALLITA" : "INVIATA",
+    riferimentoTipo: "PORTAL_ACCOUNT",
+    riferimentoId: input.clienteId,
+    dataInvio,
+  };
+
+  nextNotificaId += 1;
+  testNotifiche.push(notification);
+  return { ...notification };
+}
+
 async function listNotifiche(input: ListNotificheInput): Promise<ListNotificheResult> {
   const page = parsePositiveInteger(input.page) ?? DEFAULT_PAGE;
   const parsedLimit = parsePositiveInteger(input.limit) ?? DEFAULT_LIMIT;
@@ -291,6 +323,7 @@ async function listNotifiche(input: ListNotificheInput): Promise<ListNotificheRe
 }
 
 export {
+  createPortalAccountActivationNotifica,
   createPreventivoNotifica,
   createRiparazioneStatoNotifica,
   listNotifiche,

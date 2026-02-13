@@ -1,10 +1,14 @@
 import { Router, type Response } from "express";
 import { buildErrorResponse } from "../lib/errors.js";
 import {
+  activatePortalAccount,
   loginWithCredentials,
+  loginPortalWithCredentials,
   refreshSession,
   type AuthFailureCode,
+  type ActivatePortalAccountResult,
   type LoginResult,
+  type LoginPortalResult,
   type RefreshSessionResult,
 } from "../services/auth-service.js";
 import {
@@ -14,6 +18,7 @@ import {
 } from "../services/login-rate-limit.js";
 
 const authRouter = Router();
+const portalAuthRouter = Router();
 
 function resolveClientIp(forwardedFor: string | undefined, fallbackIp: string): string {
   if (!forwardedFor) {
@@ -50,6 +55,45 @@ function respondAuthServiceError(res: Response, error: unknown): void {
       "Servizio autenticazione non disponibile",
     ),
   );
+}
+
+function respondPortalActivateFailure(
+  res: Response,
+  result: Exclude<ActivatePortalAccountResult, { ok: true; data: unknown }>,
+): void {
+  if (result.code === "INVALID_ACTIVATION_TOKEN") {
+    res
+      .status(400)
+      .json(buildErrorResponse("INVALID_ACTIVATION_TOKEN", "Activation token non valido"));
+    return;
+  }
+
+  if (result.code === "WEAK_PASSWORD") {
+    res
+      .status(400)
+      .json(buildErrorResponse("WEAK_PASSWORD", "Password troppo debole"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(buildErrorResponse("AUTH_SERVICE_UNAVAILABLE", "Servizio autenticazione non disponibile"));
+}
+
+function respondPortalLoginFailure(
+  res: Response,
+  result: Exclude<LoginPortalResult, { ok: true; data: unknown }>,
+): void {
+  if (result.code === "INVALID_CREDENTIALS") {
+    res
+      .status(401)
+      .json(buildErrorResponse("INVALID_CREDENTIALS", "Credenziali non valide"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(buildErrorResponse("AUTH_SERVICE_UNAVAILABLE", "Servizio autenticazione non disponibile"));
 }
 
 authRouter.post("/login", async (req, res) => {
@@ -110,4 +154,48 @@ authRouter.post("/refresh", async (req, res) => {
   res.status(200).json(result.data);
 });
 
-export { authRouter };
+portalAuthRouter.post("/activate", async (req, res) => {
+  const payload = {
+    token: typeof req.body?.token === "string" ? req.body.token : "",
+    password: typeof req.body?.password === "string" ? req.body.password : "",
+  };
+
+  let result: ActivatePortalAccountResult;
+  try {
+    result = await activatePortalAccount(payload);
+  } catch (error) {
+    respondAuthServiceError(res, error);
+    return;
+  }
+
+  if (!result.ok) {
+    respondPortalActivateFailure(res, result);
+    return;
+  }
+
+  res.status(200).json({ data: result.data });
+});
+
+portalAuthRouter.post("/login", async (req, res) => {
+  const payload = {
+    email: typeof req.body?.email === "string" ? req.body.email : "",
+    password: typeof req.body?.password === "string" ? req.body.password : "",
+  };
+
+  let result: LoginPortalResult;
+  try {
+    result = await loginPortalWithCredentials(payload);
+  } catch (error) {
+    respondAuthServiceError(res, error);
+    return;
+  }
+
+  if (!result.ok) {
+    respondPortalLoginFailure(res, result);
+    return;
+  }
+
+  res.status(200).json(result.data);
+});
+
+export { authRouter, portalAuthRouter };

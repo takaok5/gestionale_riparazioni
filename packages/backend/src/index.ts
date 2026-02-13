@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { healthRouter } from "./routes/health.js";
-import { authRouter } from "./routes/auth.js";
+import { authRouter, portalAuthRouter } from "./routes/auth.js";
 import { usersRouter } from "./routes/users.js";
 import { clientiRouter } from "./routes/clienti.js";
 import { fornitoriRouter } from "./routes/fornitori.js";
@@ -28,6 +28,7 @@ app.use(express.json());
 
 app.use("/api/health", healthRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/portal/auth", portalAuthRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/clienti", clientiRouter);
 app.use("/api/fornitori", fornitoriRouter);
