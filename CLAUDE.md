@@ -4,6 +4,7 @@
 - **Language:** TypeScript ^5.7.0 (strict mode)
 - **Runtime:** Node.js (ES2022 target)
 - **Backend:** Express ^4.21.0 + Prisma ^6.3.0 + PostgreSQL
+- **PDF/QR:** PDFKit ^0.14.0 + qrcode ^1.5.3
 - **Frontend:** React ^18.3.0 + Vite ^6.1.0 + Tailwind CSS ^3.4.0 + shadcn/ui
 - **Auth:** JWT (access 15min + refresh 7d) + bcryptjs (salt 12)
 - **Validation:** Zod ^3.24.0 (shared frontend/backend)

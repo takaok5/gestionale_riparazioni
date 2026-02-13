@@ -353,6 +353,7 @@ riparazioniRouter.get("/", authenticate, async (req, res) => {
   res.status(200).json(result.data);
 });
 
+// AC-1: Add route for etichetta PDF.
 riparazioniRouter.get(
   "/:id/etichetta",
   authenticate,

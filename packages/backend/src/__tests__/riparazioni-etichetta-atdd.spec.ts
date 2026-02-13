@@ -91,7 +91,7 @@ function seedClienteCodiceFallback(): void {
 }
 
 function expectQrPayloadInPdf(bodyText: string, payload: string): void {
-  expect(bodyText).toContain(payload);
+  expect(bodyText).toContain(`QR:${payload}`);
 }
 
 beforeEach(() => {
@@ -123,7 +123,7 @@ describe("AC-1 - Etichetta PDF 62x100mm con QR e dati riparazione", () => {
     );
   });
 
-  it('Tests AC-1: Given riparazione id=10 with dataRicezione 2026-02-09T10:00:00.000Z When GET /api/riparazioni/10/etichetta Then PDF payload starts with %PDF and contains RIP-20260209-0001, Rossi Mario, Samsung, Galaxy S21, 09/02/2026', async () => {
+  it('Tests AC-1: Given riparazione id=10 with dataRicezione 2026-02-09T10:00:00.000Z When GET /api/riparazioni/10/etichetta Then PDF payload starts with %PDF and contains RIP-20260209-0001, Rossi Mario, Samsung, Galaxy S21, 09/02/2026 and QR payload RIP-20260209-0001', async () => {
     seedClienteRossiMario();
     await seedUntilRiparazioneId10();
 
@@ -145,7 +145,7 @@ describe("AC-1 - Etichetta PDF 62x100mm con QR e dati riparazione", () => {
 });
 
 describe("AC-2 - Fallback codiceCliente quando nome cliente assente", () => {
-  it('Tests AC-2: Given riparazione id=10 with cliente.nome empty and codiceCliente CLI-0005 When GET /api/riparazioni/10/etichetta as TECNICO Then PDF customer line shows CLI-0005', async () => {
+  it('Tests AC-2: Given riparazione id=10 with cliente.nome empty and codiceCliente CLI-000005 When GET /api/riparazioni/10/etichetta as TECNICO Then PDF customer line shows CLI-000005', async () => {
     seedClienteCodiceFallback();
     await seedUntilRiparazioneId10();
 

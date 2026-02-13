@@ -1,3 +1,4 @@
+// AC-1: Update `packages/backend/package.json` with pdfkit/qrcode dependencies.
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 
@@ -23,6 +24,16 @@ function escapePdfText(value: string): string {
 function buildTestPdfBuffer(input: RiparazioneEtichettaPdfInput): Buffer {
   const width = Math.round(LABEL_WIDTH_PT);
   const height = Math.round(LABEL_HEIGHT_PT);
+  const streamLines = [
+    `BT /F1 12 Tf 20 260 Td (${escapePdfText(input.codiceRiparazione)}) Tj ET`,
+    `BT /F1 12 Tf 20 240 Td (${escapePdfText(input.cliente)}) Tj ET`,
+    `BT /F1 12 Tf 20 220 Td (${escapePdfText(input.marca)}) Tj ET`,
+    `BT /F1 12 Tf 20 200 Td (${escapePdfText(input.modello)}) Tj ET`,
+    `BT /F1 12 Tf 20 180 Td (${escapePdfText(input.dataRicezione)}) Tj ET`,
+    `BT /F1 12 Tf 20 160 Td (QR:${escapePdfText(input.qrPayload)}) Tj ET`,
+  ];
+  const streamContent = streamLines.join("\n");
+  const streamLength = Buffer.byteLength(streamContent, "utf8");
   const lines = [
     "%PDF-1.4",
     "1 0 obj",
@@ -35,14 +46,9 @@ function buildTestPdfBuffer(input: RiparazioneEtichettaPdfInput): Buffer {
     `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Contents 4 0 R >>`,
     "endobj",
     "4 0 obj",
-    "<< /Length 240 >>",
+    `<< /Length ${streamLength} >>`,
     "stream",
-    `BT /F1 12 Tf 20 260 Td (${escapePdfText(input.codiceRiparazione)}) Tj ET`,
-    `BT /F1 12 Tf 20 240 Td (${escapePdfText(input.cliente)}) Tj ET`,
-    `BT /F1 12 Tf 20 220 Td (${escapePdfText(input.marca)}) Tj ET`,
-    `BT /F1 12 Tf 20 200 Td (${escapePdfText(input.modello)}) Tj ET`,
-    `BT /F1 12 Tf 20 180 Td (${escapePdfText(input.dataRicezione)}) Tj ET`,
-    `BT /F1 12 Tf 20 160 Td (QR:${escapePdfText(input.qrPayload)}) Tj ET`,
+    streamContent,
     "endstream",
     "endobj",
     "trailer",
@@ -53,6 +59,7 @@ function buildTestPdfBuffer(input: RiparazioneEtichettaPdfInput): Buffer {
   return Buffer.from(lines.join("\n"));
 }
 
+// AC-1: Implement deterministic label builder with fixed size and QR payload.
 async function buildRiparazioneEtichettaPdf(
   input: RiparazioneEtichettaPdfInput,
 ): Promise<Buffer> {

@@ -1,0 +1,26 @@
+target_modules:
+  - packages/backend/src/routes/riparazioni.ts
+  - packages/backend/src/services/riparazioni-service.ts
+  - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts
+  - packages/backend/src/__tests__/fatture-lista-dettaglio-atdd.spec.ts
+  - packages/backend/package.json
+patterns_to_follow:
+  - packages/backend/src/routes/riparazioni.ts:312 -> GET handlers build a typed payload from req.params and delegate to service functions, then map failures through a dedicated responder.
+  - packages/backend/src/routes/riparazioni.ts:118 -> respondGetRiparazioneDettaglioFailure maps service NOT_FOUND to buildErrorResponse("RIPARAZIONE_NOT_FOUND", "Riparazione non trovata") with HTTP 404.
+  - packages/backend/src/services/riparazioni-service.ts:1450 -> getRiparazioneDettaglioInDatabase reads nested Prisma relations and returns a stable `data` envelope shape expected by tests.
+  - packages/backend/src/routes/fatture.ts:326 -> PDF download route sets `Content-Type: application/pdf` and `Content-Disposition` before sending binary content.
+  - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts:214 -> not-found assertions validate exact domain error code/message and absence of `data` payload.
+dependencies:
+  - packages/backend/src/index.ts -> mounts riparazioniRouter at `/api/riparazioni`, so adding `/api/riparazioni/:id/etichetta` affects API surface immediately.
+  - packages/backend/src/services/dashboard-service.ts -> imports listRiparazioni from riparazioni-service, so changes in shared parsing/helpers in the service can impact dashboard behavior.
+  - packages/backend/src/services/report-service.ts -> imports riparazioni-service utilities and may be affected by broad refactors in the same module.
+  - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts -> reuses the same router/service stack and will detect regressions in existing detail endpoint behavior.
+risks:
+  - packages/backend/package.json currently has no QR/PDF library dependency, so implementing real QR rendering for labels likely requires adding a new dependency and keeping tests deterministic.
+  - Label format requirement 62x100mm can drift if PDF dimensions are encoded with wrong unit conversion; this can cause printer clipping despite valid `application/pdf` response.
+  - AC-2 fallback (`codiceCliente` when customer name missing) depends on available fields from riparazione detail query; incomplete Prisma select may silently produce wrong label content.
+  - New `/etichetta` route must preserve existing error contract (`RIPARAZIONE_NOT_FOUND`) to avoid regressions in shared client-side error handling.
+existing_tests:
+  - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts
+  - packages/backend/src/__tests__/fatture-lista-dettaglio-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-create-atdd.spec.ts

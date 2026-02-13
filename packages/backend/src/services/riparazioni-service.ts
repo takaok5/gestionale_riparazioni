@@ -755,9 +755,18 @@ function parseGetRiparazioneEtichettaPdfInput(
   };
 }
 
-function resolveClienteLabel(nome: string | null | undefined, codiceCliente: string): string {
+// AC-2: Extend customer projection for nome -> codiceCliente fallback.
+function resolveClienteLabel(
+  nome: string | null | undefined,
+  ragioneSociale: string | null | undefined,
+  codiceCliente: string,
+): string {
   if (typeof nome === "string" && nome.trim()) {
     return nome.trim();
+  }
+
+  if (typeof ragioneSociale === "string" && ragioneSociale.trim()) {
+    return ragioneSociale.trim();
   }
 
   return codiceCliente;
@@ -1685,6 +1694,7 @@ async function getRiparazioneEtichettaPdfInTestStore(
 
   const clienteLabel = resolveClienteLabel(
     clienteResult.data.data.nome,
+    clienteResult.data.data.ragioneSociale,
     clienteResult.data.data.codiceCliente,
   );
 
@@ -1747,6 +1757,7 @@ async function getRiparazioneEtichettaPdfInDatabase(
 
     const clienteLabel = resolveClienteLabel(
       clienteResult.data.data.nome,
+      clienteResult.data.data.ragioneSociale,
       clienteResult.data.data.codiceCliente,
     );
 
@@ -2301,6 +2312,7 @@ async function getRiparazioneDettaglio(
   return getRiparazioneDettaglioInDatabase(parsed.data);
 }
 
+// AC-1, AC-2, AC-3: Add service entrypoint for etichetta PDF.
 async function getRiparazioneEtichettaPdf(
   input: GetRiparazioneEtichettaPdfInput,
 ): Promise<GetRiparazioneEtichettaPdfResult> {
