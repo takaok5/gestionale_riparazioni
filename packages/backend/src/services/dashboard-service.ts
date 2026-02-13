@@ -1,6 +1,8 @@
 import { listArticoliAlert, listClienti } from "./anagrafiche-service.js";
 import { listFatture, type ListFattureResult } from "./fatture-service.js";
 import { listRiparazioni, type ListRiparazioniResult } from "./riparazioni-service.js";
+import { PrismaClient } from "@prisma/client";
+import { listActiveTecniciForTests } from "./users-service.js";
 
 interface GetDashboardInput {
   actorUserId: unknown;
@@ -13,6 +15,11 @@ interface GetDashboardRiparazioniPerStatoInput {
   periodo: unknown;
 }
 
+interface GetDashboardCaricoTecniciInput {
+  actorUserId: unknown;
+  actorRole: unknown;
+}
+
 type DashboardFailure =
   | { ok: false; code: "VALIDATION_ERROR"; message: string }
   | { ok: false; code: "FORBIDDEN"; message: string }
@@ -22,6 +29,7 @@ interface DashboardAdminData {
   riparazioniPerStato: Record<string, number>;
   caricoTecnici: Array<{
     tecnicoId: number;
+    username: string;
     nome: string;
     riparazioniAttive: number;
   }>;
@@ -53,6 +61,9 @@ type DashboardSuccess =
   | { ok: true; data: DashboardAdminData | DashboardTecnicoData | DashboardCommercialeData };
 
 type GetDashboardResult = DashboardSuccess | DashboardFailure;
+type GetDashboardCaricoTecniciResult =
+  | { ok: true; data: DashboardAdminData["caricoTecnici"] }
+  | DashboardFailure;
 type ListedRiparazione = Extract<ListRiparazioniResult, { ok: true }>["data"]["data"][number];
 type ListedFattura = Extract<ListFattureResult, { ok: true }>["data"]["data"][number];
 type DashboardStatoKey =
@@ -73,6 +84,8 @@ const DASHBOARD_STATI: DashboardStatoKey[] = [
   "CONSEGNATA",
   "ANNULLATA",
 ];
+
+let prismaClient: PrismaClient | null = null;
 
 function asPositiveInteger(value: unknown): number | null {
   if (typeof value === "number" && Number.isInteger(value) && value > 0) {
@@ -115,6 +128,143 @@ function toDateOnly(isoDate: string): string {
     return isoDate.slice(0, 10);
   }
   return parsed.toISOString().slice(0, 10);
+}
+
+function getPrismaClient(): PrismaClient {
+  if (!prismaClient) {
+    prismaClient = new PrismaClient();
+  }
+
+  return prismaClient;
+}
+
+function toDisplayNameFromUsername(username: string): string {
+  const tokens = username
+    .replace(/[._-]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token.length > 0);
+
+  if (tokens.length === 0) {
+    return username;
+  }
+
+  return tokens
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1).toLowerCase())
+    .join(" ");
+}
+
+async function listTecniciById(
+  tecnicoIds: number[],
+): Promise<Map<number, { username: string; nome: string }> | DashboardFailure> {
+  if (tecnicoIds.length === 0) {
+    return new Map();
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    const activeTecnici = listActiveTecniciForTests();
+    const map = new Map<number, { username: string; nome: string }>();
+    for (const user of activeTecnici) {
+      if (!tecnicoIds.includes(user.id)) {
+        continue;
+      }
+      map.set(user.id, {
+        username: user.username,
+        nome: toDisplayNameFromUsername(user.username),
+      });
+    }
+    return map;
+  }
+
+  try {
+    const users = await getPrismaClient().user.findMany({
+      where: {
+        id: { in: tecnicoIds },
+        role: "TECNICO",
+        isActive: true,
+      },
+      select: {
+        id: true,
+        username: true,
+      },
+    });
+
+    const map = new Map<number, { username: string; nome: string }>();
+    for (const user of users) {
+      map.set(user.id, {
+        username: user.username,
+        nome: toDisplayNameFromUsername(user.username),
+      });
+    }
+
+    return map;
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+      message: "Impossibile leggere i tecnici",
+    };
+  }
+}
+
+function resolveTecnicoIdentity(
+  tecnicoId: number,
+  tecniciById: Map<number, { username: string; nome: string }>,
+): { username: string; nome: string } | null {
+  const fromUsers = tecniciById.get(tecnicoId);
+  if (fromUsers) {
+    return fromUsers;
+  }
+
+  return null;
+}
+
+async function buildCaricoTecnici(): Promise<GetDashboardCaricoTecniciResult> {
+  const riparazioniResult = await fetchAllRiparazioni({});
+  if (!riparazioniResult.ok) {
+    return riparazioniResult;
+  }
+
+  const caricoTecniciMap = new Map<number, number>();
+  for (const row of riparazioniResult.data) {
+    if (
+      row.tecnicoId &&
+      (row.stato === "IN_DIAGNOSI" || row.stato === "IN_LAVORAZIONE")
+    ) {
+      caricoTecniciMap.set(row.tecnicoId, (caricoTecniciMap.get(row.tecnicoId) ?? 0) + 1);
+    }
+  }
+
+  const tecniciByIdResult = await listTecniciById(Array.from(caricoTecniciMap.keys()));
+  if (!(tecniciByIdResult instanceof Map)) {
+    return tecniciByIdResult;
+  }
+
+  const tecniciById = tecniciByIdResult;
+  const caricoTecnici = Array.from(caricoTecniciMap.entries())
+    .map(([tecnicoId, riparazioniAttive]) => {
+      const tecnico = resolveTecnicoIdentity(tecnicoId, tecniciById);
+      if (!tecnico) {
+        return null;
+      }
+      return {
+        tecnicoId,
+        username: tecnico.username,
+        nome: tecnico.nome,
+        riparazioniAttive,
+      };
+    })
+    .filter(
+      (row): row is { tecnicoId: number; username: string; nome: string; riparazioniAttive: number } =>
+        row !== null,
+    )
+    .sort((a, b) =>
+      b.riparazioniAttive === a.riparazioniAttive
+        ? a.tecnicoId - b.tecnicoId
+        : b.riparazioniAttive - a.riparazioniAttive,
+    );
+
+  return { ok: true, data: caricoTecnici };
 }
 
 async function fetchAllRiparazioni(filters: {
@@ -332,23 +482,15 @@ async function buildAdminDashboard(): Promise<GetDashboardResult> {
     IN_LAVORAZIONE: 0,
     COMPLETATA: 0,
   };
-  const caricoTecniciMap = new Map<number, number>();
   for (const row of riparazioniResult.data) {
     const currentCount = riparazioniPerStato[row.stato] ?? 0;
     riparazioniPerStato[row.stato] = currentCount + 1;
-    if (
-      row.tecnicoId &&
-      (row.stato === "IN_DIAGNOSI" || row.stato === "IN_LAVORAZIONE")
-    ) {
-      caricoTecniciMap.set(row.tecnicoId, (caricoTecniciMap.get(row.tecnicoId) ?? 0) + 1);
-    }
   }
 
-  const caricoTecnici = Array.from(caricoTecniciMap.entries()).map(([tecnicoId, riparazioniAttive]) => ({
-    tecnicoId,
-    nome: `Tecnico ${tecnicoId}`,
-    riparazioniAttive,
-  }));
+  const caricoTecniciResult = await buildCaricoTecnici();
+  if (!caricoTecniciResult.ok) {
+    return caricoTecniciResult;
+  }
 
   const alertResult = await listArticoliAlert({});
   if (!alertResult.ok) {
@@ -381,11 +523,42 @@ async function buildAdminDashboard(): Promise<GetDashboardResult> {
     ok: true,
     data: {
       riparazioniPerStato,
-      caricoTecnici,
+      caricoTecnici: caricoTecniciResult.data,
       alertMagazzino: alertResult.data.data.length,
       ultimiPagamenti,
     },
   };
+}
+
+async function getDashboardCaricoTecnici(
+  input: GetDashboardCaricoTecniciInput,
+): Promise<GetDashboardCaricoTecniciResult> {
+  const actorUserId = asPositiveInteger(input.actorUserId);
+  if (actorUserId === null) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "actorUserId non valido",
+    };
+  }
+
+  const actorRole = asRole(input.actorRole);
+  if (!actorRole) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "actorRole non valido",
+    };
+  }
+  if (actorRole !== "ADMIN") {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      message: "Admin only",
+    };
+  }
+
+  return buildCaricoTecnici();
 }
 
 async function buildTecnicoDashboard(actorUserId: number): Promise<GetDashboardResult> {
@@ -546,7 +719,9 @@ async function getDashboard(input: GetDashboardInput): Promise<GetDashboardResul
 
 export {
   getDashboard,
+  getDashboardCaricoTecnici,
   getDashboardRiparazioniPerStato,
+  type GetDashboardCaricoTecniciInput,
   type GetDashboardInput,
   type GetDashboardResult,
   type GetDashboardRiparazioniPerStatoInput,

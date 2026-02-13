@@ -761,6 +761,16 @@ function getUserRoleForTests(userId: number): Role | null {
   return user.role;
 }
 
+function listActiveTecniciForTests(): Array<{ id: number; username: string }> {
+  ensureTestEnvironment();
+  return testUsers
+    .filter((user) => user.isActive && user.role === "TECNICO")
+    .map((user) => ({
+      id: user.id,
+      username: user.username,
+    }));
+}
+
 function ensureTestEnvironment(): void {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
@@ -776,6 +786,7 @@ export {
   setUserRoleForTests,
   setUserIsActiveForTests,
   getUserRoleForTests,
+  listActiveTecniciForTests,
   type CreateUserInput,
   type CreateUserResult,
   type UpdateUserRoleInput,
