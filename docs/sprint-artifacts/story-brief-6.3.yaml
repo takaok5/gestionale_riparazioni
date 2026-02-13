@@ -1,0 +1,38 @@
+story_id: '6.3'
+target_modules:
+  - 'packages/backend/src/routes/dashboard.ts'
+  - 'packages/backend/src/services/dashboard-service.ts'
+  - 'packages/backend/src/services/riparazioni-service.ts'
+patterns_to_follow:
+  - pattern: 'Route handler pattern with result.ok check and error mapping (400 validation, 403 forbidden, 500 fallback)'
+    reference: 'packages/backend/src/routes/dashboard.ts:13'
+  - pattern: 'Validation-first service flow: validate actorUserId/actorRole, forbid non-admin, then execute business query'
+    reference: 'packages/backend/src/services/dashboard-service.ts:229'
+  - pattern: 'Aggregation with Map on riparazioni and active statuses IN_DIAGNOSI/IN_LAVORAZIONE before response shaping'
+    reference: 'packages/backend/src/services/dashboard-service.ts:323'
+dependencies:
+  - module: 'packages/backend/src/routes/dashboard.ts'
+    used_by:
+      - 'packages/backend/src/index.ts:15'
+    uses:
+      - 'packages/backend/src/services/dashboard-service.ts'
+  - module: 'packages/backend/src/services/dashboard-service.ts'
+    used_by:
+      - 'packages/backend/src/routes/dashboard.ts'
+    uses:
+      - 'packages/backend/src/services/riparazioni-service.ts'
+      - 'packages/backend/src/services/fatture-service.ts'
+      - 'packages/backend/src/services/anagrafiche-service.ts'
+  - module: 'packages/backend/src/services/riparazioni-service.ts'
+    used_by:
+      - 'packages/backend/src/services/dashboard-service.ts:120'
+risks:
+  - 'Performance risk: computing technician workload via paginated full-scan may become expensive on large datasets.'
+  - 'Data consistency risk: endpoint requires technician username/nome and TECNICO-only filtering; missing user joins can return placeholder or wrong role users.'
+  - 'Authorization risk: role gating must keep strict ADMIN-only access and return 403 for Tecnico/Commerciale.'
+existing_tests:
+  - 'packages/backend/src/__tests__/dashboard-operativa-atdd.spec.ts'
+  - 'packages/backend/src/__tests__/dashboard-riparazioni-per-stato-atdd.spec.ts'
+notes:
+  - 'If no existing service can provide technician metadata with role filtering, add a dedicated query/helper instead of overloading generic listRiparazioni response.'
+  - 'No files were invented; all paths exist in repository.'
