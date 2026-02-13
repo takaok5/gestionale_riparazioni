@@ -1,5 +1,9 @@
 import { createFatturaPdfPath } from "./fatture-pdf-service.js";
 import { getApprovedPreventivoForRiparazioneForTests } from "./preventivi-service.js";
+import {
+  createCheckoutSession,
+  verifyWebhookSignature,
+} from "./stripe-service.js";
 
 interface CreateFatturaInput {
   riparazioneId: unknown;
@@ -10,6 +14,15 @@ interface CreatePagamentoInput {
   importo: unknown;
   metodo: unknown;
   dataPagamento?: unknown;
+}
+
+interface CreateStripeCheckoutLinkInput {
+  fatturaId: unknown;
+}
+
+interface HandleStripeWebhookInput {
+  signature: unknown;
+  payload: unknown;
 }
 
 interface GetFatturaDetailInput {
@@ -126,6 +139,16 @@ type OverpaymentFailure = {
   code: "OVERPAYMENT_NOT_ALLOWED";
 };
 
+type InvoiceAlreadyPaidFailure = {
+  ok: false;
+  code: "INVOICE_ALREADY_PAID";
+};
+
+type InvalidSignatureFailure = {
+  ok: false;
+  code: "INVALID_SIGNATURE";
+};
+
 type CreateFatturaResult =
   | { ok: true; data: FatturaPayload }
   | ValidationFailure
@@ -137,6 +160,21 @@ type CreateFatturaResult =
 type CreatePagamentoResult =
   | { ok: true; data: CreatePagamentoPayload }
   | ValidationFailure
+  | FatturaNotFoundFailure
+  | OverpaymentFailure
+  | ServiceUnavailableFailure;
+
+type CreateStripeCheckoutLinkResult =
+  | { ok: true; data: { paymentUrl: string; sessionId: string } }
+  | ValidationFailure
+  | FatturaNotFoundFailure
+  | InvoiceAlreadyPaidFailure
+  | ServiceUnavailableFailure;
+
+type HandleStripeWebhookResult =
+  | { ok: true; data: { duplicate: boolean } }
+  | ValidationFailure
+  | InvalidSignatureFailure
   | FatturaNotFoundFailure
   | OverpaymentFailure
   | ServiceUnavailableFailure;
@@ -181,6 +219,18 @@ interface ParsedCreatePagamentoInput {
   dataPagamento?: string;
 }
 
+interface ParsedCreateStripeCheckoutLinkInput {
+  fatturaId: number;
+}
+
+interface ParsedStripeWebhookPayload {
+  eventType: string;
+  sessionId: string;
+  fatturaId: number;
+  amountTotal: number;
+  createdTimestamp: number;
+}
+
 interface ParsedGetFatturaDetailInput {
   fatturaId: number;
 }
@@ -201,6 +251,7 @@ let nextTestFatturaId = 1;
 let nextTestPagamentoId = 1;
 let testFatture: FatturaPayload[] = [];
 const testLastSequenceByYear = new Map<number, number>();
+const processedStripeSessionIds = new Set<string>();
 
 function asPositiveInteger(value: unknown): number | null {
   if (typeof value === "number") {
@@ -285,6 +336,10 @@ function toIsoDate(dateInput?: string): string {
   return dateInput;
 }
 
+function unixTimestampToIsoDate(timestampSeconds: number): string {
+  return new Date(timestampSeconds * 1000).toISOString().slice(0, 10);
+}
+
 function parseCreateFatturaInput(
   input: CreateFatturaInput,
 ): { ok: true; data: ParsedCreateFatturaInput } | ValidationFailure {
@@ -365,6 +420,127 @@ function parseCreatePagamentoInput(
   return {
     ok: true,
     data: { fatturaId, importo, metodo, dataPagamento },
+  };
+}
+
+function parseCreateStripeCheckoutLinkInput(
+  input: CreateStripeCheckoutLinkInput,
+): { ok: true; data: ParsedCreateStripeCheckoutLinkInput } | ValidationFailure {
+  const fatturaId = asPositiveInteger(input.fatturaId);
+  if (fatturaId === null) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: {
+        field: "fatturaId",
+        rule: "required",
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    data: { fatturaId },
+  };
+}
+
+function parseStripeWebhookPayload(
+  payload: unknown,
+): { ok: true; data: ParsedStripeWebhookPayload } | ValidationFailure {
+  if (typeof payload !== "object" || payload === null) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: { field: "payload", rule: "invalid" },
+    };
+  }
+
+  const event = payload as {
+    type?: unknown;
+    created?: unknown;
+    data?: { object?: unknown };
+  };
+  if (typeof event.type !== "string" || event.type.length === 0) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: { field: "type", rule: "required" },
+    };
+  }
+
+  const createdTimestamp =
+    typeof event.created === "number" && Number.isFinite(event.created)
+      ? Math.trunc(event.created)
+      : null;
+  if (createdTimestamp === null || createdTimestamp <= 0) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: { field: "created", rule: "required" },
+    };
+  }
+
+  const objectPayload =
+    typeof event.data === "object" &&
+    event.data !== null &&
+    typeof event.data.object === "object" &&
+    event.data.object !== null
+      ? (event.data.object as {
+          id?: unknown;
+          metadata?: { fatturaId?: unknown };
+          amount_total?: unknown;
+        })
+      : null;
+
+  if (!objectPayload) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: { field: "data.object", rule: "required" },
+    };
+  }
+
+  const sessionId =
+    typeof objectPayload.id === "string" ? objectPayload.id.trim() : "";
+  if (sessionId.length === 0) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: { field: "data.object.id", rule: "required" },
+    };
+  }
+
+  const fatturaId = asPositiveInteger(objectPayload.metadata?.fatturaId);
+  if (fatturaId === null) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: { field: "data.object.metadata.fatturaId", rule: "required" },
+    };
+  }
+
+  const amountTotal =
+    typeof objectPayload.amount_total === "number" &&
+    Number.isFinite(objectPayload.amount_total)
+      ? Math.trunc(objectPayload.amount_total)
+      : null;
+  if (amountTotal === null || amountTotal <= 0) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: { field: "data.object.amount_total", rule: "required" },
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      eventType: event.type,
+      sessionId,
+      fatturaId,
+      amountTotal,
+      createdTimestamp,
+    },
   };
 }
 
@@ -692,6 +868,85 @@ async function createPagamentoInTestStore(
   };
 }
 
+async function createStripeCheckoutLinkInTestStore(
+  payload: ParsedCreateStripeCheckoutLinkInput,
+): Promise<CreateStripeCheckoutLinkResult> {
+  const fattura = testFatture.find((row) => row.id === payload.fatturaId);
+  if (!fattura) {
+    return {
+      ok: false,
+      code: "FATTURA_NOT_FOUND",
+    };
+  }
+
+  if (fattura.stato === "PAGATA") {
+    return {
+      ok: false,
+      code: "INVOICE_ALREADY_PAID",
+    };
+  }
+
+  const checkout = createCheckoutSession({
+    fatturaId: fattura.id,
+  });
+
+  return {
+    ok: true,
+    data: checkout,
+  };
+}
+
+async function handleStripeWebhookInTestStore(
+  signature: string,
+  parsedPayload: ParsedStripeWebhookPayload,
+): Promise<HandleStripeWebhookResult> {
+  if (!verifyWebhookSignature(signature)) {
+    return {
+      ok: false,
+      code: "INVALID_SIGNATURE",
+    };
+  }
+
+  if (parsedPayload.eventType !== "checkout.session.completed") {
+    return {
+      ok: true,
+      data: {
+        duplicate: false,
+      },
+    };
+  }
+
+  if (processedStripeSessionIds.has(parsedPayload.sessionId)) {
+    return {
+      ok: true,
+      data: {
+        duplicate: true,
+      },
+    };
+  }
+
+  const importo = roundCurrency(parsedPayload.amountTotal / 100);
+  const createResult = await createPagamentoInTestStore({
+    fatturaId: parsedPayload.fatturaId,
+    importo,
+    metodo: "STRIPE",
+    dataPagamento: unixTimestampToIsoDate(parsedPayload.createdTimestamp),
+  });
+
+  if (!createResult.ok) {
+    return createResult;
+  }
+
+  processedStripeSessionIds.add(parsedPayload.sessionId);
+
+  return {
+    ok: true,
+    data: {
+      duplicate: false,
+    },
+  };
+}
+
 async function listFattureInTestStore(
   payload: ParsedListFattureInput,
 ): Promise<ListFattureResult> {
@@ -812,6 +1067,50 @@ async function createPagamento(
   };
 }
 
+async function createStripeCheckoutLink(
+  input: CreateStripeCheckoutLinkInput,
+): Promise<CreateStripeCheckoutLinkResult> {
+  const parsed = parseCreateStripeCheckoutLinkInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return createStripeCheckoutLinkInTestStore(parsed.data);
+  }
+
+  return {
+    ok: false,
+    code: "SERVICE_UNAVAILABLE",
+  };
+}
+
+async function handleStripeWebhook(
+  input: HandleStripeWebhookInput,
+): Promise<HandleStripeWebhookResult> {
+  const signature = asNonEmptyString(input.signature);
+  if (!signature) {
+    return {
+      ok: false,
+      code: "INVALID_SIGNATURE",
+    };
+  }
+
+  const parsedPayload = parseStripeWebhookPayload(input.payload);
+  if (!parsedPayload.ok) {
+    return parsedPayload;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return handleStripeWebhookInTestStore(signature, parsedPayload.data);
+  }
+
+  return {
+    ok: false,
+    code: "SERVICE_UNAVAILABLE",
+  };
+}
+
 async function getFatturaDetail(
   input: GetFatturaDetailInput,
 ): Promise<GetFatturaDetailResult> {
@@ -878,6 +1177,7 @@ function resetFattureStoreForTests(): void {
   nextTestFatturaId = 1;
   nextTestPagamentoId = 1;
   testLastSequenceByYear.clear();
+  processedStripeSessionIds.clear();
 }
 
 function setFatturaSequenceForTests(year: number, sequence: number): void {
@@ -900,6 +1200,7 @@ function countFattureByRiparazioneForTests(riparazioneId: number): number {
 
 function seedFattureForReportForTests(entries: SeedFatturaReportInput[]): void {
   ensureTestEnvironment();
+  processedStripeSessionIds.clear();
   testFatture = entries.map((entry, index) => {
     const dataEmissione = asIsoDate(entry.dataEmissione);
     if (!dataEmissione) {
@@ -964,6 +1265,8 @@ function seedFattureForReportForTests(entries: SeedFatturaReportInput[]): void {
 export {
   createFattura,
   createPagamento,
+  createStripeCheckoutLink,
+  handleStripeWebhook,
   getFatturaDetail,
   listFatture,
   getFatturaPdf,
@@ -975,6 +1278,10 @@ export {
   type CreateFatturaResult,
   type CreatePagamentoInput,
   type CreatePagamentoResult,
+  type CreateStripeCheckoutLinkInput,
+  type CreateStripeCheckoutLinkResult,
+  type HandleStripeWebhookInput,
+  type HandleStripeWebhookResult,
   type GetFatturaDetailInput,
   type GetFatturaDetailResult,
   type ListFattureInput,
