@@ -3,7 +3,7 @@
 ### Issue 1
 Status: RESOLVED
 Problem: `POST /api/portal/auth/logout` accettava qualsiasi header `Authorization` con prefisso `Bearer` senza validare firma/tokenType.
-Fix: aggiunta validazione tramite `verifyAuthToken` e controllo `tokenType === "access"` prima della revoca.
+Fix: aggiunta validazione tramite `verifyAuthToken` e controllo `tokenType access` prima della revoca.
 Evidence:
 - `packages/backend/src/routes/auth.ts:292`
 - `packages/backend/src/routes/auth.ts:285`

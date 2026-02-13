@@ -142,6 +142,7 @@ let portalAccounts = clonePortalAccounts(basePortalAccounts);
 const revokedPortalRefreshTokens = new Map<string, number>();
 const PORTAL_USER_ID_PREFIX = 900000;
 const PORTAL_REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const REFRESH_KIND = "refresh" as const;
 
 interface DbUserRecord {
   id: number;
@@ -327,7 +328,7 @@ async function refreshSession(refreshToken: string): Promise<RefreshSessionResul
     return { ok: false, code: "INVALID_REFRESH_TOKEN" };
   }
 
-  if (payload.tokenType !== "refresh") {
+  if (payload.tokenType !== REFRESH_KIND) {
     return { ok: false, code: "INVALID_REFRESH_TOKEN" };
   }
 
@@ -551,7 +552,7 @@ async function refreshPortalSession(
   }
 
   const payload = resolveTokenPayload(token);
-  if (!payload || payload.tokenType !== "refresh") {
+  if (!payload || payload.tokenType !== REFRESH_KIND) {
     return { ok: false, code: "INVALID_REFRESH_TOKEN" };
   }
 
@@ -598,7 +599,7 @@ async function logoutPortalSession(
   }
 
   const payload = resolveTokenPayload(token);
-  if (!payload || payload.tokenType !== "refresh") {
+  if (!payload || payload.tokenType !== REFRESH_KIND) {
     return { ok: false, code: "INVALID_REFRESH_TOKEN" };
   }
 

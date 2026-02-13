@@ -28,6 +28,11 @@ import {
 
 const authRouter = Router();
 const portalAuthRouter = Router();
+const ACCESS_KIND = "access" as const;
+
+function readBodyString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
 
 function resolveClientIp(forwardedFor: string | undefined, fallbackIp: string): string {
   if (!forwardedFor) {
@@ -180,12 +185,11 @@ authRouter.post("/login", async (req, res) => {
 });
 
 authRouter.post("/refresh", async (req, res) => {
-  const refreshToken =
-    typeof req.body?.refreshToken === "string" ? req.body.refreshToken : "";
+  const refreshInput = readBodyString(req.body?.refreshToken);
 
   let result: RefreshSessionResult;
   try {
-    result = await refreshSession(refreshToken);
+    result = await refreshSession(refreshInput);
   } catch (error) {
     respondAuthServiceError(res, error);
     return;
@@ -201,8 +205,8 @@ authRouter.post("/refresh", async (req, res) => {
 
 portalAuthRouter.post("/activate", async (req, res) => {
   const payload = {
-    token: typeof req.body?.token === "string" ? req.body.token : "",
-    password: typeof req.body?.password === "string" ? req.body.password : "",
+    token: readBodyString(req.body?.token),
+    password: readBodyString(req.body?.password),
   };
 
   let result: ActivatePortalAccountResult;
@@ -224,8 +228,8 @@ portalAuthRouter.post("/activate", async (req, res) => {
 portalAuthRouter.post("/login", async (req, res) => {
   const ip = resolveClientIp(req.header("x-forwarded-for"), req.ip || "0.0.0.0");
   const payload = {
-    email: typeof req.body?.email === "string" ? req.body.email : "",
-    password: typeof req.body?.password === "string" ? req.body.password : "",
+    email: readBodyString(req.body?.email),
+    password: readBodyString(req.body?.password),
   };
   const rateLimitKey = resolvePortalRateLimitKey(ip, payload.email);
   const retryAfter = getRetryAfterSecondsForKey(rateLimitKey, portalLoginPolicy);
@@ -263,12 +267,11 @@ portalAuthRouter.post("/login", async (req, res) => {
 });
 
 portalAuthRouter.post("/refresh", async (req, res) => {
-  const refreshToken =
-    typeof req.body?.refreshToken === "string" ? req.body.refreshToken : "";
+  const refreshInput = readBodyString(req.body?.refreshToken);
 
   let result: RefreshPortalSessionResult;
   try {
-    result = await refreshPortalSession(refreshToken);
+    result = await refreshPortalSession(refreshInput);
   } catch (error) {
     respondAuthServiceError(res, error);
     return;
@@ -288,19 +291,19 @@ portalAuthRouter.post("/logout", async (req, res) => {
     res.status(401).json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
     return;
   }
-  const accessToken = authHeader.slice("Bearer ".length);
-  const verification = verifyAuthToken(accessToken);
-  if (!verification.ok || verification.payload.tokenType !== "access") {
+  const bearerPrefixLength = "Bearer ".length;
+  const accessJwt = authHeader.slice(bearerPrefixLength);
+  const verification = verifyAuthToken(accessJwt);
+  if (!verification.ok || verification.payload.tokenType !== ACCESS_KIND) {
     res.status(401).json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
     return;
   }
 
-  const refreshToken =
-    typeof req.body?.refreshToken === "string" ? req.body.refreshToken : "";
+  const refreshInput = readBodyString(req.body?.refreshToken);
 
   let result: LogoutPortalSessionResult;
   try {
-    result = await logoutPortalSession(refreshToken);
+    result = await logoutPortalSession(refreshInput);
   } catch (error) {
     respondAuthServiceError(res, error);
     return;
