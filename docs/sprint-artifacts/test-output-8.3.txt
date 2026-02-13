@@ -1,0 +1,351 @@
+
+> gestionale-riparazioni@0.1.0 test
+> npm run test --workspaces --if-present --run
+
+npm warn Unknown cli config "--run". This will stop working in the next major version of npm.
+
+> @gestionale/backend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend[39m
+
+ [32m✓[39m src/__tests__/riparazioni-create-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 470[2mms[22m[39m
+ [32m✓[39m src/__tests__/articoli-create-atdd.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 486[2mms[22m[39m
+ [32m✓[39m src/__tests__/audit-trail.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 725[2mms[22m[39m
+ [32m✓[39m src/__tests__/fornitori-list-search-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 865[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista fornitori paginata[2m > [22mtests AC-1: should return 200 with 15 fornitori and meta {page:1,limit:20,total:15,totalPages:1} [33m 434[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-ricambi-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 884[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-detail-update-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 982[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-change-password.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1080[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Current password errata[2m > [22mkeeps old password valid when change fails [33m 826[2mms[22m[39m
+ [32m✓[39m src/__tests__/articoli-movimenti-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1098[2mms[22m[39m
+ [32m✓[39m src/__tests__/auth-refresh.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 1163[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Rinnovo con refresh token valido[2m > [22mreturns 200 with new accessToken and refreshToken [33m 514[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Rinnovo con refresh token valido[2m > [22mreturns user payload with id, username, email and role [33m 432[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-etichetta-atdd.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1251[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Etichetta PDF 62x100mm con QR e dati riparazione[2m > [22mTests AC-1: Given riparazione id=10 con codiceRiparazione "RIP-20260209-0001", cliente "Rossi Mario", dispositivo "Samsung Galaxy S21" When GET /api/riparazioni/10/etichetta as TECNICO Then 200 with application/pdf and attachment filename [33m 346[2mms[22m[39m
+ [32m✓[39m src/__tests__/preventivi-create-atdd.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1339[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Creazione preventivo con totali[2m > [22mTests AC-1: Given esiste una riparazione con id=10 When invio POST /api/preventivi con payload MANODOPERA+RICAMBIO Then viene creato preventivo in stato "BOZZA" con subtotale=200.00, iva=44.00, totale=244.00 e HTTP 201 [33m 456[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Creazione preventivo con totali[2m > [22mTests AC-1: Given payload contiene 2 voci con importi specifici When creo il preventivo Then la risposta include riparazioneId=10 e le stesse voci itemizzate [33m 302[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-list-search-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1474[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista clienti paginata[2m > [22mtests AC-1: should return 200 with data[10] and meta {page:1,limit:10,total:25,totalPages:3} [33m 789[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista clienti paginata[2m > [22mtests AC-1: should return records ordered by id asc on page 1 [33m 362[2mms[22m[39m
+ [32m✓[39m src/__tests__/portal-account-activation-atdd.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 1472[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Attivazione account portale cliente[2m > [22mTests AC-4: Given token valido non scaduto When POST /api/portal/auth/activate Then 200 con data.clienteId=5 e stato ATTIVO [33m 528[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Attivazione account portale cliente[2m > [22mTests AC-4: Given attivazione riuscita When POST /api/portal/auth/login con nuove credenziali Then 200 con accessToken e refreshToken [33m 942[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-detail-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1650[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Dettaglio riparazione con cliente, tecnico e stato corrente[2m > [22mTests AC-1: Given riparazione id=10 exists When I GET /api/riparazioni/10 Then I receive 200 with full riparazione data including cliente { id, nome, telefono, email }, tecnico { id, username }, current stato [33m 383[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Dettaglio riparazione con cliente, tecnico e stato corrente[2m > [22mTests AC-1: Given riparazione id=10 exists When I GET /api/riparazioni/10 Then response uses data envelope with expected top-level fields [33m 342[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Storico stati della riparazione[2m > [22mTests AC-2: Given riparazione id=10 has changed stato 3 times When I GET /api/riparazioni/10 Then response includes statiHistory array with 3 entries showing { stato, dataOra, userId, note } [33m 313[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-list-filter-atdd.spec.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 1704[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista riparazioni paginata[2m > [22mtests AC-1: Given 30 repairs exist When GET /api/riparazioni?page=1&limit=15 Then returns 200 with 15 rows and meta {page:1,limit:15,total:30,totalPages:2} [33m 920[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-ricevuta-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1811[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - PDF A4 ricevuta con sezioni obbligatorie[2m > [22mTests AC-1: Given repair id=10 with complete intake data When GET /api/riparazioni/10/ricevuta Then PDF starts with %PDF and includes customer/device/problem/conditions/signature sections [33m 306[2mms[22m[39m
+ [32m✓[39m src/__tests__/ordini-ricezione-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1861[2mms[22m[39m
+ [32m✓[39m src/__tests__/ordini-stato-atdd.spec.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 1863[2mms[22m[39m
+ [32m✓[39m src/__tests__/fatture-create-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 2127[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Creazione fattura da preventivo approvato[2m > [22mTests AC-1: Given preventivo id=5 APPROVATO con totale 244.00 When POST /api/fatture { riparazioneId: 10 } Then HTTP 201 con numeroFattura 2026/0001 e importi 200/44/244 [33m 419[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Creazione fattura da preventivo approvato[2m > [22mTests AC-1: Given preventivo approvato per riparazione 10 When genero fattura Then risposta include stato EMESSA, riparazioneId=10 e pdfPath non vuoto [33m 344[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Sequenza numeroFattura[2m > [22mTests AC-2: Given ultima fattura 2026/0015 e riparazione 11 approvata When POST /api/fatture { riparazioneId: 11 } Then numeroFattura 2026/0016 [33m 373[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Sequenza numeroFattura[2m > [22mTests AC-2: Given due emissioni consecutive nello stesso anno When genero fatture Then la numerazione e' crescente e senza duplicati [33m 320[2mms[22m[39m
+ [32m✓[39m src/__tests__/auth-login.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 2153[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login Utente valido[2m > [22mreturns 200 with accessToken and refreshToken when credentials are valid [33m 469[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login Utente valido[2m > [22mreturns user payload with id, username, email, role [33m 397[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Account disabilitato[2m > [22mreturns 401 ACCOUNT_DISABLED for mario.disabilitato [33m 455[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Account disabilitato[2m > [22mreturns no tokens for disabled account [33m 609[2mms[22m[39m
+ [32m✓[39m src/__tests__/report-magazzino-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 2231[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - KPI report magazzino[2m > [22mTests AC-1: Given articoli with giacenze and prezzi When GET /api/report/magazzino Then returns 200 with KPI keys [33m 399[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - KPI report magazzino[2m > [22mTests AC-1: Given Display Samsung S21 with SCARICO 45 When report is returned Then top item includes articoloId=5 and quantitaUtilizzata=45 [33m 422[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Conteggio articoli esauriti[2m > [22mTests AC-2: Given articolo id=5 has giacenza 0 and sogliaMinima>0 When GET /api/report/magazzino Then articoliEsauriti is incremented [33m 339[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-annullamento-admin-atdd.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 2270[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Admin annulla da IN_LAVORAZIONE con nota[2m > [22mTests AC-1: Given ADMIN userId=1 and riparazione 10 in stato IN_LAVORAZIONE When PATCH /api/riparazioni/10/stato {"stato":"ANNULLATA","note":"Cliente ha ritirato dispositivo"} Then 200 with data.stato ANNULLATA [33m 597[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Admin annulla da IN_LAVORAZIONE con nota[2m > [22mTests AC-1: Given admin cancellation succeeds When GET /api/riparazioni/10 Then latest statiHistory row has stato ANNULLATA userId 1 note "Cliente ha ritirato dispositivo" [33m 510[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Admin annulla da RICEVUTA senza nota[2m > [22mTests AC-2: Given ADMIN userId=1 and riparazione 10 in stato RICEVUTA When PATCH /api/riparazioni/10/stato {"stato":"ANNULLATA"} Then 200 with data.stato ANNULLATA [33m 336[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Admin annulla da RICEVUTA senza nota[2m > [22mTests AC-2: Given admin cancellation without note succeeds When GET /api/riparazioni/10 Then latest statiHistory row has stato ANNULLATA userId 1 note "" [33m 321[2mms[22m[39m
+ [32m✓[39m src/__tests__/articoli-list-search-alert-atdd.spec.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 2337[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista paginata articoli[2m > [22mTests AC-1: Given 30 articoli exist When GET /api/articoli?page=1&limit=20 Then 200 with 20 rows and meta [33m 876[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista paginata articoli[2m > [22mTests AC-1: Given page=2 limit=10 When listing Then meta reflects pagination and deterministic boundaries [33m 625[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-stato-notifiche-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 2720[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - RICEVUTA generates email and INVIATA Notifica[2m > [22mTests AC-1: Given riparazione id=10 and cliente@test.it When PATCH /api/riparazioni/10/stato sets stato=RICEVUTA Then 200 and email subject "Riparazione Ricevuta - RIP-20260209-0001" is returned in payload [33m 561[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - RICEVUTA generates email and INVIATA Notifica[2m > [22mTests AC-1: Given transition to RICEVUTA succeeds When GET /api/notifiche?tipo=STATO_RIPARAZIONE Then latest row has stato INVIATA and riferimentoId 10 [33m 513[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - COMPLETATA sends ready-for-pickup email[2m > [22mTests AC-2: Given riparazione 10 in IN_LAVORAZIONE When PATCH /api/riparazioni/10/stato {"stato":"COMPLETATA"} Then 200 and email subject Riparazione Completata [33m 357[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - COMPLETATA sends ready-for-pickup email[2m > [22mTests AC-2: Given completion transition succeeds When GET /api/notifiche?stato=INVIATA Then notifica body contains "La sua riparazione e pronta per il ritiro" [33m 333[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-assegnazione-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 3019[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Assegnazione valida a tecnico[2m > [22mTests AC-1: Given admin and user id=7 role TECNICO When PATCH /api/riparazioni/10/assegna {tecnicoId:7} Then 200 and data.id=10 data.tecnicoId=7 [33m 556[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Assegnazione valida a tecnico[2m > [22mTests AC-1: Given assignment to tecnico id=7 succeeds When requesting detail Then riparazione 10 has tecnico.id=7 [33m 508[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Rifiuto assegnazione a utente non tecnico[2m > [22mTests AC-2: Given user id=5 role COMMERCIALE When PATCH /api/riparazioni/10/assegna {tecnicoId:5} Then 400 with VALIDATION_ERROR and message [33m 377[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-stato-base-atdd.spec.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 3695[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - RICEVUTA -> IN_DIAGNOSI con storico[2m > [22mTests AC-1: Given userId=7 role TECNICO assigned to riparazione 10 in stato RICEVUTA When PATCH /api/riparazioni/10/stato with {"stato":"IN_DIAGNOSI","note":"Iniziata diagnosi"} Then 200 with data {id:10, stato:IN_DIAGNOSI} [33m 405[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - RICEVUTA -> IN_DIAGNOSI con storico[2m > [22mTests AC-1: Given transition to IN_DIAGNOSI succeeds When GET /api/riparazioni/10 Then statiHistory latest row contains stato IN_DIAGNOSI, userId 7, note "Iniziata diagnosi" [33m 506[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - IN_DIAGNOSI -> IN_LAVORAZIONE[2m > [22mTests AC-2: Given riparazione 10 in stato IN_DIAGNOSI and assigned tecnico userId=7 When PATCH /api/riparazioni/10/stato {"stato":"IN_LAVORAZIONE"} Then 200 with data.stato IN_LAVORAZIONE [33m 398[2mms[22m[39m
+ [32m✓[39m src/__tests__/fatture-pagamenti-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 3712[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Registrazione pagamento totale[2m > [22mTests AC-1: Given fattura id=8 totale 244.00 senza pagamenti When POST /api/fatture/8/pagamenti importo 244.00 Then HTTP 201 e stato PAGATA [33m 958[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Registrazione pagamento totale[2m > [22mTests AC-1: Given pagamento totale registrato When GET /api/fatture/8 Then residuo 0.00 [33m 663[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Registrazione pagamento parziale + saldo[2m > [22mTests AC-2: Given pagamento iniziale 100.00 When POST saldo 144.00 Then totalePagato 244.00 e stato PAGATA [33m 410[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Registrazione pagamento parziale + saldo[2m > [22mTests AC-2: Given due pagamenti 100+144 When GET /api/fatture/8 Then pagamenti length 2 [33m 447[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Blocco overpayment[2m > [22mTests AC-3: Given fattura gia saldata 244.00 When POST importo 10.00 Then HTTP 400 con messaggio overpayment [33m 324[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Blocco overpayment[2m > [22mTests AC-3: Given overpayment rifiutato When GET /api/fatture/8 Then numero pagamenti resta invariato [33m 327[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Dettaglio fattura con pagamenti[2m > [22mTests AC-4: Given pagamento da 100.00 esiste When GET /api/fatture/8 Then pagamenti include importo 100 e residuo 144 [33m 314[2mms[22m[39m
+ [32m✓[39m src/__tests__/preventivi-notifiche-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 220[2mms[22m[39m
+ [32m✓[39m src/__tests__/report-riparazioni-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 298[2mms[22m[39m
+ [32m✓[39m src/__tests__/notifiche-list-atdd.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 223[2mms[22m[39m
+ [32m✓[39m src/__tests__/stripe-pagamenti-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 4354[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Link Stripe Checkout[2m > [22mTests AC-1: Given fattura id=8 totale 244.00 stato EMESSA When POST /api/pagamenti/crea-link/8 Then HTTP 200 con paymentUrl e sessionId [33m 917[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Link Stripe Checkout[2m > [22mTests AC-1: Given richiesta link Stripe valida When POST /api/pagamenti/crea-link/8 Then paymentUrl ha prefisso Stripe e sessionId segue pattern cs_ [33m 636[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Fattura gia pagata[2m > [22mTests AC-2: Given fattura id=8 stato PAGATA When POST /api/pagamenti/crea-link/8 Then HTTP 400 con errore Invoice is already paid [33m 479[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Fattura gia pagata[2m > [22mTests AC-2: Given fattura pagata When POST /api/pagamenti/crea-link/8 Then response non contiene paymentUrl/sessionId [33m 462[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Webhook checkout.session.completed[2m > [22mTests AC-3: Given evento checkout.session.completed con metadata.fatturaId=8 When POST /api/webhooks/stripe Then HTTP 200 [33m 353[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Firma webhook invalida[2m > [22mTests AC-4: Given stripe-signature invalida When POST /api/webhooks/stripe Then HTTP 400 Invalid signature [33m 309[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-5 - Idempotenza evento duplicato[2m > [22mTests AC-5: Given pagamento gia registrato per sessionId cs_test_link_8 When POST evento duplicato Then HTTP 200 [33m 303[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-5 - Idempotenza evento duplicato[2m > [22mTests AC-5: Given evento duplicato stripe su sessionId gia processato When POST /api/webhooks/stripe Then pagamenti.length resta 1 [33m 315[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-create.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 239[2mms[22m[39m
+ [32m✓[39m src/__tests__/riparazioni-stato-preventivo-atdd.spec.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 4515[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - IN_DIAGNOSI -> PREVENTIVO_EMESSO[2m > [22mTests AC-1: Given riparazione 10 in stato IN_DIAGNOSI and actor TECNICO userId=7 When PATCH /api/riparazioni/10/stato with {"stato":"PREVENTIVO_EMESSO","note":"Preventivo emesso"} Then 200 with data.stato PREVENTIVO_EMESSO [33m 555[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - IN_DIAGNOSI -> PREVENTIVO_EMESSO[2m > [22mTests AC-1: Given transition to PREVENTIVO_EMESSO succeeds When GET /api/riparazioni/10 Then latest statiHistory row contains stato PREVENTIVO_EMESSO, userId 7 and note "Preventivo emesso" [33m 533[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - PREVENTIVO_EMESSO -> IN_ATTESA_APPROVAZIONE[2m > [22mTests AC-2: Given riparazione 10 in stato PREVENTIVO_EMESSO and actor TECNICO userId=7 When PATCH /api/riparazioni/10/stato with {"stato":"IN_ATTESA_APPROVAZIONE","note":"In attesa approvazione preventivo"} Then 200 with data.stato IN_ATTESA_APPROVAZIONE [33m 321[2mms[22m[39m
+ [32m✓[39m src/__tests__/ordini-create-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 224[2mms[22m[39m
+ [32m✓[39m src/__tests__/fornitori-create-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 189[2mms[22m[39m
+ [32m✓[39m src/__tests__/fatture-lista-dettaglio-atdd.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 4735[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista fatture paginata[2m > [22mTests AC-1: Given 20 fatture exist When I GET /api/fatture?page=1&limit=10 Then I receive 200 with data array of 10 fatture and meta { page: 1, limit: 10, total: 20 } [33m 1835[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Lista fatture paginata[2m > [22mTests AC-1: Given 20 fatture exist When I GET /api/fatture?page=1&limit=10 Then response keeps deterministic first page boundaries [33m 923[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Filtro range date[2m > [22mTests AC-3: Given fatture created in February 2026 exist When I GET /api/fatture?dataDa=2026-02-01&dataA=2026-02-28 Then each row has date in requested range [33m 303[2mms[22m[39m
+ [32m✓[39m src/__tests__/preventivi-update-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 179[2mms[22m[39m
+ [32m✓[39m src/__tests__/preventivi-response-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 174[2mms[22m[39m
+ [32m✓[39m src/__tests__/clienti-create-atdd.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 192[2mms[22m[39m
+ [32m✓[39m src/__tests__/dashboard-carico-tecnici-atdd.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 137[2mms[22m[39m
+ [32m✓[39m src/__tests__/users-update-deactivate.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 138[2mms[22m[39m
+ [32m✓[39m src/__tests__/fornitori-detail-update-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 112[2mms[22m[39m
+ [32m✓[39m src/__tests__/preventivi-send-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 95[2mms[22m[39m
+ [32m✓[39m src/__tests__/report-export-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 93[2mms[22m[39m
+ [32m✓[39m src/__tests__/dashboard-riparazioni-per-stato-atdd.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 137[2mms[22m[39m
+ [32m✓[39m src/__tests__/portal-account-conflict-atdd.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 79[2mms[22m[39m
+ [32m✓[39m src/__tests__/dashboard-operativa-atdd.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 82[2mms[22m[39m
+ [32m✓[39m src/__tests__/portal-account-create-atdd.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 65[2mms[22m[39m
+ [32m✓[39m src/__tests__/report-finanziari-atdd.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 80[2mms[22m[39m
+ [32m✓[39m src/__tests__/portal-account-email-required-atdd.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 63[2mms[22m[39m
+ [32m✓[39m src/__tests__/preventivi-detail-atdd.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [31m❯[39m src/__tests__/portal-dashboard-me.atdd.spec.ts [2m([22m[2m8 tests[22m[2m | [22m[31m8 failed[39m[2m)[22m[33m 3670[2mms[22m[39m
+[31m   [31m×[31m AC-1 - Dashboard counters for customer[2m > [22mTests AC-1: Given customer id=5 has 2 open orders, 1 active repair, and 1 pending quote When GET /api/portal/me with valid token Then 200 with exact stats[39m[33m 820[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-1 - Dashboard counters for customer[2m > [22mTests AC-1: Given same customer scenario When GET /api/portal/me Then stats keys are present and numeric[39m[33m 592[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-2 - Zero counters are numeric and never null[2m > [22mTests AC-2: Given customer has no active items When GET /api/portal/me Then returns zero counters[39m[33m 566[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-2 - Zero counters are numeric and never null[2m > [22mTests AC-2: Given customer has no active items When GET /api/portal/me Then counters are not null[39m[33m 565[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-3 - Recent events are sorted by descending timestamp[2m > [22mTests AC-3: Given customer has recent status/invoice events When GET /api/portal/me Then response has eventiRecenti array[39m[33m 564[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-3 - Recent events are sorted by descending timestamp[2m > [22mTests AC-3: Given customer has recent events When GET /api/portal/me Then each event has required keys and descending timestamps[39m[33m 551[2mms[22m[39m
+[31m     → expected 404 to be 200 // Object.is equality[39m
+[31m   [31m×[31m AC-4 - Unauthorized requests[2m > [22mTests AC-4: Given unauthenticated request When GET /api/portal/me Then 401 UNAUTHORIZED[39m[32m 4[2mms[22m[39m
+[31m     → expected 404 to be 401 // Object.is equality[39m
+[31m   [31m×[31m AC-4 - Unauthorized requests[2m > [22mTests AC-4: Given invalid bearer token When GET /api/portal/me Then 401 and no dashboard payload[39m[32m 5[2mms[22m[39m
+[31m     → expected 404 to be 401 // Object.is equality[39m
+ [32m✓[39m src/__tests__/portal-auth-login-refresh-logout.atdd.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 13783[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login portale con credenziali valide[2m > [22mreturns 200 with accessToken and refreshToken [33m 933[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-1 - Login portale con credenziali valide[2m > [22mreturns customer profileSummary with expected identifiers [33m 1106[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Login portale con password non valida[2m > [22mreturns 401 with error code INVALID_CREDENTIALS [33m 1154[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-2 - Login portale con password non valida[2m > [22mdoes not return accessToken and refreshToken [33m 1062[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Lock temporaneo account portale[2m > [22mreturns 423 ACCOUNT_TEMPORARILY_LOCKED on attempt after threshold [33m 3592[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-3 - Lock temporaneo account portale[2m > [22mreturns Retry-After header and no tokens while account is locked [33m 2961[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Refresh token portale[2m > [22mreturns 200 with new accessToken and refreshToken [33m 519[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-4 - Refresh token portale[2m > [22minvalidates old refresh token after successful rotation [33m 561[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-5 - Logout portale con revoca refresh token[2m > [22mreturns 200 with data.revoked=true [33m 523[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-5 - Logout portale con revoca refresh token[2m > [22mreturns 401 on refresh with revoked token after logout [33m 555[2mms[22m[39m
+   [33m[2m✓[22m[39m AC-5 - Logout portale con revoca refresh token[2m > [22mreturns 401 when logout access token header is invalid [33m 540[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 8 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-dashboard-me.atdd.spec.ts[2m > [22mAC-1 - Dashboard counters for customer[2m > [22mTests AC-1: Given customer id=5 has 2 open orders, 1 active repair, and 1 pending quote When GET /api/portal/me with valid token Then 200 with exact stats
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-dashboard-me.atdd.spec.ts:[2m74:29[22m[39m
+    [90m 72| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [32m`Bearer [39m[36m${[39maccessToken[36m}[39m[32m`[39m)[33m;[39m
+    [90m 73| [39m
+    [90m 74| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m 75| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mstats)[33m.[39m[34mtoEqual[39m({
+    [90m 76| [39m      ordiniAperti[33m:[39m [34m2[39m[33m,[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-dashboard-me.atdd.spec.ts[2m > [22mAC-1 - Dashboard counters for customer[2m > [22mTests AC-1: Given same customer scenario When GET /api/portal/me Then stats keys are present and numeric
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-dashboard-me.atdd.spec.ts:[2m89:29[22m[39m
+    [90m 87| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [32m`Bearer [39m[36m${[39maccessToken[36m}[39m[32m`[39m)[33m;[39m
+    [90m 88| [39m
+    [90m 89| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m 90| [39m    [34mexpect[39m([35mtypeof[39m response[33m.[39mbody[33m.[39mstats[33m.[39mordiniAperti)[33m.[39m[34mtoBe[39m([32m"number"[39m)[33m;[39m
+    [90m 91| [39m    expect(typeof response.body.stats.riparazioniAttive).toBe("number"…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-dashboard-me.atdd.spec.ts[2m > [22mAC-2 - Zero counters are numeric and never null[2m > [22mTests AC-2: Given customer has no active items When GET /api/portal/me Then returns zero counters
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-dashboard-me.atdd.spec.ts:[2m104:29[22m[39m
+    [90m102| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [32m`Bearer [39m[36m${[39maccessToken[36m}[39m[32m`[39m)[33m;[39m
+    [90m103| [39m
+    [90m104| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m105| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mstats[33m.[39mordiniAperti)[33m.[39m[34mtoBe[39m([34m0[39m)[33m;[39m
+    [90m106| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mstats[33m.[39mriparazioniAttive)[33m.[39m[34mtoBe[39m([34m0[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-dashboard-me.atdd.spec.ts[2m > [22mAC-2 - Zero counters are numeric and never null[2m > [22mTests AC-2: Given customer has no active items When GET /api/portal/me Then counters are not null
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-dashboard-me.atdd.spec.ts:[2m117:29[22m[39m
+    [90m115| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [32m`Bearer [39m[36m${[39maccessToken[36m}[39m[32m`[39m)[33m;[39m
+    [90m116| [39m
+    [90m117| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m118| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mstats[33m.[39mordiniAperti)[33m.[39mnot[33m.[39m[34mtoBeNull[39m()[33m;[39m
+    [90m119| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39mstats[33m.[39mriparazioniAttive)[33m.[39mnot[33m.[39m[34mtoBeNull[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-dashboard-me.atdd.spec.ts[2m > [22mAC-3 - Recent events are sorted by descending timestamp[2m > [22mTests AC-3: Given customer has recent status/invoice events When GET /api/portal/me Then response has eventiRecenti array
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-dashboard-me.atdd.spec.ts:[2m132:29[22m[39m
+    [90m130| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [32m`Bearer [39m[36m${[39maccessToken[36m}[39m[32m`[39m)[33m;[39m
+    [90m131| [39m
+    [90m132| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m133| [39m    [34mexpect[39m([33mArray[39m[33m.[39m[34misArray[39m(response[33m.[39mbody[33m.[39meventiRecenti))[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m134| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39meventiRecenti[33m.[39mlength)[33m.[39m[34mtoBeGreaterThan[39m([34m0[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-dashboard-me.atdd.spec.ts[2m > [22mAC-3 - Recent events are sorted by descending timestamp[2m > [22mTests AC-3: Given customer has recent events When GET /api/portal/me Then each event has required keys and descending timestamps
+[31m[1mAssertionError[22m: expected 404 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-dashboard-me.atdd.spec.ts:[2m144:29[22m[39m
+    [90m142| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [32m`Bearer [39m[36m${[39maccessToken[36m}[39m[32m`[39m)[33m;[39m
+    [90m143| [39m
+    [90m144| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m145| [39m    for (const event of response.body.eventiRecenti as Array<Record<st…
+    [90m146| [39m      [34mexpect[39m(event)[33m.[39m[34mtoHaveProperty[39m([32m"tipo"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-dashboard-me.atdd.spec.ts[2m > [22mAC-4 - Unauthorized requests[2m > [22mTests AC-4: Given unauthenticated request When GET /api/portal/me Then 401 UNAUTHORIZED
+[31m[1mAssertionError[22m: expected 404 to be 401 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 401[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-dashboard-me.atdd.spec.ts:[2m163:29[22m[39m
+    [90m161| [39m    [35mconst[39m response [33m=[39m [35mawait[39m [34mrequest[39m(app)[33m.[39m[35mget[39m([32m"/api/portal/me"[39m)[33m;[39m
+    [90m162| [39m
+    [90m163| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m401[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m164| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mcode)[33m.[39m[34mtoBe[39m([32m"UNAUTHORIZED"[39m)[33m;[39m
+    [90m165| [39m    expect(response.body.error.message).toBe("Token mancante o non val…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/portal-dashboard-me.atdd.spec.ts[2m > [22mAC-4 - Unauthorized requests[2m > [22mTests AC-4: Given invalid bearer token When GET /api/portal/me Then 401 and no dashboard payload
+[31m[1mAssertionError[22m: expected 404 to be 401 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 401[39m
+[31m+ 404[39m
+
+[36m [2m❯[22m src/__tests__/portal-dashboard-me.atdd.spec.ts:[2m173:29[22m[39m
+    [90m171| [39m      [33m.[39m[35mset[39m([32m"Authorization"[39m[33m,[39m [32m"Bearer invalid-token"[39m)[33m;[39m
+    [90m172| [39m
+    [90m173| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m401[39m)[33m;[39m
+    [90m   | [39m                            [31m^[39m
+    [90m174| [39m    [34mexpect[39m(response[33m.[39mbody[33m.[39merror[33m.[39mcode)[33m.[39m[34mtoBe[39m([32m"UNAUTHORIZED"[39m)[33m;[39m
+    [90m175| [39m    [34mexpect[39m(response[33m.[39mbody)[33m.[39mnot[33m.[39m[34mtoHaveProperty[39m([32m"stats"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m52 passed[39m[22m[90m (53)[39m
+[2m      Tests [22m [1m[31m8 failed[39m[22m[2m | [22m[1m[32m457 passed[39m[22m[90m (465)[39m
+[2m   Start at [22m 17:31:51
+[2m   Duration [22m 19.18s[2m (transform 4.09s, setup 0ms, collect 202.41s, tests 80.55s, environment 15ms, prepare 17.88s)[22m
+
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error workspace @gestionale/backend@0.1.0
+npm error location C:\Users\FAT-E\progetti\gestionale_riparazioni-main\packages\backend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c vitest run
+
+
+> @gestionale/frontend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/frontend[39m
+
+No test files found, exiting with code 0
+
+[2minclude: [22m[33msrc/**/*.test.ts[2m, [22msrc/**/*.spec.ts[39m
+[2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+
+
+> @gestionale/shared@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/shared[39m
+
+ [32m✓[39m src/validators/index.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 17:32:11
+[2m   Duration [22m 613ms[2m (transform 36ms, setup 0ms, collect 70ms, tests 3ms, environment 0ms, prepare 192ms)[22m
+
