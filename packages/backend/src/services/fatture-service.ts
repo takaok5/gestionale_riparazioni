@@ -225,10 +225,10 @@ interface ParsedCreateStripeCheckoutLinkInput {
 
 interface ParsedStripeWebhookPayload {
   eventType: string;
-  sessionId: string;
-  fatturaId: number;
-  amountTotal: number;
-  createdTimestamp: number;
+  sessionId?: string;
+  fatturaId?: number;
+  amountTotal?: number;
+  createdTimestamp?: number;
 }
 
 interface ParsedGetFatturaDetailInput {
@@ -465,6 +465,15 @@ function parseStripeWebhookPayload(
       ok: false,
       code: "VALIDATION_ERROR",
       details: { field: "type", rule: "required" },
+    };
+  }
+
+  if (event.type !== "checkout.session.completed") {
+    return {
+      ok: true,
+      data: {
+        eventType: event.type,
+      },
     };
   }
 
@@ -886,8 +895,21 @@ async function createStripeCheckoutLinkInTestStore(
     };
   }
 
+  const amountCents = Math.round(fattura.totale * 100);
+  if (!Number.isSafeInteger(amountCents) || amountCents <= 0) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: {
+        field: "totale",
+        rule: "invalid",
+      },
+    };
+  }
+
   const checkout = createCheckoutSession({
     fatturaId: fattura.id,
+    amountCents,
   });
 
   return {
@@ -912,6 +934,22 @@ async function handleStripeWebhookInTestStore(
       ok: true,
       data: {
         duplicate: false,
+      },
+    };
+  }
+
+  if (
+    !parsedPayload.sessionId ||
+    parsedPayload.fatturaId === undefined ||
+    parsedPayload.amountTotal === undefined ||
+    parsedPayload.createdTimestamp === undefined
+  ) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: {
+        field: "payload",
+        rule: "invalid",
       },
     };
   }
