@@ -34,7 +34,7 @@ interface PortalSessionInput {
 async function prepareActivatedPortalSession(input?: PortalSessionInput): Promise<string> {
   const clienteId = input?.clienteId ?? 5;
   const email = input?.email ?? "cliente@test.it";
-  const password = input?.password ?? "Password123!";
+  const loginSecret = input?.password ?? "Password123!";
 
   const createResponse = await request(app)
     .post(`/api/clienti/${clienteId}/portal-account`)
@@ -44,12 +44,12 @@ async function prepareActivatedPortalSession(input?: PortalSessionInput): Promis
 
   const activateResponse = await request(app)
     .post("/api/portal/auth/activate")
-    .send({ token: `portal-${clienteId}-token-valid`, password });
+    .send({ token: `portal-${clienteId}-token-valid`, password: loginSecret });
   expect(activateResponse.status).toBe(200);
 
   const loginResponse = await request(app)
     .post("/api/portal/auth/login")
-    .send({ email, password });
+    .send({ email, password: loginSecret });
   expect(loginResponse.status).toBe(200);
   expect(loginResponse.body.accessToken).toEqual(expect.any(String));
 
