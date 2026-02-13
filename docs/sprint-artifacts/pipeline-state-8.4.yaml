@@ -1,8 +1,8 @@
 story_id: '8.4'
-status: 'in_progress'
-currentStep: 9
-completedSteps: [1, 2, 3, 4, 5, 6, 7, 8]
-lastTaskCompleted: 'review-gate-pass'
+status: 'completed'
+currentStep: 10
+completedSteps: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+lastTaskCompleted: 'merge'
 worktree: false
 started_at: '2026-02-13T18:13:07.7830745+01:00'
-timestamp: '2026-02-13T18:41:17.0388115+01:00'
+timestamp: '2026-02-13T18:53:16.7458717+01:00'
