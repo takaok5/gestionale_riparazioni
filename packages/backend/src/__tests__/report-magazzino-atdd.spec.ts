@@ -64,6 +64,10 @@ async function seedMagazzinoScenario(): Promise<void> {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
 
+  for (let i = 1; i <= 4; i += 1) {
+    await createArticolo(i, 6600 + i);
+  }
+
   const articoloTop = await createArticolo(5, 6601, { nome: "Display Samsung S21", sogliaMinima: 3 });
   const articoloZero = await createArticolo(6, 6602, { sogliaMinima: 2 });
   const articoloOther = await createArticolo(7, 6603, { sogliaMinima: 1 });

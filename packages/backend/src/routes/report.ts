@@ -3,8 +3,11 @@ import { buildErrorResponse } from "../lib/errors.js";
 import { authenticate } from "../middleware/auth.js";
 import {
   getReportFinanziari,
+  getReportMagazzino,
   type GetReportFinanziariInput,
   type GetReportFinanziariResult,
+  type GetReportMagazzinoInput,
+  type GetReportMagazzinoResult,
   getReportRiparazioni,
   type GetReportRiparazioniInput,
   type GetReportRiparazioniResult,
@@ -18,6 +21,10 @@ type GetReportRiparazioniFailure = Exclude<
 >;
 type GetReportFinanziariFailure = Exclude<
   GetReportFinanziariResult,
+  { ok: true; data: unknown }
+>;
+type GetReportMagazzinoFailure = Exclude<
+  GetReportMagazzinoResult,
   { ok: true; data: unknown }
 >;
 
@@ -44,6 +51,27 @@ function respondReportRiparazioniFailure(
 
 function respondReportFinanziariFailure(
   result: GetReportFinanziariFailure,
+  res: Response,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(buildErrorResponse("VALIDATION_ERROR", result.message, result.details));
+    return;
+  }
+  if (result.code === "FORBIDDEN") {
+    res
+      .status(403)
+      .json(buildErrorResponse("FORBIDDEN", result.message));
+    return;
+  }
+  res
+    .status(500)
+    .json(buildErrorResponse("REPORT_SERVICE_UNAVAILABLE", result.message));
+}
+
+function respondReportMagazzinoFailure(
+  result: GetReportMagazzinoFailure,
   res: Response,
 ): void {
   if (result.code === "VALIDATION_ERROR") {
@@ -92,6 +120,21 @@ reportRouter.get("/finanziari", authenticate, async (req, res) => {
   const result = await getReportFinanziari(payload);
   if (!result.ok) {
     respondReportFinanziariFailure(result, res);
+    return;
+  }
+
+  res.status(200).json(result.data);
+});
+
+reportRouter.get("/magazzino", authenticate, async (req, res) => {
+  const payload: GetReportMagazzinoInput = {
+    actorUserId: req.user?.userId,
+    actorRole: req.user?.role,
+  };
+
+  const result = await getReportMagazzino(payload);
+  if (!result.ok) {
+    respondReportMagazzinoFailure(result, res);
     return;
   }
 

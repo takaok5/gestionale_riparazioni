@@ -4,6 +4,13 @@ import {
   type GetRiparazioneDettaglioResult,
   type ListRiparazioniResult,
 } from "./riparazioni-service.js";
+import {
+  getArticoloById,
+  listArticoli,
+  listAuditLogs,
+  type ListArticoliResult,
+  type ListAuditLogsResult,
+} from "./anagrafiche-service.js";
 import { listFatture } from "./fatture-service.js";
 import { listPreventiviReport } from "./preventivi-service.js";
 
@@ -20,6 +27,11 @@ interface GetReportFinanziariInput {
   actorRole: unknown;
   dateFrom?: unknown;
   dateTo?: unknown;
+}
+
+interface GetReportMagazzinoInput {
+  actorUserId: unknown;
+  actorRole: unknown;
 }
 
 interface ValidationDetails extends Record<string, unknown> {
@@ -50,12 +62,27 @@ interface ReportFinanziariPayload {
   tassoApprovazione: number;
 }
 
+interface ReportMagazzinoPayload {
+  valoreGiacenze: number;
+  articoliEsauriti: number;
+  articoliSottoSoglia: number;
+  topArticoliUtilizzati: Array<{
+    articoloId: number;
+    nome: string;
+    quantitaUtilizzata: number;
+  }>;
+}
+
 type GetReportRiparazioniResult =
   | { ok: true; data: ReportRiparazioniPayload }
   | ReportFailure;
 
 type GetReportFinanziariResult =
   | { ok: true; data: ReportFinanziariPayload }
+  | ReportFailure;
+
+type GetReportMagazzinoResult =
+  | { ok: true; data: ReportMagazzinoPayload }
   | ReportFailure;
 
 interface ParsedInput {
@@ -71,6 +98,16 @@ type RiparazioneDettaglio = Extract<
   Extract<GetRiparazioneDettaglioResult, { ok: true }>["data"]["data"],
   { statiHistory: unknown }
 >;
+type ListedArticolo = Extract<ListArticoliResult, { ok: true }>["data"]["data"][number];
+type AudiLogRow = Extract<ListAuditLogsResult, { ok: true }>["data"]["results"][number];
+
+interface EnrichedArticolo {
+  id: number;
+  nome: string;
+  giacenza: number;
+  sogliaMinima: number;
+  prezzoAcquisto: number;
+}
 
 function asPositiveInteger(value: unknown): number | null {
   if (typeof value === "number" && Number.isInteger(value) && value > 0) {
@@ -262,6 +299,183 @@ async function fetchAllFattureForReport(filters: {
   }
 
   return { ok: true, data: rows };
+}
+
+async function fetchAllArticoliForReport(): Promise<
+  | { ok: true; data: EnrichedArticolo[] }
+  | ReportFailure
+> {
+  let page = 1;
+  const limit = 100;
+  const rows: ListedArticolo[] = [];
+
+  while (true) {
+    const result = await listArticoli({
+      page,
+      limit,
+      search: undefined,
+      categoria: undefined,
+    });
+    if (!result.ok) {
+      return {
+        ok: false,
+        code: "SERVICE_UNAVAILABLE",
+        message: "Impossibile leggere gli articoli",
+      };
+    }
+
+    rows.push(...result.data.data);
+    if (page >= result.data.meta.totalPages) {
+      break;
+    }
+    page += 1;
+  }
+
+  const detailedRows = await Promise.all(
+    rows.map((row) =>
+      getArticoloById({
+        articoloId: row.id,
+      }),
+    ),
+  );
+
+  const enriched: EnrichedArticolo[] = [];
+  for (let index = 0; index < rows.length; index += 1) {
+    const detail = detailedRows[index];
+    if (!detail.ok) {
+      return {
+        ok: false,
+        code: "SERVICE_UNAVAILABLE",
+        message: "Impossibile leggere i dettagli articoli",
+      };
+    }
+    enriched.push({
+      id: rows[index].id,
+      nome: rows[index].nome,
+      giacenza: rows[index].giacenza,
+      sogliaMinima: rows[index].sogliaMinima,
+      prezzoAcquisto: detail.data.data.prezzoAcquisto,
+    });
+  }
+
+  return { ok: true, data: enriched };
+}
+
+function asObject(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function parsePositiveNumber(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  return value;
+}
+
+function extractScaricoFromAuditRow(
+  row: AudiLogRow,
+  windowStartMs: number,
+): { articoloId: number; quantita: number } | null {
+  if (row.action !== "UPDATE") {
+    return null;
+  }
+  const timestampMs = new Date(row.timestamp).getTime();
+  if (Number.isNaN(timestampMs) || timestampMs < windowStartMs) {
+    return null;
+  }
+
+  const articoloId = asPositiveInteger(row.objectId);
+  if (articoloId === null) {
+    return null;
+  }
+
+  const dettagli = asObject(row.dettagli);
+  if (!dettagli) {
+    return null;
+  }
+  const next = asObject(dettagli.new);
+  if (!next) {
+    return null;
+  }
+  const movimento = asObject(next.movimento);
+  if (!movimento) {
+    return null;
+  }
+
+  if (movimento.tipo !== "SCARICO") {
+    return null;
+  }
+  const quantita = parsePositiveNumber(movimento.quantita);
+  if (quantita === null) {
+    return null;
+  }
+
+  return { articoloId, quantita };
+}
+
+async function fetchTopArticoliUtilizzati(
+  articlesById: Map<number, EnrichedArticolo>,
+): Promise<
+  | {
+      ok: true;
+      data: Array<{ articoloId: number; nome: string; quantitaUtilizzata: number }>;
+    }
+  | ReportFailure
+> {
+  let page = 1;
+  const nowMs = Date.now();
+  const windowStartMs = nowMs - 30 * 24 * 60 * 60 * 1000;
+  const usageByArticleId = new Map<number, number>();
+
+  while (true) {
+    const logsResult = await listAuditLogs({
+      modelName: "Articolo",
+      page,
+    });
+    if (!logsResult.ok) {
+      return {
+        ok: false,
+        code: "SERVICE_UNAVAILABLE",
+        message: "Impossibile leggere i movimenti di magazzino",
+      };
+    }
+
+    for (const row of logsResult.data.results) {
+      const parsed = extractScaricoFromAuditRow(row, windowStartMs);
+      if (!parsed) {
+        continue;
+      }
+      usageByArticleId.set(
+        parsed.articoloId,
+        (usageByArticleId.get(parsed.articoloId) ?? 0) + parsed.quantita,
+      );
+    }
+
+    const { pageSize, total } = logsResult.data.pagination;
+    if (page * pageSize >= total) {
+      break;
+    }
+    page += 1;
+  }
+
+  const topEntries = [...usageByArticleId.entries()]
+    .sort((a, b) => {
+      if (b[1] !== a[1]) {
+        return b[1] - a[1];
+      }
+      return a[0] - b[0];
+    })
+    .slice(0, 10)
+    .map(([articoloId, quantitaUtilizzata]) => ({
+      articoloId,
+      nome: articlesById.get(articoloId)?.nome ?? `Articolo ${articoloId}`,
+      quantitaUtilizzata,
+    }));
+
+  return { ok: true, data: topEntries };
 }
 
 function buildCountPerStato(rows: ListedRiparazione[]): Record<string, number> {
@@ -472,11 +686,72 @@ async function getReportFinanziari(
   };
 }
 
+async function getReportMagazzino(
+  input: GetReportMagazzinoInput,
+): Promise<GetReportMagazzinoResult> {
+  const parsed = parseInput({
+    actorUserId: input.actorUserId,
+    actorRole: input.actorRole,
+  });
+  if (!parsed.ok) {
+    return parsed;
+  }
+  const actor = parsed.data;
+
+  if (actor.actorRole !== "ADMIN") {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      message: "Admin only",
+    };
+  }
+
+  const articlesResult = await fetchAllArticoliForReport();
+  if (!articlesResult.ok) {
+    return articlesResult;
+  }
+
+  const articlesById = new Map<number, EnrichedArticolo>(
+    articlesResult.data.map((article) => [article.id, article]),
+  );
+
+  const topResult = await fetchTopArticoliUtilizzati(articlesById);
+  if (!topResult.ok) {
+    return topResult;
+  }
+
+  const valoreGiacenze = round2(
+    articlesResult.data.reduce(
+      (sum, article) => sum + article.giacenza * article.prezzoAcquisto,
+      0,
+    ),
+  );
+  const articoliEsauriti = articlesResult.data.filter(
+    (article) => article.giacenza === 0 && article.sogliaMinima > 0,
+  ).length;
+  const articoliSottoSoglia = articlesResult.data.filter(
+    (article) => article.giacenza <= article.sogliaMinima,
+  ).length;
+
+  return {
+    ok: true,
+    data: {
+      valoreGiacenze,
+      articoliEsauriti,
+      articoliSottoSoglia,
+      topArticoliUtilizzati: topResult.data,
+    },
+  };
+}
+
 export {
   getReportFinanziari,
+  getReportMagazzino,
   getReportRiparazioni,
   type GetReportFinanziariInput,
   type GetReportFinanziariResult,
+  type GetReportMagazzinoInput,
+  type GetReportMagazzinoResult,
   type GetReportRiparazioniInput,
   type GetReportRiparazioniResult,
 };
