@@ -6,6 +6,7 @@ import {
   type JwtPayload,
 } from "../middleware/auth.js";
 import { getClienteById, listClienteRiparazioni } from "./anagrafiche-service.js";
+import { getFatturaDetail, getFatturaPdf } from "./fatture-service.js";
 import { getRiparazioneDettaglio, listRiparazioni } from "./riparazioni-service.js";
 import {
   createPortalAccountActivationNotifica,
@@ -13,6 +14,7 @@ import {
 } from "./notifiche-service.js";
 import {
   getPreventivoDettaglio,
+  getPreventivoPdf,
   registraRispostaPreventivo,
   type RegistraRispostaPreventivoResult,
 } from "./preventivi-service.js";
@@ -117,6 +119,11 @@ interface PortalOrdineDettaglioPayload {
   documentiCollegati: PortalOrdineDocumentoPayload[];
 }
 
+interface PortalDocumentoPdfPayload {
+  fileName: string;
+  content: Buffer;
+}
+
 interface PortalRiparazioniListItemPayload {
   id: number;
   codiceRiparazione: string;
@@ -201,6 +208,14 @@ type ListPortalOrdiniResult =
 
 type GetPortalOrdineDettaglioResult =
   | { ok: true; data: PortalOrdineDettaglioPayload }
+  | { ok: false; code: PortalOrdiniFailureCode };
+
+type GetPortalFatturaPdfResult =
+  | { ok: true; data: PortalDocumentoPdfPayload }
+  | { ok: false; code: PortalOrdiniFailureCode };
+
+type GetPortalPreventivoPdfResult =
+  | { ok: true; data: PortalDocumentoPdfPayload }
   | { ok: false; code: PortalOrdiniFailureCode };
 
 type ListPortalRiparazioniResult =
@@ -1047,6 +1062,116 @@ async function getPortalRiparazioneDettaglio(
   return loadPortalRiparazioneDettaglio(accessToken, riparazioneId);
 }
 
+async function getPortalFatturaPdf(
+  accessToken: string,
+  fatturaId: unknown,
+): Promise<GetPortalFatturaPdfResult> {
+  const clienteId = resolvePortalClienteIdFromAccessToken(accessToken);
+  if (!clienteId) {
+    return { ok: false, code: "UNAUTHORIZED" };
+  }
+
+  const fatturaResult = await getFatturaDetail({ fatturaId });
+  if (!fatturaResult.ok) {
+    if (fatturaResult.code === "VALIDATION_ERROR") {
+      return { ok: false, code: "VALIDATION_ERROR" };
+    }
+    if (fatturaResult.code === "FATTURA_NOT_FOUND") {
+      return { ok: false, code: "NOT_FOUND" };
+    }
+    return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  }
+
+  const riparazioneResult = await getRiparazioneDettaglio({
+    riparazioneId: fatturaResult.data.riparazioneId,
+  });
+  if (!riparazioneResult.ok) {
+    if (riparazioneResult.code === "VALIDATION_ERROR") {
+      return { ok: false, code: "VALIDATION_ERROR" };
+    }
+    if (riparazioneResult.code === "NOT_FOUND") {
+      return { ok: false, code: "NOT_FOUND" };
+    }
+    return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  }
+
+  if (riparazioneResult.data.data.cliente.id !== clienteId) {
+    return { ok: false, code: "FORBIDDEN" };
+  }
+
+  const fatturaPdfResult = await getFatturaPdf({ fatturaId });
+  if (!fatturaPdfResult.ok) {
+    if (fatturaPdfResult.code === "VALIDATION_ERROR") {
+      return { ok: false, code: "VALIDATION_ERROR" };
+    }
+    if (fatturaPdfResult.code === "FATTURA_NOT_FOUND") {
+      return { ok: false, code: "NOT_FOUND" };
+    }
+    return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  }
+
+  return {
+    ok: true,
+    data: fatturaPdfResult.data,
+  };
+}
+
+async function getPortalPreventivoPdf(
+  accessToken: string,
+  preventivoId: unknown,
+): Promise<GetPortalPreventivoPdfResult> {
+  const clienteId = resolvePortalClienteIdFromAccessToken(accessToken);
+  if (!clienteId) {
+    return { ok: false, code: "UNAUTHORIZED" };
+  }
+
+  const preventivoResult = await getPreventivoDettaglio({ preventivoId });
+  if (!preventivoResult.ok) {
+    if (preventivoResult.code === "VALIDATION_ERROR") {
+      return { ok: false, code: "VALIDATION_ERROR" };
+    }
+    if (preventivoResult.code === "NOT_FOUND") {
+      return { ok: false, code: "NOT_FOUND" };
+    }
+    return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  }
+
+  const riparazioneResult = await getRiparazioneDettaglio({
+    riparazioneId: preventivoResult.data.data.riparazioneId,
+  });
+  if (!riparazioneResult.ok) {
+    if (riparazioneResult.code === "VALIDATION_ERROR") {
+      return { ok: false, code: "VALIDATION_ERROR" };
+    }
+    if (riparazioneResult.code === "NOT_FOUND") {
+      return { ok: false, code: "NOT_FOUND" };
+    }
+    return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  }
+
+  if (riparazioneResult.data.data.cliente.id !== clienteId) {
+    return { ok: false, code: "FORBIDDEN" };
+  }
+
+  const preventivoPdfResult = await getPreventivoPdf({
+    preventivoId: preventivoResult.data.data.id,
+  });
+  if (!preventivoPdfResult.ok) {
+    if (preventivoPdfResult.code === "VALIDATION_ERROR") {
+      return { ok: false, code: "VALIDATION_ERROR" };
+    }
+    if (preventivoPdfResult.code === "NOT_FOUND") {
+      return { ok: false, code: "NOT_FOUND" };
+    }
+    return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  }
+
+  return {
+    ok: true,
+    data: preventivoPdfResult.data,
+  };
+}
+
 async function registraRispostaPreventivoPortale(
   accessToken: string,
   input: PortalPreventivoRispostaInput,
@@ -1113,7 +1238,9 @@ export {
   activatePortalAccount,
   createPortalAccountForCliente,
   getPortalDashboard,
+  getPortalFatturaPdf,
   getPortalOrdineDettaglio,
+  getPortalPreventivoPdf,
   registraRispostaPreventivoPortale,
   getPortalRiparazioneDettaglio,
   listPortalOrdini,
@@ -1130,7 +1257,9 @@ export {
   type AuthFailureCode,
   type CreatePortalAccountResult,
   type GetPortalDashboardResult,
+  type GetPortalFatturaPdfResult,
   type GetPortalOrdineDettaglioResult,
+  type GetPortalPreventivoPdfResult,
   type GetPortalRiparazioneDettaglioResult,
   type LoginFailureCode,
   type LoginResult,

@@ -11,6 +11,10 @@ interface GetPreventivoDettaglioInput {
   preventivoId: unknown;
 }
 
+interface GetPreventivoPdfInput {
+  preventivoId: unknown;
+}
+
 interface UpdatePreventivoInput {
   preventivoId: unknown;
   voci: unknown;
@@ -115,6 +119,12 @@ type CreatePreventivoResult =
 
 type GetPreventivoDettaglioResult =
   | { ok: true; data: { data: PreventivoPayload } }
+  | ValidationFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
+type GetPreventivoPdfResult =
+  | { ok: true; data: { fileName: string; content: Buffer } }
   | ValidationFailure
   | NotFoundFailure
   | ServiceUnavailableFailure;
@@ -1508,6 +1518,53 @@ async function getPreventivoDettaglio(
   return getPreventivoDettaglioInDatabase(parsed.data);
 }
 
+async function getPreventivoPdf(
+  input: GetPreventivoPdfInput,
+): Promise<GetPreventivoPdfResult> {
+  const detailResult = await getPreventivoDettaglio({
+    preventivoId: input.preventivoId,
+  });
+  if (!detailResult.ok) {
+    if (detailResult.code === "VALIDATION_ERROR") {
+      return detailResult;
+    }
+    if (detailResult.code === "NOT_FOUND") {
+      return detailResult;
+    }
+    return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  }
+
+  const preventivo = detailResult.data.data;
+  const fileName = generatePreventivoPdfDocument(preventivo.id);
+  const pdfContent = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 144] /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 58 >>
+stream
+BT /F1 12 Tf 36 100 Td (Preventivo ${preventivo.numeroPreventivo}) Tj ET
+endstream
+endobj
+trailer
+<< /Root 1 0 R >>
+%%EOF`;
+
+  return {
+    ok: true,
+    data: {
+      fileName,
+      content: Buffer.from(pdfContent),
+    },
+  };
+}
+
 async function updatePreventivo(
   input: UpdatePreventivoInput,
 ): Promise<UpdatePreventivoResult> {
@@ -1791,6 +1848,7 @@ function getApprovedPreventivoForRiparazioneForTests(
 export {
   createPreventivo,
   getPreventivoDettaglio,
+  getPreventivoPdf,
   inviaPreventivo,
   listPreventiviReport,
   registraRispostaPreventivo,
@@ -1806,6 +1864,8 @@ export {
   type CreatePreventivoResult,
   type GetPreventivoDettaglioInput,
   type GetPreventivoDettaglioResult,
+  type GetPreventivoPdfInput,
+  type GetPreventivoPdfResult,
   type InviaPreventivoInput,
   type InviaPreventivoResult,
   type ListPreventiviReportInput,

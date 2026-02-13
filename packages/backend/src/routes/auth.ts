@@ -5,7 +5,9 @@ import { getClienteById } from "../services/anagrafiche-service.js";
 import {
   activatePortalAccount,
   getPortalDashboard,
+  getPortalFatturaPdf,
   getPortalOrdineDettaglio,
+  getPortalPreventivoPdf,
   getPortalRiparazioneDettaglio,
   listPortalOrdini,
   listPortalRiparazioni,
@@ -18,7 +20,9 @@ import {
   type AuthFailureCode,
   type ActivatePortalAccountResult,
   type GetPortalDashboardResult,
+  type GetPortalFatturaPdfResult,
   type GetPortalOrdineDettaglioResult,
+  type GetPortalPreventivoPdfResult,
   type GetPortalRiparazioneDettaglioResult,
   type LoginResult,
   type LoginPortalResult,
@@ -411,6 +415,80 @@ function respondPortalPreventivoRispostaFailure(
     .json(buildErrorResponse("AUTH_SERVICE_UNAVAILABLE", "Servizio autenticazione non disponibile"));
 }
 
+function respondPortalFatturaPdfFailure(
+  res: Response,
+  result: Exclude<GetPortalFatturaPdfResult, { ok: true; data: unknown }>,
+): void {
+  if (result.code === "UNAUTHORIZED") {
+    res
+      .status(401)
+      .json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(buildErrorResponse("VALIDATION_ERROR", "Parametri non validi"));
+    return;
+  }
+
+  if (result.code === "FORBIDDEN") {
+    res
+      .status(403)
+      .json(buildErrorResponse("FORBIDDEN", "FORBIDDEN"));
+    return;
+  }
+
+  if (result.code === "NOT_FOUND") {
+    res
+      .status(404)
+      .json(buildErrorResponse("FATTURA_NOT_FOUND", "Fattura non trovata"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(buildErrorResponse("AUTH_SERVICE_UNAVAILABLE", "Servizio autenticazione non disponibile"));
+}
+
+function respondPortalPreventivoPdfFailure(
+  res: Response,
+  result: Exclude<GetPortalPreventivoPdfResult, { ok: true; data: unknown }>,
+): void {
+  if (result.code === "UNAUTHORIZED") {
+    res
+      .status(401)
+      .json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(buildErrorResponse("VALIDATION_ERROR", "Parametri non validi"));
+    return;
+  }
+
+  if (result.code === "FORBIDDEN") {
+    res
+      .status(403)
+      .json(buildErrorResponse("FORBIDDEN", "FORBIDDEN"));
+    return;
+  }
+
+  if (result.code === "NOT_FOUND") {
+    res
+      .status(404)
+      .json(buildErrorResponse("PREVENTIVO_NOT_FOUND", "Preventivo non trovato"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(buildErrorResponse("AUTH_SERVICE_UNAVAILABLE", "Servizio autenticazione non disponibile"));
+}
+
 authRouter.post("/login", async (req, res) => {
   const ip = resolveClientIp(req.header("x-forwarded-for"), req.ip || "0.0.0.0");
   const retryAfter = getRetryAfterSeconds(ip);
@@ -703,6 +781,66 @@ portalRouter.post("/preventivi/:id/risposta", async (req, res) => {
   }
 
   res.status(200).json({ data: result.data });
+});
+
+portalRouter.get("/documenti/fattura/:id/pdf", async (req, res) => {
+  const authHeader = req.header("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  const accessJwt = authHeader.slice("Bearer ".length);
+
+  let result: GetPortalFatturaPdfResult;
+  try {
+    result = await getPortalFatturaPdf(accessJwt, req.params.id);
+  } catch (error) {
+    respondAuthServiceError(res, error);
+    return;
+  }
+
+  if (!result.ok) {
+    respondPortalFatturaPdfFailure(res, result);
+    return;
+  }
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename=\"${result.data.fileName}\"`,
+  );
+  res.status(200).send(result.data.content);
+});
+
+portalRouter.get("/documenti/preventivo/:id/pdf", async (req, res) => {
+  const authHeader = req.header("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  const accessJwt = authHeader.slice("Bearer ".length);
+
+  let result: GetPortalPreventivoPdfResult;
+  try {
+    result = await getPortalPreventivoPdf(accessJwt, req.params.id);
+  } catch (error) {
+    respondAuthServiceError(res, error);
+    return;
+  }
+
+  if (!result.ok) {
+    respondPortalPreventivoPdfFailure(res, result);
+    return;
+  }
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename=\"${result.data.fileName}\"`,
+  );
+  res.status(200).send(result.data.content);
 });
 
 portalRouter.get("/ordini", async (req, res) => {

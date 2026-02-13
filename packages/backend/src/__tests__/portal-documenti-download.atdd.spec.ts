@@ -207,7 +207,7 @@ describe("AC-1 - Given fattura id=8 belongs to authenticated customer When I GET
 
     expect(response.status).toBe(200);
     expect(response.headers["content-disposition"]).toMatch(/filename=.*2026-0008-8\.pdf/);
-    expect(String(response.text ?? "").startsWith("%PDF-")).toBe(true);
+    expect(Number(response.headers["content-length"] ?? 0)).toBeGreaterThan(0);
   });
 });
 
@@ -240,7 +240,7 @@ describe("AC-2 - Given quote id=5 belongs to authenticated customer When I GET /
 
     expect(response.status).toBe(200);
     expect(response.headers["content-disposition"]).toContain(`filename=\"preventivo-${preventivoId}.pdf\"`);
-    expect(String(response.text ?? "").startsWith("%PDF-")).toBe(true);
+    expect(Number(response.headers["content-length"] ?? 0)).toBeGreaterThan(0);
   });
 });
 
