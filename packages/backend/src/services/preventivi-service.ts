@@ -102,6 +102,11 @@ type ServiceUnavailableFailure = {
   code: "SERVICE_UNAVAILABLE";
 };
 
+type ResponseAlreadyRecordedFailure = {
+  ok: false;
+  code: "RESPONSE_ALREADY_RECORDED";
+};
+
 type CreatePreventivoResult =
   | { ok: true; data: PreventivoPayload }
   | ValidationFailure
@@ -144,6 +149,7 @@ interface RegistraRispostaPreventivoSuccessPayload extends PreventivoPayload {
 type RegistraRispostaPreventivoResult =
   | { ok: true; data: RegistraRispostaPreventivoSuccessPayload }
   | ValidationFailure
+  | ResponseAlreadyRecordedFailure
   | NotFoundFailure
   | ServiceUnavailableFailure;
 
@@ -1299,11 +1305,10 @@ async function registraRispostaPreventivoInTestStore(
   }
 
   if (target.stato === "APPROVATO" || target.stato === "RIFIUTATO") {
-    return buildValidationFailure(
-      "stato",
-      "immutable",
-      "Response already recorded for this preventivo",
-    );
+    return {
+      ok: false,
+      code: "RESPONSE_ALREADY_RECORDED",
+    };
   }
 
   if (target.stato !== "INVIATO") {
@@ -1371,11 +1376,10 @@ async function registraRispostaPreventivoInDatabase(
         }
 
         if (row.stato === "APPROVATO" || row.stato === "RIFIUTATO") {
-          return buildValidationFailure(
-            "stato",
-            "immutable",
-            "Response already recorded for this preventivo",
-          );
+          return {
+            ok: false as const,
+            code: "RESPONSE_ALREADY_RECORDED" as const,
+          };
         }
 
         if (row.stato !== "INVIATO") {

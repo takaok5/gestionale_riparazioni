@@ -11,6 +11,11 @@ import {
   createPortalAccountActivationNotifica,
   listNotifiche,
 } from "./notifiche-service.js";
+import {
+  getPreventivoDettaglio,
+  registraRispostaPreventivo,
+  type RegistraRispostaPreventivoResult,
+} from "./preventivi-service.js";
 
 type Role = "ADMIN" | "TECNICO" | "COMMERCIALE";
 
@@ -152,6 +157,7 @@ type PortalOrdiniFailureCode =
   | "FORBIDDEN"
   | "NOT_FOUND"
   | "SERVICE_UNAVAILABLE";
+type PortalPreventiviFailureCode = PortalOrdiniFailureCode | "RESPONSE_ALREADY_RECORDED";
 type AuthFailureCode =
   | "INVALID_CREDENTIALS"
   | "ACCOUNT_DISABLED"
@@ -203,6 +209,15 @@ type ListPortalRiparazioniResult =
 
 type GetPortalRiparazioneDettaglioResult = GetPortalOrdineDettaglioResult;
 
+type RegistraRispostaPreventivoSuccessPayload = Extract<
+  RegistraRispostaPreventivoResult,
+  { ok: true; data: unknown }
+>["data"];
+
+type RegistraPortalPreventivoRispostaResult =
+  | { ok: true; data: RegistraRispostaPreventivoSuccessPayload }
+  | { ok: false; code: PortalPreventiviFailureCode };
+
 interface CreatePortalAccountInput {
   clienteId: number;
   email: string | null;
@@ -228,6 +243,11 @@ interface PortalRiparazioniQueryInput {
   page: unknown;
   limit: unknown;
   stato: unknown;
+}
+
+interface PortalPreventivoRispostaInput {
+  preventivoId: unknown;
+  approvato: unknown;
 }
 
 type PortalAccountStatus = "INVITATO" | "ATTIVO";
@@ -1027,11 +1047,74 @@ async function getPortalRiparazioneDettaglio(
   return loadPortalRiparazioneDettaglio(accessToken, riparazioneId);
 }
 
+async function registraRispostaPreventivoPortale(
+  accessToken: string,
+  input: PortalPreventivoRispostaInput,
+): Promise<RegistraPortalPreventivoRispostaResult> {
+  const clienteId = resolvePortalClienteIdFromAccessToken(accessToken);
+  if (!clienteId) {
+    return { ok: false, code: "UNAUTHORIZED" };
+  }
+
+  const preventivoResult = await getPreventivoDettaglio({
+    preventivoId: input.preventivoId,
+  });
+  if (!preventivoResult.ok) {
+    if (preventivoResult.code === "VALIDATION_ERROR") {
+      return { ok: false, code: "VALIDATION_ERROR" };
+    }
+    if (preventivoResult.code === "NOT_FOUND") {
+      return { ok: false, code: "NOT_FOUND" };
+    }
+    return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  }
+
+  const riparazioneResult = await getRiparazioneDettaglio({
+    riparazioneId: preventivoResult.data.data.riparazioneId,
+  });
+  if (!riparazioneResult.ok) {
+    if (riparazioneResult.code === "VALIDATION_ERROR") {
+      return { ok: false, code: "VALIDATION_ERROR" };
+    }
+    if (riparazioneResult.code === "NOT_FOUND") {
+      return { ok: false, code: "NOT_FOUND" };
+    }
+    return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  }
+
+  if (riparazioneResult.data.data.cliente.id !== clienteId) {
+    return { ok: false, code: "FORBIDDEN" };
+  }
+
+  const rispostaResult = await registraRispostaPreventivo({
+    preventivoId: input.preventivoId,
+    approvato: input.approvato,
+  });
+  if (!rispostaResult.ok) {
+    if (rispostaResult.code === "VALIDATION_ERROR") {
+      return { ok: false, code: "VALIDATION_ERROR" };
+    }
+    if (rispostaResult.code === "RESPONSE_ALREADY_RECORDED") {
+      return { ok: false, code: "RESPONSE_ALREADY_RECORDED" };
+    }
+    if (rispostaResult.code === "NOT_FOUND") {
+      return { ok: false, code: "NOT_FOUND" };
+    }
+    return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  }
+
+  return {
+    ok: true,
+    data: rispostaResult.data,
+  };
+}
+
 export {
   activatePortalAccount,
   createPortalAccountForCliente,
   getPortalDashboard,
   getPortalOrdineDettaglio,
+  registraRispostaPreventivoPortale,
   getPortalRiparazioneDettaglio,
   listPortalOrdini,
   listPortalRiparazioni,
@@ -1053,11 +1136,13 @@ export {
   type LoginResult,
   type LoginPortalResult,
   type ListPortalOrdiniResult,
+  type PortalPreventiviFailureCode,
   type ListPortalRiparazioniResult,
   type LogoutPortalSessionResult,
   type PortalActivateFailureCode,
   type PortalCreateFailureCode,
   type PortalOrdiniFailureCode,
+  type RegistraPortalPreventivoRispostaResult,
   type PortalLoginFailureCode,
   type PortalLogoutFailureCode,
   type PortalRefreshFailureCode,

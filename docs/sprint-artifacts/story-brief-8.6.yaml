@@ -1,0 +1,30 @@
+story_id: "8.6"
+story_title: "Approvazione o Rifiuto Preventivo dal Portale"
+acceptance_criteria:
+  - "AC-1: Given preventivo id=5 belongs to my repair and stato is INVIATO When I POST /api/portal/preventivi/5/risposta with { approvato: true } Then preventivo becomes APPROVATO, riparazione becomes APPROVATA, I receive 200"
+  - "AC-2: Given preventivo id=5 belongs to my repair and stato is INVIATO When I POST /api/portal/preventivi/5/risposta with { approvato: false } Then preventivo becomes RIFIUTATO, riparazione becomes ANNULLATA, I receive 200"
+  - "AC-3: Given preventivo id=5 already has stato APPROVATO When I POST /api/portal/preventivi/5/risposta Then I receive 400 with error RESPONSE_ALREADY_RECORDED"
+  - "AC-4: Given preventivo id=5 belongs to another customer When I POST /api/portal/preventivi/5/risposta Then I receive 403 FORBIDDEN"
+target_modules:
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/routes/auth.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/auth-service.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/preventivi-service.ts"
+patterns_to_follow:
+  - "Portal bearer-token guard + handler pattern in packages/backend/src/routes/auth.ts:604"
+  - "Portal failure mapping with explicit 403 FORBIDDEN response in packages/backend/src/routes/auth.ts:344"
+  - "Portal ownership guard (dettaglio.cliente.id vs token clienteId) in packages/backend/src/services/auth-service.ts:975"
+  - "Preventivo response transition checks and next status mapping in packages/backend/src/services/preventivi-service.ts:1301"
+dependencies:
+  - "packages/backend/src/index.ts:32 mounts portalRouter at /api/portal, so the new endpoint must be exposed there"
+  - "packages/backend/src/routes/auth.ts:5 imports portal use-cases from services/auth-service.ts; keep the same route-to-service boundary"
+  - "packages/backend/src/services/auth-service.ts:9 depends on riparazioni-service to validate customer ownership for portal detail flows"
+  - "packages/backend/src/services/preventivi-service.ts:1537 is the existing preventivo response use-case that updates both preventivo and riparazione statuses"
+risks:
+  - "If customer ownership is not enforced before recording response, a portal customer can approve/reject another customer's quote"
+  - "AC-3 expects code RESPONSE_ALREADY_RECORDED, while current preventivi flow returns VALIDATION_ERROR with message only; code mapping must be aligned"
+  - "If the endpoint bypasses existing transition checks (only INVIATO -> APPROVATO/RIFIUTATO), data integrity between preventivo and riparazione states can break"
+existing_tests:
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/preventivi-response-atdd.spec.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/portal-riparazioni-list-detail.atdd.spec.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/portal-ordini-list-detail.atdd.spec.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/portal-dashboard-me.atdd.spec.ts"

@@ -195,6 +195,18 @@ function respondRegistraRispostaPreventivoFailure(
   res: Response,
   result: RegistraRispostaPreventivoFailure,
 ): void {
+  if (result.code === "RESPONSE_ALREADY_RECORDED") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          "Response already recorded for this preventivo",
+        ),
+      );
+    return;
+  }
+
   if (result.code === "VALIDATION_ERROR") {
     res
       .status(400)

@@ -11,6 +11,7 @@ import {
   listPortalRiparazioni,
   loginWithCredentials,
   loginPortalWithCredentials,
+  registraRispostaPreventivoPortale,
   logoutPortalSession,
   refreshPortalSession,
   refreshSession,
@@ -24,6 +25,7 @@ import {
   type ListPortalOrdiniResult,
   type ListPortalRiparazioniResult,
   type LogoutPortalSessionResult,
+  type RegistraPortalPreventivoRispostaResult,
   type RefreshPortalSessionResult,
   type RefreshSessionResult,
 } from "../services/auth-service.js";
@@ -360,6 +362,55 @@ function respondPortalRiparazioneDettaglioFailure(
     .json(buildErrorResponse("AUTH_SERVICE_UNAVAILABLE", "Servizio autenticazione non disponibile"));
 }
 
+function respondPortalPreventivoRispostaFailure(
+  res: Response,
+  result: Exclude<RegistraPortalPreventivoRispostaResult, { ok: true; data: unknown }>,
+): void {
+  if (result.code === "UNAUTHORIZED") {
+    res
+      .status(401)
+      .json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(buildErrorResponse("VALIDATION_ERROR", "Payload non valido"));
+    return;
+  }
+
+  if (result.code === "RESPONSE_ALREADY_RECORDED") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "RESPONSE_ALREADY_RECORDED",
+          "Response already recorded for this preventivo",
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "FORBIDDEN") {
+    res
+      .status(403)
+      .json(buildErrorResponse("FORBIDDEN", "FORBIDDEN"));
+    return;
+  }
+
+  if (result.code === "NOT_FOUND") {
+    res
+      .status(404)
+      .json(buildErrorResponse("PREVENTIVO_NOT_FOUND", "Preventivo non trovato"));
+    return;
+  }
+
+  res
+    .status(500)
+    .json(buildErrorResponse("AUTH_SERVICE_UNAVAILABLE", "Servizio autenticazione non disponibile"));
+}
+
 authRouter.post("/login", async (req, res) => {
   const ip = resolveClientIp(req.header("x-forwarded-for"), req.ip || "0.0.0.0");
   const retryAfter = getRetryAfterSeconds(ip);
@@ -620,6 +671,34 @@ portalRouter.get("/riparazioni/:id", async (req, res) => {
 
   if (!result.ok) {
     respondPortalRiparazioneDettaglioFailure(res, result);
+    return;
+  }
+
+  res.status(200).json({ data: result.data });
+});
+
+portalRouter.post("/preventivi/:id/risposta", async (req, res) => {
+  const authHeader = req.header("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json(buildErrorResponse("UNAUTHORIZED", "Token mancante o non valido"));
+    return;
+  }
+
+  const accessJwt = authHeader.slice("Bearer ".length);
+
+  let result: RegistraPortalPreventivoRispostaResult;
+  try {
+    result = await registraRispostaPreventivoPortale(accessJwt, {
+      preventivoId: req.params.id,
+      approvato: req.body?.approvato,
+    });
+  } catch (error) {
+    respondAuthServiceError(res, error);
+    return;
+  }
+
+  if (!result.ok) {
+    respondPortalPreventivoRispostaFailure(res, result);
     return;
   }
 
