@@ -1,0 +1,31 @@
+story_id: "8.7"
+story_title: "Download Documenti dal Portale Cliente"
+acceptance_criteria:
+  - "AC-1: Given invoice id=8 belongs to authenticated customer When I GET /api/portal/documenti/fattura/8/pdf Then I receive application/pdf with correct filename"
+  - "AC-2: Given quote id=5 belongs to authenticated customer When I GET /api/portal/documenti/preventivo/5/pdf Then I receive application/pdf with correct filename"
+  - "AC-3: Given requested document id belongs to another customer When I GET /api/portal/documenti/fattura/8/pdf Then I receive 403 FORBIDDEN"
+  - "AC-4: Given unauthenticated request When I GET /api/portal/documenti/preventivo/5/pdf Then I receive 401 Unauthorized"
+target_modules:
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/routes/auth.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/auth-service.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/fatture-service.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/preventivi-service.ts"
+patterns_to_follow:
+  - "Portal bearer-token guard + route handler structure in packages/backend/src/routes/auth.ts:601"
+  - "FORBIDDEN mapping with buildErrorResponse in packages/backend/src/routes/auth.ts:309"
+  - "PDF response headers (Content-Type + Content-Disposition) in packages/backend/src/routes/fatture.ts:341"
+  - "Portal customer resolution from access token in packages/backend/src/services/auth-service.ts:904"
+dependencies:
+  - "packages/backend/src/index.ts:31 mounts portalAuthRouter and portalRouter under /api/portal"
+  - "packages/backend/src/services/auth-service.ts imports and orchestrates portal use-cases from fatture/preventivi/riparazioni services"
+  - "packages/backend/src/routes/auth.ts is the single entrypoint for portal endpoints and error mapping"
+risks:
+  - "If ownership checks are skipped, a customer could download another customer's invoice/quote PDF"
+  - "If Content-Disposition filename normalization is inconsistent, browser download names may break"
+  - "Returning raw service errors instead of portal-mapped codes can break expected 401/403 behavior"
+existing_tests:
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/portal-dashboard-me.atdd.spec.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/portal-ordini-list-detail.atdd.spec.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/portal-riparazioni-list-detail.atdd.spec.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/portal-preventivi-risposta.atdd.spec.ts"
+  - "C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/fatture-lista-dettaglio-atdd.spec.ts"
