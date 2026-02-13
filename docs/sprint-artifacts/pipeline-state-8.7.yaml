@@ -1,0 +1,8 @@
+story_id: '8.7'
+status: 'in_progress'
+currentStep: 2
+completedSteps: [1]
+lastTaskCompleted: 'step-01-init-complete'
+worktree: false
+started_at: '2026-02-13T20:34:21+01:00'
+timestamp: '2026-02-13T20:34:21+01:00'
