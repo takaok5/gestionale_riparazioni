@@ -462,6 +462,7 @@ async function fetchTopArticoliUtilizzati(
   }
 
   const topEntries = [...usageByArticleId.entries()]
+    .filter(([articoloId]) => articlesById.has(articoloId))
     .sort((a, b) => {
       if (b[1] !== a[1]) {
         return b[1] - a[1];
@@ -471,7 +472,7 @@ async function fetchTopArticoliUtilizzati(
     .slice(0, 10)
     .map(([articoloId, quantitaUtilizzata]) => ({
       articoloId,
-      nome: articlesById.get(articoloId)?.nome ?? `Articolo ${articoloId}`,
+      nome: articlesById.get(articoloId)?.nome ?? "",
       quantitaUtilizzata,
     }));
 
@@ -730,7 +731,7 @@ async function getReportMagazzino(
     (article) => article.giacenza === 0 && article.sogliaMinima > 0,
   ).length;
   const articoliSottoSoglia = articlesResult.data.filter(
-    (article) => article.giacenza <= article.sogliaMinima,
+    (article) => article.sogliaMinima > 0 && article.giacenza <= article.sogliaMinima,
   ).length;
 
   return {

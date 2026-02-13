@@ -65,7 +65,7 @@ async function seedMagazzinoScenario(): Promise<void> {
   vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
 
   for (let i = 1; i <= 4; i += 1) {
-    await createArticolo(i, 6600 + i);
+    await createArticolo(i, 6600 + i, { sogliaMinima: 0 });
   }
 
   const articoloTop = await createArticolo(5, 6601, { nome: "Display Samsung S21", sogliaMinima: 3 });
@@ -124,7 +124,7 @@ describe("AC-2 - Conteggio articoli esauriti", () => {
       .set("Authorization", authHeader("ADMIN", 6622));
 
     expect(response.status).toBe(200);
-    expect(response.body.articoliEsauriti).toBeGreaterThanOrEqual(1);
+    expect(response.body.articoliEsauriti).toBe(1);
   });
 
   it("Tests AC-2: Given one seeded zero-stock articolo When report is returned Then articoliSottoSoglia is at least articoliEsauriti", async () => {
