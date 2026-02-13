@@ -1,0 +1,39 @@
+story_id: "7.3"
+story_title: "Log e Consultazione Notifiche"
+acceptance_criteria:
+  - "AC-1: GET /api/notifiche?page=1&limit=20 returns 20 rows and pagination meta"
+  - "AC-2: GET /api/notifiche?tipo=PREVENTIVO returns only PREVENTIVO notifications"
+  - "AC-3: GET /api/notifiche?stato=FALLITA returns only failed notifications"
+  - "AC-4: GET /api/notifiche?dataDa=2026-02-01&dataA=2026-02-28 filters by date range"
+  - "AC-5: TECNICO on GET /api/notifiche gets 403 Admin only"
+
+target_modules:
+  - "packages/backend/src/routes/notifiche.ts"
+  - "packages/backend/src/services/notifiche-service.ts"
+  - "packages/backend/src/middleware/auth.ts"
+  - "packages/backend/src/__tests__/notifiche-list-atdd.spec.ts"
+
+patterns_to_follow:
+  - "Route protection with authenticate + authorize(\"ADMIN\") and query forwarding: packages/backend/src/routes/notifiche.ts:7"
+  - "Pagination parsing and bounded limit (parsePositiveInteger + DEFAULT_LIMIT/MAX_LIMIT): packages/backend/src/services/notifiche-service.ts:116"
+  - "Filter normalization for enum-like query params (trim + uppercase): packages/backend/src/services/notifiche-service.ts:67"
+  - "In-memory filtering followed by pagination metadata shape { page, limit, total, totalPages }: packages/backend/src/services/notifiche-service.ts:215"
+  - "Forbidden role handling through centralized middleware with FORBIDDEN error code: packages/backend/src/middleware/auth.ts:112"
+
+dependencies:
+  - "packages/backend/src/index.ts (imports and mounts notifiche router) [17,39]"
+  - "packages/backend/src/routes/notifiche.ts (imports listNotifiche from notifiche-service) [3]"
+  - "packages/backend/src/services/preventivi-service.ts (imports createPreventivoNotifica) [2]"
+  - "packages/backend/src/services/riparazioni-service.ts (imports notifiche-service functions) [8]"
+  - "packages/backend/src/__tests__/preventivi-notifiche-atdd.spec.ts (exercises GET /api/notifiche flows) [43,126,151]"
+  - "packages/backend/src/__tests__/riparazioni-stato-notifiche-atdd.spec.ts (exercises tipo/stato filters on /api/notifiche) [114,150,222]"
+
+risks:
+  - "Date range filtering on ISO strings can produce timezone boundary regressions if local dates are converted inconsistently."
+  - "Changing authorize behavior to enforce message 'Admin only' can break existing tests expecting 'Accesso negato' in other routes."
+  - "Adding new filters in listNotifiche can accidentally alter existing PREVENTIVO/STATO_RIPARAZIONE results used by stories 7.1/7.2 tests."
+  - "Pagination math (totalPages/safePage) may regress for empty datasets or out-of-range page values."
+
+existing_tests:
+  - "packages/backend/src/__tests__/preventivi-notifiche-atdd.spec.ts"
+  - "packages/backend/src/__tests__/riparazioni-stato-notifiche-atdd.spec.ts"

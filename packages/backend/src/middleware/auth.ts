@@ -21,6 +21,7 @@ interface AuthTokens {
 type VerifyTokenResult =
   | { ok: true; payload: JwtPayload }
   | { ok: false; code: "INVALID_TOKEN" | "JWT_SECRET_MISSING" };
+type AuthorizeOption = { forbiddenMessage?: string };
 
 declare global {
   namespace Express {
@@ -103,14 +104,31 @@ function verifyAuthToken(token: string): VerifyTokenResult {
   }
 }
 
-function authorize(...roles: string[]) {
+function authorize(...rolesOrOptions: Array<string | AuthorizeOption>) {
+  const roles: string[] = [];
+  let forbiddenMessage = "Accesso negato";
+
+  for (const value of rolesOrOptions) {
+    if (typeof value === "string") {
+      roles.push(value);
+      continue;
+    }
+
+    if (typeof value.forbiddenMessage === "string" && value.forbiddenMessage.trim().length > 0) {
+      forbiddenMessage = value.forbiddenMessage.trim();
+    }
+  }
+  if (roles.length === 0) {
+    throw new Error("AUTHORIZE_ROLES_REQUIRED");
+  }
+
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json({ error: "Non autenticato" });
       return;
     }
     if (!roles.includes(req.user.role)) {
-      res.status(403).json(buildErrorResponse("FORBIDDEN", "Accesso negato"));
+      res.status(403).json(buildErrorResponse("FORBIDDEN", forbiddenMessage));
       return;
     }
     next();

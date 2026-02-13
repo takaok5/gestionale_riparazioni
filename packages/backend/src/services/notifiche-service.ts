@@ -43,6 +43,8 @@ interface ListNotificheInput {
   limit?: unknown;
   tipo?: unknown;
   stato?: unknown;
+  dataDa?: unknown;
+  dataA?: unknown;
 }
 
 interface ListNotificheResult {
@@ -138,6 +140,28 @@ function parsePositiveInteger(value: unknown): number | null {
   return parsed;
 }
 
+function parseDateOnly(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return undefined;
+  }
+
+  const parsed = new Date(`${trimmed}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) {
+    return undefined;
+  }
+
+  if (parsed.toISOString().slice(0, 10) !== trimmed) {
+    return undefined;
+  }
+
+  return trimmed;
+}
+
 function resetNotificheStoreForTests(): void {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
@@ -218,14 +242,36 @@ async function listNotifiche(input: ListNotificheInput): Promise<ListNotificheRe
   const limit = Math.min(parsedLimit, MAX_LIMIT);
   const tipoFilter = normalizeFilter(input.tipo);
   const statoFilter = normalizeFilter(input.stato);
+  const dataDa = parseDateOnly(input.dataDa);
+  const dataA = parseDateOnly(input.dataA);
+  const dataDaStart = dataDa ? `${dataDa}T00:00:00.000Z` : undefined;
+  const dataAEnd = dataA ? `${dataA}T23:59:59.999Z` : undefined;
 
   let rows = testNotifiche.map((row) => ({ ...row }));
+  if (dataDaStart && dataAEnd && dataDaStart > dataAEnd) {
+    rows = [];
+  }
+
   if (tipoFilter) {
     rows = rows.filter((row) => row.tipo === tipoFilter);
   }
   if (statoFilter) {
     rows = rows.filter((row) => row.stato === statoFilter);
   }
+  if (dataDaStart) {
+    rows = rows.filter((row) => row.dataInvio >= dataDaStart);
+  }
+  if (dataAEnd) {
+    rows = rows.filter((row) => row.dataInvio <= dataAEnd);
+  }
+
+  rows.sort((left, right) => {
+    if (left.dataInvio === right.dataInvio) {
+      return right.id - left.id;
+    }
+    return right.dataInvio.localeCompare(left.dataInvio);
+  });
+
   const total = rows.length;
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const safePage = Math.min(page, totalPages);

@@ -1,0 +1,1 @@
+packages/backend/src/__tests__/notifiche-list-atdd.spec.ts

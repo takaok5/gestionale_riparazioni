@@ -2,8 +2,8 @@
 
 ## Current Story
 
-**Story:** 7.2
-**Step:** 10
+**Story:** 7.3
+**Step:** 9
 **Status:** in_progress
 
 ## Progress
@@ -14,8 +14,8 @@
 
 ## Session
 
-- **Last activity:** 2026-02-13T10:26:50+01:00
-- **Resume from:** step 10
+- **Last activity:** 2026-02-13T10:52:33.7038647+01:00
+- **Resume from:** step 9
 
 ---
 *Auto-updated by story-pipeline*
