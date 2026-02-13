@@ -5778,6 +5778,63 @@ function resetAnagraficheStoreForTests(): void {
   nextTestAuditLogId = computeNextId(testAuditLogs.map((item) => item.id));
 }
 
+type SeedClienteForTestsInput = {
+  id: number;
+  nome: string;
+  codiceCliente: string;
+  cognome?: string | null;
+  ragioneSociale?: string | null;
+  tipologia?: TipologiaCliente;
+  indirizzo?: string;
+  citta?: string;
+  cap?: string;
+  provincia?: string;
+  telefono?: string | null;
+  email?: string | null;
+  partitaIva?: string | null;
+  codiceFiscale?: string | null;
+};
+
+function seedClienteForTests(input: SeedClienteForTestsInput): void {
+  ensureTestEnvironment();
+
+  const record: TestClienteRecord = {
+    id: input.id,
+    nome: input.nome,
+    cognome: input.cognome ?? null,
+    ragioneSociale: input.ragioneSociale ?? null,
+    tipologia: input.tipologia ?? "PRIVATO",
+    indirizzo: input.indirizzo ?? "Via Test 1",
+    citta: input.citta ?? "Milano",
+    cap: input.cap ?? "20100",
+    provincia: input.provincia ?? "MI",
+    codiceCliente: input.codiceCliente,
+    telefono: input.telefono ?? "0000000000",
+    email: input.email ?? null,
+    partitaIva: input.partitaIva ?? null,
+    codiceFiscale: input.codiceFiscale ?? null,
+  };
+
+  const existingIndex = testClienti.findIndex((item) => item.id === input.id);
+  if (existingIndex >= 0) {
+    testClienti[existingIndex] = {
+      ...testClienti[existingIndex],
+      ...record,
+    };
+  } else {
+    testClienti.push(record);
+  }
+
+  if (input.id >= nextTestClienteId) {
+    nextTestClienteId = input.id + 1;
+  }
+
+  const sequence = extractClienteCodeSequence(record.codiceCliente);
+  if (sequence >= nextTestClienteCodeSequence) {
+    nextTestClienteCodeSequence = sequence + 1;
+  }
+}
+
 function seedFornitoreDetailScenarioForTests(): void {
   ensureTestEnvironment();
 
@@ -5892,6 +5949,7 @@ export {
   listArticoliAlert,
   listClienteRiparazioni,
   resetAnagraficheStoreForTests,
+  seedClienteForTests,
   seedFornitoreDetailScenarioForTests,
   type CreateClienteInput,
   type CreateClienteResult,
