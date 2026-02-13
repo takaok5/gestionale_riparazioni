@@ -1,0 +1,18 @@
+target_modules:
+  - packages/backend/src/routes/report.ts
+  - packages/backend/src/services/report-service.ts
+  - packages/backend/prisma/schema.prisma
+  - packages/backend/src/services/anagrafiche-service.ts
+patterns_to_follow:
+  - "Route pattern: authenticate -> payload parsing -> service call -> error mapping in report routes (packages/backend/src/routes/report.ts:66)"
+  - "Inventory movement pattern: atomic transaction with stock guard and movement write (packages/backend/src/services/anagrafiche-service.ts:3983)"
+dependencies:
+  - "docs/epics/epic-6-dashboard-reportistica.md:95 (Story 6.1 dependency for data foundations)"
+  - "packages/backend/src/services/anagrafiche-service.ts (stock movement source of truth)"
+risks:
+  - "Top-10 SCARICO aggregation on 30-day window can be expensive without proper query/index strategy"
+  - "Admin-only guard regression may expose inventory KPIs to non-admin roles"
+existing_tests:
+  - packages/backend/src/__tests__/report-riparazioni-atdd.spec.ts
+  - packages/backend/src/__tests__/report-finanziari-atdd.spec.ts
+  - packages/backend/src/__tests__/articoli-movimenti-atdd.spec.ts
