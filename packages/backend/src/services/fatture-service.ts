@@ -24,6 +24,15 @@ interface ListFattureInput {
   dataA?: unknown;
 }
 
+interface SeedFatturaReportInput {
+  id?: number;
+  riparazioneId?: number;
+  dataEmissione: string;
+  totale: number;
+  totalePagato: number;
+  stato?: FatturaStato;
+}
+
 interface GetFatturaPdfInput {
   fatturaId: unknown;
 }
@@ -889,6 +898,69 @@ function countFattureByRiparazioneForTests(riparazioneId: number): number {
   return testFatture.filter((row) => row.riparazioneId === riparazioneId).length;
 }
 
+function seedFattureForReportForTests(entries: SeedFatturaReportInput[]): void {
+  ensureTestEnvironment();
+  testFatture = entries.map((entry, index) => {
+    const dataEmissione = asIsoDate(entry.dataEmissione);
+    if (!dataEmissione) {
+      throw new Error("INVALID_DATA_EMISSIONE_FOR_TESTS");
+    }
+    if (!Number.isFinite(entry.totale) || entry.totale <= 0) {
+      throw new Error("INVALID_TOTALE_FOR_TESTS");
+    }
+    if (!Number.isFinite(entry.totalePagato) || entry.totalePagato < 0) {
+      throw new Error("INVALID_TOTALE_PAGATO_FOR_TESTS");
+    }
+    if (entry.totalePagato - entry.totale > 0.0001) {
+      throw new Error("OVERPAYMENT_FOR_TESTS");
+    }
+    const id = entry.id ?? index + 1;
+    const riparazioneId = entry.riparazioneId ?? id;
+    const totale = roundCurrency(entry.totale);
+    const totalePagato = roundCurrency(entry.totalePagato);
+    const residuo = roundCurrency(Math.max(0, totale - totalePagato));
+    const stato = entry.stato ?? (residuo === 0 ? "PAGATA" : "EMESSA");
+    const year = Number(dataEmissione.slice(0, 4));
+    const numeroFattura = `${year}/${String(id).padStart(4, "0")}`;
+    return {
+      id,
+      riparazioneId,
+      numeroFattura,
+      stato,
+      dataEmissione,
+      subtotale: roundCurrency(totale / 1.22),
+      iva: roundCurrency(totale - roundCurrency(totale / 1.22)),
+      totale,
+      totalePagato,
+      residuo,
+      pdfPath: createFatturaPdfPath(numeroFattura, id),
+      voci: [
+        {
+          tipo: "MANODOPERA",
+          descrizione: "Voce report seed",
+          quantita: 1,
+          prezzoUnitario: roundCurrency(totale / 1.22),
+        },
+      ],
+      pagamenti:
+        totalePagato > 0
+          ? [
+              {
+                id,
+                fatturaId: id,
+                importo: totalePagato,
+                metodo: "BONIFICO",
+                dataPagamento: dataEmissione,
+              },
+            ]
+          : [],
+    };
+  });
+  const maxId = testFatture.reduce((max, row) => Math.max(max, row.id), 0);
+  nextTestFatturaId = maxId + 1;
+  nextTestPagamentoId = maxId + 1;
+}
+
 export {
   createFattura,
   createPagamento,
@@ -897,6 +969,7 @@ export {
   getFatturaPdf,
   countFattureByRiparazioneForTests,
   resetFattureStoreForTests,
+  seedFattureForReportForTests,
   setFatturaSequenceForTests,
   type CreateFatturaInput,
   type CreateFatturaResult,
@@ -908,4 +981,5 @@ export {
   type ListFattureResult,
   type GetFatturaPdfInput,
   type GetFatturaPdfResult,
+  type SeedFatturaReportInput,
 };

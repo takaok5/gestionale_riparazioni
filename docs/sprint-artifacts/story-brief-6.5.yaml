@@ -1,0 +1,35 @@
+story_id: '6.5'
+story_title: 'Report Finanziari'
+source_story_file: 'docs/epics/epic-6-dashboard-reportistica.md'
+source_section: 'Epic 6 -> Story 6.5'
+acceptance_criteria:
+  - 'AC-1: Given fatture in January 2026 totaling 15000.00 EUR, pagamenti totaling 12000.00 When I GET /api/report/finanziari?dateFrom=2026-01-01&dateTo=2026-01-31 Then I receive { fatturato: 15000.00, incassato: 12000.00, margine: 5500.00, preventiviEmessi: 30, preventiviApprovati: 22, tassoApprovazione: 73.33 }'
+  - 'AC-2: Given preventivi with stato APPROVATO and RIFIUTATO exist in period When I GET /api/report/finanziari?dateFrom=2026-02-01&dateTo=2026-02-28 Then tassoApprovazione is calculated as (approvati / totali) * 100'
+  - 'AC-3: Given I am Commerciale When I GET /api/report/finanziari Then I receive 403 "Admin only"'
+target_modules:
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/routes/report.ts'
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/report-service.ts'
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/fatture-service.ts'
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/services/preventivi-service.ts'
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/index.ts'
+patterns_to_follow:
+  - 'packages/backend/src/routes/report.ts:38-55 - route pattern authenticate -> parse query -> service call -> failure mapper -> 200 response'
+  - 'docs/architecture.md:732-737 - FR-010 contract for GET /api/report/finanziari with admin auth and shared report query semantics'
+  - 'packages/backend/src/services/report-service.ts:90-205 - report service pattern with role guard, query validation, paged aggregation and typed failure union'
+dependencies:
+  - 'packages/backend/src/index.ts imports and mounts reportRouter under /api/report'
+  - 'packages/backend/src/routes/report.ts depends on middleware/auth authenticate and buildErrorResponse helpers'
+  - 'packages/backend/src/routes/report.ts depends on packages/backend/src/services/report-service.ts for report orchestration'
+  - 'packages/backend/src/services/report-service.ts will depend on fatture-service.ts and preventivi-service.ts for financial metrics'
+risks:
+  - 'Large date ranges can force full pagination scans; incomplete paging would undercount fatturato/incassato'
+  - 'Margine formula is not explicitly modeled in existing services; ambiguous calculation can produce misleading KPI'
+  - 'tassoApprovazione must handle zero preventivi to avoid NaN/Infinity and preserve API contract'
+  - 'Missing admin guard at /api/report/finanziari would violate AC-3 (Commerciale must receive 403)'
+existing_tests:
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/report-riparazioni-atdd.spec.ts'
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/fatture-lista-dettaglio-atdd.spec.ts'
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/fatture-pagamenti-atdd.spec.ts'
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/preventivi-response-atdd.spec.ts'
+  - 'C:/Users/FAT-E/progetti/gestionale_riparazioni-main/packages/backend/src/__tests__/preventivi-create-atdd.spec.ts'
+  - 'No dedicated /api/report/finanziari ATDD yet'

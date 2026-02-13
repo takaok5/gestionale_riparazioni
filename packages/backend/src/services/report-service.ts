@@ -4,11 +4,20 @@ import {
   type GetRiparazioneDettaglioResult,
   type ListRiparazioniResult,
 } from "./riparazioni-service.js";
+import { listFatture } from "./fatture-service.js";
+import { listPreventiviReport } from "./preventivi-service.js";
 
 interface GetReportRiparazioniInput {
   actorUserId: unknown;
   actorRole: unknown;
   tecnicoId?: unknown;
+  dateFrom?: unknown;
+  dateTo?: unknown;
+}
+
+interface GetReportFinanziariInput {
+  actorUserId: unknown;
+  actorRole: unknown;
   dateFrom?: unknown;
   dateTo?: unknown;
 }
@@ -32,8 +41,21 @@ interface ReportRiparazioniPayload {
   tecnicoId?: number;
 }
 
+interface ReportFinanziariPayload {
+  fatturato: number;
+  incassato: number;
+  margine: number;
+  preventiviEmessi: number;
+  preventiviApprovati: number;
+  tassoApprovazione: number;
+}
+
 type GetReportRiparazioniResult =
   | { ok: true; data: ReportRiparazioniPayload }
+  | ReportFailure;
+
+type GetReportFinanziariResult =
+  | { ok: true; data: ReportFinanziariPayload }
   | ReportFailure;
 
 interface ParsedInput {
@@ -190,6 +212,58 @@ async function fetchAllRiparazioni(filters: {
   return { ok: true, data: rows };
 }
 
+async function fetchAllFattureForReport(filters: {
+  dateFrom?: string;
+  dateTo?: string;
+}): Promise<
+  | { ok: true; data: { totale: number; totalePagato: number }[] }
+  | ReportFailure
+> {
+  let page = 1;
+  const limit = 100;
+  const rows: { totale: number; totalePagato: number }[] = [];
+
+  while (true) {
+    const fattureResult = await listFatture({
+      page,
+      limit,
+      dataDa: filters.dateFrom,
+      dataA: filters.dateTo,
+    });
+    if (!fattureResult.ok) {
+      if (fattureResult.code === "VALIDATION_ERROR") {
+        return {
+          ok: false,
+          code: "VALIDATION_ERROR",
+          message: "Filtro fatture non valido",
+          details: {
+            field: fattureResult.details.field,
+            rule: fattureResult.details.rule,
+          },
+        };
+      }
+      return {
+        ok: false,
+        code: "SERVICE_UNAVAILABLE",
+        message: "Impossibile leggere le fatture",
+      };
+    }
+
+    rows.push(
+      ...fattureResult.data.data.map((row) => ({
+        totale: row.totale,
+        totalePagato: row.totalePagato,
+      })),
+    );
+    if (page >= fattureResult.data.meta.totalPages) {
+      break;
+    }
+    page += 1;
+  }
+
+  return { ok: true, data: rows };
+}
+
 function buildCountPerStato(rows: ListedRiparazione[]): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const row of rows) {
@@ -231,6 +305,10 @@ function computeTempoMedioPerStato(details: RiparazioneDettaglio[]): Record<stri
   }
 
   return result;
+}
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 async function fetchDetails(
@@ -305,8 +383,100 @@ async function getReportRiparazioni(
   return { ok: true, data: reportData };
 }
 
+async function getReportFinanziari(
+  input: GetReportFinanziariInput,
+): Promise<GetReportFinanziariResult> {
+  const parsed = parseInput({
+    actorUserId: input.actorUserId,
+    actorRole: input.actorRole,
+    dateFrom: input.dateFrom,
+    dateTo: input.dateTo,
+  });
+  if (!parsed.ok) {
+    return parsed;
+  }
+  const filters = parsed.data;
+
+  if (filters.actorRole !== "ADMIN") {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      message: "Admin only",
+    };
+  }
+
+  const fattureResult = await fetchAllFattureForReport({
+    dateFrom: filters.dateFrom,
+    dateTo: filters.dateTo,
+  });
+  if (!fattureResult.ok) {
+    return fattureResult;
+  }
+
+  const preventiviResult = await listPreventiviReport({
+    dateFrom: filters.dateFrom,
+    dateTo: filters.dateTo,
+  });
+  if (!preventiviResult.ok) {
+    if (preventiviResult.code === "VALIDATION_ERROR") {
+      return {
+        ok: false,
+        code: "VALIDATION_ERROR",
+        message: "Filtro preventivi non valido",
+        details: {
+          field: preventiviResult.details.field,
+          rule: preventiviResult.details.rule,
+        },
+      };
+    }
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+      message: "Impossibile leggere i preventivi",
+    };
+  }
+
+  const fatturato = round2(
+    fattureResult.data.reduce((sum, row) => sum + row.totale, 0),
+  );
+  const incassato = round2(
+    fattureResult.data.reduce((sum, row) => sum + row.totalePagato, 0),
+  );
+  const preventiviEmessiRows = preventiviResult.data.filter(
+    (row) => row.stato === "APPROVATO" || row.stato === "RIFIUTATO",
+  );
+  const preventiviApprovatiRows = preventiviResult.data.filter(
+    (row) => row.stato === "APPROVATO",
+  );
+  const preventiviEmessi = preventiviEmessiRows.length;
+  const preventiviApprovati = preventiviApprovatiRows.length;
+  const tassoApprovazione =
+    preventiviEmessi === 0
+      ? 0
+      : round2((preventiviApprovati / preventiviEmessi) * 100);
+  const costiPreventiviApprovati = round2(
+    preventiviApprovatiRows.reduce((sum, row) => sum + row.totale, 0),
+  );
+  const margine = round2(fatturato - costiPreventiviApprovati);
+
+  return {
+    ok: true,
+    data: {
+      fatturato,
+      incassato,
+      margine,
+      preventiviEmessi,
+      preventiviApprovati,
+      tassoApprovazione,
+    },
+  };
+}
+
 export {
+  getReportFinanziari,
   getReportRiparazioni,
+  type GetReportFinanziariInput,
+  type GetReportFinanziariResult,
   type GetReportRiparazioniInput,
   type GetReportRiparazioniResult,
 };

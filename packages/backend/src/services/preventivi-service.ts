@@ -45,6 +45,28 @@ interface PreventivoPayload {
   totale: number;
 }
 
+interface ListPreventiviReportInput {
+  dateFrom?: unknown;
+  dateTo?: unknown;
+}
+
+interface PreventivoReportRow {
+  id: number;
+  stato: string;
+  dataInvio: string | null;
+  dataRisposta: string | null;
+  totale: number;
+}
+
+interface SeedPreventivoReportInput {
+  id?: number;
+  riparazioneId?: number;
+  stato: string;
+  dataInvio?: string | null;
+  dataRisposta?: string | null;
+  totale: number;
+}
+
 interface ApprovedPreventivoForFattura {
   id: number;
   riparazioneId: number;
@@ -122,6 +144,11 @@ type RegistraRispostaPreventivoResult =
   | { ok: true; data: RegistraRispostaPreventivoSuccessPayload }
   | ValidationFailure
   | NotFoundFailure
+  | ServiceUnavailableFailure;
+
+type ListPreventiviReportResult =
+  | { ok: true; data: PreventivoReportRow[] }
+  | ValidationFailure
   | ServiceUnavailableFailure;
 
 interface ParsedCreatePreventivoInput {
@@ -221,6 +248,128 @@ function asPositiveNumber(value: unknown): number | null {
   }
 
   return parsed;
+}
+
+function asIsoDate(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return null;
+  }
+
+  const [yearRaw, monthRaw, dayRaw] = trimmed.split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() + 1 !== month ||
+    parsed.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+function toIsoDateOnly(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed.toISOString().slice(0, 10);
+}
+
+function parseListPreventiviReportInput(
+  input: ListPreventiviReportInput,
+): { ok: true; data: { dateFrom?: string; dateTo?: string } } | ValidationFailure {
+  let dateFrom: string | undefined;
+  if (input.dateFrom !== undefined && input.dateFrom !== null && input.dateFrom !== "") {
+    const parsed = asIsoDate(input.dateFrom);
+    if (!parsed) {
+      return {
+        ok: false,
+        code: "VALIDATION_ERROR",
+        details: { field: "dateFrom", rule: "YYYY-MM-DD" },
+      };
+    }
+    dateFrom = parsed;
+  }
+
+  let dateTo: string | undefined;
+  if (input.dateTo !== undefined && input.dateTo !== null && input.dateTo !== "") {
+    const parsed = asIsoDate(input.dateTo);
+    if (!parsed) {
+      return {
+        ok: false,
+        code: "VALIDATION_ERROR",
+        details: { field: "dateTo", rule: "YYYY-MM-DD" },
+      };
+    }
+    dateTo = parsed;
+  }
+
+  if (dateFrom && dateTo && dateFrom > dateTo) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      details: { field: "dateFrom", rule: "lte_dateTo" },
+    };
+  }
+
+  return { ok: true, data: { dateFrom, dateTo } };
+}
+
+function listPreventiviReportInTestStore(input: {
+  dateFrom?: string;
+  dateTo?: string;
+}): ListPreventiviReportResult {
+  const rows = testPreventivi
+    .map((row) => {
+      const referenceDate = toIsoDateOnly(row.dataRisposta ?? row.dataInvio);
+      return {
+        id: row.id,
+        stato: row.stato,
+        dataInvio: row.dataInvio,
+        dataRisposta: row.dataRisposta,
+        totale: row.totale,
+        referenceDate,
+      };
+    })
+    .filter((row) => {
+      if (!row.referenceDate) {
+        return false;
+      }
+      if (input.dateFrom && row.referenceDate < input.dateFrom) {
+        return false;
+      }
+      if (input.dateTo && row.referenceDate > input.dateTo) {
+        return false;
+      }
+      return true;
+    })
+    .map((row) => ({
+      id: row.id,
+      stato: row.stato,
+      dataInvio: row.dataInvio,
+      dataRisposta: row.dataRisposta,
+      totale: row.totale,
+    }));
+
+  return { ok: true, data: rows };
 }
 
 function roundCurrency(value: number): number {
@@ -1356,6 +1505,24 @@ async function registraRispostaPreventivo(
   return registraRispostaPreventivoInDatabase(parsed.data);
 }
 
+async function listPreventiviReport(
+  input: ListPreventiviReportInput,
+): Promise<ListPreventiviReportResult> {
+  const parsed = parseListPreventiviReportInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return listPreventiviReportInTestStore(parsed.data);
+  }
+
+  return {
+    ok: false,
+    code: "SERVICE_UNAVAILABLE",
+  };
+}
+
 function ensureTestEnvironment(): void {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("TEST_HELPER_ONLY_IN_TEST_ENV");
@@ -1460,6 +1627,61 @@ function setPreventivoStatoForTests(preventivoId: number, stato: string): void {
   target.dataRisposta = null;
 }
 
+function seedPreventiviForReportForTests(entries: SeedPreventivoReportInput[]): void {
+  ensureTestEnvironment();
+  const allowedStati = new Set(["BOZZA", "INVIATO", "APPROVATO", "RIFIUTATO"]);
+  testPreventivi = entries.map((entry, index) => {
+    if (!allowedStati.has(entry.stato)) {
+      throw new Error("INVALID_STATO_FOR_REPORT_TESTS");
+    }
+    if (!Number.isFinite(entry.totale) || entry.totale <= 0) {
+      throw new Error("INVALID_TOTALE_FOR_REPORT_TESTS");
+    }
+    const parsedDataInvio =
+      entry.dataInvio === undefined || entry.dataInvio === null
+        ? null
+        : asIsoDate(entry.dataInvio);
+    if (entry.dataInvio !== undefined && entry.dataInvio !== null && !parsedDataInvio) {
+      throw new Error("INVALID_DATA_INVIO_FOR_REPORT_TESTS");
+    }
+    const parsedDataRisposta =
+      entry.dataRisposta === undefined || entry.dataRisposta === null
+        ? null
+        : asIsoDate(entry.dataRisposta);
+    if (entry.dataRisposta !== undefined && entry.dataRisposta !== null && !parsedDataRisposta) {
+      throw new Error("INVALID_DATA_RISPOSTA_FOR_REPORT_TESTS");
+    }
+    const id = entry.id ?? index + 1;
+    const riparazioneId = entry.riparazioneId ?? id;
+    const dataInvio = parsedDataInvio;
+    const dataRisposta = parsedDataRisposta;
+    const totale = Math.round(entry.totale * 100) / 100;
+    const subtotale = Math.round((totale / 1.22) * 100) / 100;
+    const iva = Math.round((totale - subtotale) * 100) / 100;
+    return {
+      id,
+      riparazioneId,
+      numeroPreventivo: `PREV-${String(id).padStart(6, "0")}`,
+      stato: entry.stato,
+      dataInvio,
+      dataRisposta,
+      voci: [
+        {
+          tipo: "MANODOPERA",
+          descrizione: "Voce report seed",
+          quantita: 1,
+          prezzoUnitario: subtotale,
+        },
+      ],
+      subtotale,
+      iva,
+      totale,
+    };
+  });
+  const maxId = testPreventivi.reduce((max, row) => Math.max(max, row.id), 0);
+  nextTestPreventivoId = maxId + 1;
+}
+
 function setPreventivoClienteEmailForTests(
   preventivoId: number,
   email: string | null,
@@ -1516,8 +1738,10 @@ export {
   createPreventivo,
   getPreventivoDettaglio,
   inviaPreventivo,
+  listPreventiviReport,
   registraRispostaPreventivo,
   updatePreventivo,
+  seedPreventiviForReportForTests,
   resetPreventiviStoreForTests,
   setPreventivoClienteEmailForTests,
   setPreventivoEmailFailureForTests,
@@ -1530,8 +1754,12 @@ export {
   type GetPreventivoDettaglioResult,
   type InviaPreventivoInput,
   type InviaPreventivoResult,
+  type ListPreventiviReportInput,
+  type ListPreventiviReportResult,
+  type PreventivoReportRow,
   type RegistraRispostaPreventivoInput,
   type RegistraRispostaPreventivoResult,
+  type SeedPreventivoReportInput,
   type UpdatePreventivoInput,
   type UpdatePreventivoResult,
 };
