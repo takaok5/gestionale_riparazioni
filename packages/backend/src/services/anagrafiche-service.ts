@@ -6263,6 +6263,16 @@ function seedPublicPageContentForTests(
   }
 
   if (input.faqAnswerByQuestion && input.faqAnswerByQuestion.length > 0) {
+    const availableQuestions = new Set(publicFaqItems.map((item) => item.question));
+    const unknownQuestions = input.faqAnswerByQuestion
+      .map((item) => item.question)
+      .filter((question) => !availableQuestions.has(question));
+    if (unknownQuestions.length > 0) {
+      throw new Error(
+        `PUBLIC_FAQ_QUESTION_NOT_FOUND: ${unknownQuestions.join(", ")}`,
+      );
+    }
+
     const updates = new Map(
       input.faqAnswerByQuestion.map((item) => [item.question, item.answer] as const),
     );

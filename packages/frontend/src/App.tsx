@@ -77,6 +77,8 @@ const publicFaqSections = [
   },
 ] as const;
 
+const hasPublicFaqEntries = publicFaqSections.some((section) => section.items.length > 0);
+
 type AppProps = {
   path?: string;
 };
@@ -217,22 +219,31 @@ function App({ path = "/" }: AppProps) {
             </p>
 
             <div className="mt-6 space-y-6">
-              {publicFaqSections.map((section) => (
-                <section key={section.category}>
-                  <h2 className="text-lg font-semibold">{section.category}</h2>
-                  <div className="mt-3 space-y-3">
-                    {section.items.map((item) => (
-                      <article
-                        key={item.question}
-                        className="rounded-2xl bg-slate-100 p-4 text-sm text-slate-800"
-                      >
-                        <h3 className="font-semibold">{item.question}</h3>
-                        <p className="mt-2">{item.answer}</p>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-              ))}
+              {hasPublicFaqEntries ? (
+                publicFaqSections.map((section) => (
+                  <section key={section.category}>
+                    <h2 className="text-lg font-semibold">{section.category}</h2>
+                    <div className="mt-3 space-y-3">
+                      {section.items.map((item) => (
+                        <details
+                          key={item.question}
+                          open
+                          className="rounded-2xl bg-slate-100 p-4 text-sm text-slate-800"
+                        >
+                          <summary className="cursor-pointer font-semibold">
+                            {item.question}
+                          </summary>
+                          <p className="mt-2">{item.answer}</p>
+                        </details>
+                      ))}
+                    </div>
+                  </section>
+                ))
+              ) : (
+                <p className="rounded-2xl bg-slate-100 p-4 text-sm text-slate-700">
+                  Nessuna FAQ disponibile
+                </p>
+              )}
             </div>
           </section>
         </main>
