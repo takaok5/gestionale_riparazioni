@@ -11,6 +11,7 @@ import {
   type NotificaPayload,
 } from "./notifiche-service.js";
 import { buildRiparazioneEtichettaPdf } from "./riparazioni-etichetta-pdf.js";
+import { buildRiparazioneRicevutaPdf } from "./riparazioni-ricevuta-pdf.js";
 
 type Priorita = "BASSA" | "NORMALE" | "ALTA";
 
@@ -49,6 +50,10 @@ interface GetRiparazioneDettaglioInput {
 }
 
 interface GetRiparazioneEtichettaPdfInput {
+  riparazioneId: unknown;
+}
+
+interface GetRiparazioneRicevutaPdfInput {
   riparazioneId: unknown;
 }
 
@@ -256,6 +261,12 @@ type GetRiparazioneEtichettaPdfResult =
   | NotFoundFailure
   | ServiceUnavailableFailure;
 
+type GetRiparazioneRicevutaPdfResult =
+  | { ok: true; data: { fileName: string; content: Buffer } }
+  | ValidationFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
 type AssegnaRiparazioneTecnicoResult =
   | { ok: true; data: AssegnaRiparazioneTecnicoPayload }
   | ValidationFailure
@@ -309,6 +320,10 @@ interface ParsedGetRiparazioneEtichettaPdfInput {
   riparazioneId: number;
 }
 
+interface ParsedGetRiparazioneRicevutaPdfInput {
+  riparazioneId: number;
+}
+
 interface ParsedAssegnaRiparazioneTecnicoInput {
   riparazioneId: number;
   tecnicoId: number;
@@ -357,6 +372,8 @@ const INITIAL_STATO = "RICEVUTA";
 const DEFAULT_LIST_LIMIT = 15;
 const MAX_LIST_LIMIT = 100;
 const TEST_EXISTING_CLIENT_IDS = new Set<number>([5]);
+const RICEVUTA_CONDIZIONI_SERVIZIO =
+  "CONDIZIONI DI SERVIZIO: Il laboratorio non risponde di eventuali dati presenti sul dispositivo. Il cliente autorizza la diagnosi tecnica.";
 
 let testRiparazioni: TestRiparazioneRecord[] = [];
 let nextTestRiparazioneId = 1;
@@ -755,6 +772,27 @@ function parseGetRiparazioneEtichettaPdfInput(
   };
 }
 
+function parseGetRiparazioneRicevutaPdfInput(
+  input: GetRiparazioneRicevutaPdfInput,
+):
+  | { ok: true; data: ParsedGetRiparazioneRicevutaPdfInput }
+  | ValidationFailure {
+  const riparazioneId = asPositiveInteger(input.riparazioneId);
+  if (riparazioneId === null) {
+    return buildValidationFailure({
+      field: "riparazioneId",
+      rule: "invalid_integer",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      riparazioneId,
+    },
+  };
+}
+
 // AC-2: Extend customer projection for nome -> codiceCliente fallback.
 function resolveClienteLabel(
   nome: string | null | undefined,
@@ -782,6 +820,13 @@ function formatDateForLabel(value: string): string {
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   const year = String(date.getUTCFullYear());
   return `${day}/${month}/${year}`;
+}
+
+function splitAccessoriConsegnati(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.replace(/\s+/g, " ").trim())
+    .filter((item) => item.length > 0);
 }
 
 function parseAssegnaRiparazioneTecnicoInput(
@@ -1785,6 +1830,136 @@ async function getRiparazioneEtichettaPdfInDatabase(
   }
 }
 
+async function getRiparazioneRicevutaPdfInTestStore(
+  payload: ParsedGetRiparazioneRicevutaPdfInput,
+): Promise<GetRiparazioneRicevutaPdfResult> {
+  const target = testRiparazioni.find((row) => row.id === payload.riparazioneId);
+  if (!target) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  const clienteResult = await getClienteById({ clienteId: target.clienteId });
+  if (!clienteResult.ok) {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+
+  const clienteNome = resolveClienteLabel(
+    clienteResult.data.data.nome,
+    clienteResult.data.data.ragioneSociale,
+    clienteResult.data.data.codiceCliente,
+  );
+  const accessoriConsegnati = splitAccessoriConsegnati(target.accessoriConsegnati);
+
+  try {
+    const pdfBuffer = await buildRiparazioneRicevutaPdf({
+      codiceRiparazione: target.codiceRiparazione,
+      clienteNome,
+      clienteTelefono: clienteResult.data.data.telefono?.trim() ?? "",
+      clienteEmail: clienteResult.data.data.email?.trim() ?? "",
+      dispositivoTipo: target.tipoDispositivo,
+      dispositivoMarca: target.marcaDispositivo,
+      dispositivoModello: target.modelloDispositivo,
+      dispositivoSeriale: target.serialeDispositivo,
+      descrizioneProblema: target.descrizioneProblema,
+      accessoriConsegnati,
+      dataRicezione: formatDateForLabel(target.dataRicezione),
+      condizioniServizio: RICEVUTA_CONDIZIONI_SERVIZIO,
+    });
+
+    return {
+      ok: true,
+      data: {
+        fileName: `ricevuta-riparazione-${target.id}.pdf`,
+        content: pdfBuffer,
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
+async function getRiparazioneRicevutaPdfInDatabase(
+  payload: ParsedGetRiparazioneRicevutaPdfInput,
+): Promise<GetRiparazioneRicevutaPdfResult> {
+  try {
+    const prisma = getPrismaClient();
+    const row = await prisma.riparazione.findUnique({
+      where: { id: payload.riparazioneId },
+      select: {
+        id: true,
+        clienteId: true,
+        codiceRiparazione: true,
+        dataRicezione: true,
+        tipoDispositivo: true,
+        marcaDispositivo: true,
+        modelloDispositivo: true,
+        serialeDispositivo: true,
+        descrizioneProblema: true,
+        accessoriConsegnati: true,
+      },
+    });
+
+    if (!row) {
+      return {
+        ok: false,
+        code: "NOT_FOUND",
+      };
+    }
+
+    const clienteResult = await getClienteById({ clienteId: row.clienteId });
+    if (!clienteResult.ok) {
+      return {
+        ok: false,
+        code: "SERVICE_UNAVAILABLE",
+      };
+    }
+
+    const clienteNome = resolveClienteLabel(
+      clienteResult.data.data.nome,
+      clienteResult.data.data.ragioneSociale,
+      clienteResult.data.data.codiceCliente,
+    );
+    const accessoriConsegnati = splitAccessoriConsegnati(row.accessoriConsegnati);
+
+    const pdfBuffer = await buildRiparazioneRicevutaPdf({
+      codiceRiparazione: row.codiceRiparazione,
+      clienteNome,
+      clienteTelefono: clienteResult.data.data.telefono?.trim() ?? "",
+      clienteEmail: clienteResult.data.data.email?.trim() ?? "",
+      dispositivoTipo: row.tipoDispositivo,
+      dispositivoMarca: row.marcaDispositivo,
+      dispositivoModello: row.modelloDispositivo,
+      dispositivoSeriale: row.serialeDispositivo,
+      descrizioneProblema: row.descrizioneProblema,
+      accessoriConsegnati,
+      dataRicezione: formatDateForLabel(row.dataRicezione.toISOString()),
+      condizioniServizio: RICEVUTA_CONDIZIONI_SERVIZIO,
+    });
+
+    return {
+      ok: true,
+      data: {
+        fileName: `ricevuta-riparazione-${row.id}.pdf`,
+        content: pdfBuffer,
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
 async function assegnaRiparazioneTecnicoInTestStore(
   payload: ParsedAssegnaRiparazioneTecnicoInput,
 ): Promise<AssegnaRiparazioneTecnicoResult> {
@@ -2328,6 +2503,21 @@ async function getRiparazioneEtichettaPdf(
   return getRiparazioneEtichettaPdfInDatabase(parsed.data);
 }
 
+async function getRiparazioneRicevutaPdf(
+  input: GetRiparazioneRicevutaPdfInput,
+): Promise<GetRiparazioneRicevutaPdfResult> {
+  const parsed = parseGetRiparazioneRicevutaPdfInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return getRiparazioneRicevutaPdfInTestStore(parsed.data);
+  }
+
+  return getRiparazioneRicevutaPdfInDatabase(parsed.data);
+}
+
 async function assegnaRiparazioneTecnico(
   input: AssegnaRiparazioneTecnicoInput,
 ): Promise<AssegnaRiparazioneTecnicoResult> {
@@ -2423,6 +2613,7 @@ export {
   createRiparazione,
   getRiparazioneDettaglio,
   getRiparazioneEtichettaPdf,
+  getRiparazioneRicevutaPdf,
   listRiparazioni,
   resetRiparazioniStoreForTests,
   riparazioneExistsForTests,
@@ -2439,6 +2630,8 @@ export {
   type GetRiparazioneDettaglioResult,
   type GetRiparazioneEtichettaPdfInput,
   type GetRiparazioneEtichettaPdfResult,
+  type GetRiparazioneRicevutaPdfInput,
+  type GetRiparazioneRicevutaPdfResult,
   type ListRiparazioniInput,
   type ListRiparazioniResult,
 };

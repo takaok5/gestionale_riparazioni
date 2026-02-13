@@ -1,0 +1,55 @@
+story_id: "7.5"
+story_title: "Stampa Ricevuta Accettazione"
+source_story: "docs/epics/epic-7-notifiche-integrazioni.md"
+acceptance_criteria:
+  - id: "AC-1"
+    given: "riparazione id=10 con dati completi"
+    when: "GET /api/riparazioni/10/ricevuta"
+    then: "ritorna PDF A4 con dati cliente/dispositivo, descrizione problema, accessori, dataRicezione, condizioni servizio, area firma"
+  - id: "AC-2"
+    given: "accessoriConsegnati='Caricabatterie, custodia'"
+    when: "GET /api/riparazioni/10/ricevuta"
+    then: "il PDF mostra ogni accessorio come elemento separato"
+  - id: "AC-3"
+    given: "riparazione creata il 2026-02-09"
+    when: "GET /api/riparazioni/10/ricevuta"
+    then: "dataRicezione e formattata come 09/02/2026"
+  - id: "AC-4"
+    given: "utente non autenticato"
+    when: "GET /api/riparazioni/10/ricevuta"
+    then: "ritorna HTTP 401"
+
+target_modules:
+  - packages/backend/src/routes/riparazioni.ts
+  - packages/backend/src/services/riparazioni-service.ts
+  - packages/backend/src/services/riparazioni-etichetta-pdf.ts
+  - packages/backend/src/middleware/auth.ts
+  - packages/backend/src/__tests__/riparazioni-etichetta-atdd.spec.ts
+
+patterns_to_follow:
+  - packages/backend/src/routes/riparazioni.ts:357 -> route PDF protetta con `authenticate` + `authorize("TECNICO")`, payload tipizzato e delega a service.
+  - packages/backend/src/routes/riparazioni.ts:162 -> mapping errori service dedicato (VALIDATION_ERROR/NOT_FOUND/500) con `buildErrorResponse`.
+  - packages/backend/src/routes/riparazioni.ts:372 -> header `Content-Type: application/pdf` + `Content-Disposition` prima del `send(Buffer)`.
+  - packages/backend/src/services/riparazioni-service.ts:737 -> parser input endpoint con `asPositiveInteger` e `buildValidationFailure`.
+  - packages/backend/src/services/riparazioni-service.ts:775 -> formattazione data `dd/MM/yyyy` via UTC per output PDF.
+  - packages/backend/src/services/riparazioni-etichetta-pdf.ts:24 -> builder PDF deterministico in test (`%PDF` + contenuti testuali verificabili).
+  - packages/backend/src/__tests__/riparazioni-etichetta-atdd.spec.ts:110 -> test ATDD Given/When/Then con assert su header PDF e contenuto body.
+
+dependencies:
+  - packages/backend/src/index.ts -> monta `riparazioniRouter` su `/api/riparazioni`, quindi ogni nuova route diventa parte della API pubblica.
+  - packages/backend/src/services/report-service.ts -> usa `getRiparazioneDettaglio` da `riparazioni-service`, quindi refactor estesi nel service possono impattare reportistica.
+  - packages/backend/src/services/dashboard-service.ts -> usa `listRiparazioni` da `riparazioni-service`; modifiche trasversali nello stesso modulo possono creare regressioni indirette.
+  - packages/backend/src/routes/riparazioni.ts -> dipende da `packages/backend/src/middleware/auth.ts` per contratto 401 su richieste non autenticate.
+
+risks:
+  - Non esiste ancora un endpoint `/api/riparazioni/:id/ricevuta` nel codice: serve aggiungere nuova route e nuova logica PDF senza rompere `/etichetta`.
+  - La stringa `accessoriConsegnati` puo contenere spazi/valori vuoti; split e normalizzazione non robusti possono violare AC-2.
+  - L'AC-3 richiede formato data stabile: conversioni timezone locali invece di UTC possono produrre giorno errato.
+  - I messaggi 401 attuali del middleware auth sono varianti italiane (`Token mancante`/`Token non valido`), potenziale mismatch con aspettativa testuale dell'epic.
+  - PDF A4 con sezioni lunghe (descrizione problema/condizioni) rischia overflow o layout instabile se non definito un template deterministico per test.
+
+existing_tests:
+  - packages/backend/src/__tests__/riparazioni-etichetta-atdd.spec.ts
+  - packages/backend/src/__tests__/riparazioni-detail-atdd.spec.ts
+  - packages/backend/src/__tests__/auth-login.spec.ts
+  - packages/backend/src/__tests__/auth-refresh.spec.ts

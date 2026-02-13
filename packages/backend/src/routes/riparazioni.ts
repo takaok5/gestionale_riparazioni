@@ -20,6 +20,9 @@ import {
   getRiparazioneEtichettaPdf,
   type GetRiparazioneEtichettaPdfInput,
   type GetRiparazioneEtichettaPdfResult,
+  getRiparazioneRicevutaPdf,
+  type GetRiparazioneRicevutaPdfInput,
+  type GetRiparazioneRicevutaPdfResult,
   listRiparazioni,
   type ListRiparazioniInput,
   type ListRiparazioniResult,
@@ -44,6 +47,11 @@ type GetRiparazioneDettaglioFailure = Exclude<
 
 type GetRiparazioneEtichettaPdfFailure = Exclude<
   GetRiparazioneEtichettaPdfResult,
+  { ok: true; data: unknown }
+>;
+
+type GetRiparazioneRicevutaPdfFailure = Exclude<
+  GetRiparazioneRicevutaPdfResult,
   { ok: true; data: unknown }
 >;
 
@@ -162,6 +170,42 @@ function respondGetRiparazioneDettaglioFailure(
 function respondGetRiparazioneEtichettaPdfFailure(
   res: Response,
   result: GetRiparazioneEtichettaPdfFailure,
+): void {
+  if (result.code === "VALIDATION_ERROR") {
+    res
+      .status(400)
+      .json(
+        buildErrorResponse(
+          "VALIDATION_ERROR",
+          result.message ?? "Parametri non validi",
+          result.details,
+        ),
+      );
+    return;
+  }
+
+  if (result.code === "NOT_FOUND") {
+    res
+      .status(404)
+      .json(
+        buildErrorResponse("RIPARAZIONE_NOT_FOUND", "Riparazione non trovata"),
+      );
+    return;
+  }
+
+  res
+    .status(500)
+    .json(
+      buildErrorResponse(
+        "RIPARAZIONI_SERVICE_UNAVAILABLE",
+        "Servizio riparazioni non disponibile",
+      ),
+    );
+}
+
+function respondGetRiparazioneRicevutaPdfFailure(
+  res: Response,
+  result: GetRiparazioneRicevutaPdfFailure,
 ): void {
   if (result.code === "VALIDATION_ERROR") {
     res
@@ -352,6 +396,30 @@ riparazioniRouter.get("/", authenticate, async (req, res) => {
 
   res.status(200).json(result.data);
 });
+
+riparazioniRouter.get(
+  "/:id/ricevuta",
+  authenticate,
+  authorize("TECNICO"),
+  async (req, res) => {
+    const payload: GetRiparazioneRicevutaPdfInput = {
+      riparazioneId: req.params.id,
+    };
+
+    const result = await getRiparazioneRicevutaPdf(payload);
+    if (!result.ok) {
+      respondGetRiparazioneRicevutaPdfFailure(res, result);
+      return;
+    }
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=\"${result.data.fileName}\"`,
+    );
+    res.status(200).send(result.data.content);
+  },
+);
 
 // AC-1: Add route for etichetta PDF.
 riparazioniRouter.get(
