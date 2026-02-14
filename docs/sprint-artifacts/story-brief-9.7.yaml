@@ -1,0 +1,59 @@
+story_id: '9.7'
+story_title: 'Conversione Lead in Cliente + Pratica'
+source_story: 'docs/epics/epic-9-vetrina-pubblica.md:101'
+acceptance_criteria:
+  - id: 'AC-1'
+    given: 'Commerciale has a valid lead and invokes conversion endpoint'
+    when: 'POST /api/richieste/12/converti is processed successfully'
+    then: 'System creates a new Cliente and marks richiesta as CONVERTITA'
+  - id: 'AC-2'
+    given: 'A matching Cliente already exists by email or phone'
+    when: 'Lead conversion runs'
+    then: 'System reuses existing Cliente and avoids duplicate anagrafica'
+  - id: 'AC-3'
+    given: 'Commerciale chooses riparazione flow during conversion'
+    when: 'Conversion is completed'
+    then: 'System creates or prepares a Riparazione draft prefilled from lead data'
+  - id: 'AC-4'
+    given: 'Lead is already in CONVERTITA state'
+    when: 'POST /api/richieste/:id/converti is called again'
+    then: 'API returns HTTP 409 with REQUEST_ALREADY_CONVERTED'
+
+target_modules:
+  - 'packages/backend/src/routes/richieste.ts'
+  - 'packages/backend/src/services/anagrafiche-service.ts'
+  - 'packages/backend/src/services/riparazioni-service.ts'
+  - 'packages/backend/src/routes/public.ts'
+
+patterns_to_follow:
+  - pattern: 'Express authenticated route with centralized error mapping helpers'
+    reference: 'packages/backend/src/routes/richieste.ts:32'
+    details: 'Reuse authenticate/authorize + buildErrorResponse/respond* helper style already used by richieste endpoints.'
+  - pattern: 'Public richiesta lifecycle state transition guard and audit update'
+    reference: 'packages/backend/src/services/anagrafiche-service.ts:6208'
+    details: 'Extend existing transition checks and history append logic instead of introducing a parallel state mechanism.'
+  - pattern: 'Riparazione creation with validated clienteId and typed errors'
+    reference: 'packages/backend/src/services/riparazioni-service.ts:1231'
+    details: 'Conversion flow should call createRiparazione only after confirmed cliente reuse/creation.'
+
+dependencies:
+  - module: 'packages/backend/src/index.ts:35'
+    relation: 'richiesteRouter mount exposes new conversion endpoint under /api/richieste.'
+  - module: 'packages/backend/src/routes/public.ts:283'
+    relation: 'Public lead payload shape feeds conversion source data.'
+  - module: 'packages/backend/src/services/anagrafiche-service.ts:6140'
+    relation: 'Backoffice richiesta list/status relies on in-memory public leads store and must stay coherent after conversion.'
+
+risks:
+  - 'Current public lead storage is in-memory; conversion results may not persist across restart unless persistence strategy is aligned.'
+  - 'State machine currently allows limited transitions; extending to CONVERTITA can break existing guards if not updated consistently.'
+  - 'Riparazione creation fails when clienteId is unknown; ordering between cliente resolution and pratica creation is critical.'
+  - '409 contract for repeated conversion must be deterministic to avoid flaky ATDD coverage.'
+
+existing_tests:
+  - 'packages/backend/src/__tests__/public-richieste-api.atdd.spec.ts'
+  - 'packages/backend/src/__tests__/richieste-backoffice-api.atdd.spec.ts'
+
+notes:
+  - 'No dedicated conversion endpoint exists yet in richieste router.'
+  - 'No conversion-specific ATDD currently covers duplicate prevention and 409 behavior.'

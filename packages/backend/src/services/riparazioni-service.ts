@@ -1229,7 +1229,12 @@ async function createRiparazioneInTestStore(
   payload: ParsedCreateRiparazioneInput,
 ): Promise<CreateRiparazioneResult> {
   if (!TEST_EXISTING_CLIENT_IDS.has(payload.clienteId)) {
-    return { ok: false, code: "CLIENTE_NOT_FOUND" };
+    const existingCliente = await getClienteById({ clienteId: payload.clienteId });
+    if (!existingCliente.ok) {
+      return { ok: false, code: "CLIENTE_NOT_FOUND" };
+    }
+
+    TEST_EXISTING_CLIENT_IDS.add(payload.clienteId);
   }
 
   const now = new Date();

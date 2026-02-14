@@ -223,6 +223,17 @@ interface AssegnaPublicRichiestaInput {
   commercialeId: unknown;
 }
 
+interface ConvertiPublicRichiestaInput {
+  actorUserId: unknown;
+  richiestaId: unknown;
+  deferStateChange?: unknown;
+}
+
+interface FinalizzaConversionePublicRichiestaInput {
+  actorUserId: unknown;
+  richiestaId: unknown;
+}
+
 interface AuditLogDettagli {
   old: Record<string, unknown>;
   new: Record<string, unknown>;
@@ -354,6 +365,25 @@ interface CambiaStatoPublicRichiestaPayload {
 interface AssegnaPublicRichiestaPayload {
   id: number;
   assegnataAUserId: string;
+}
+
+interface ConvertiPublicRichiestaPayload {
+  richiesta: {
+    id: number;
+    stato: "CONVERTITA";
+  };
+  cliente: {
+    id: number;
+    reused: boolean;
+  };
+  lead: {
+    id: number;
+    tipo: "PREVENTIVO" | "APPUNTAMENTO";
+    nome: string;
+    email: string;
+    telefono: string | null;
+    problema: string;
+  };
 }
 
 interface ClienteListPayload {
@@ -596,6 +626,26 @@ type AssegnaPublicRichiestaResult =
   | NotFoundFailure
   | ServiceUnavailableFailure;
 
+type ConvertiPublicRichiestaResult =
+  | { ok: true; data: { data: ConvertiPublicRichiestaPayload } }
+  | ValidationFailure
+  | NotFoundFailure
+  | { ok: false; code: "ALREADY_CONVERTED" }
+  | ServiceUnavailableFailure;
+
+type FinalizzaConversionePublicRichiestaResult =
+  | {
+      ok: true;
+      data: {
+        data: {
+          id: number;
+          stato: "CONVERTITA";
+        };
+      };
+    }
+  | ValidationFailure
+  | NotFoundFailure;
+
 type ListClientiResult =
   | { ok: true; data: ClienteListPayload }
   | ValidationFailure
@@ -783,6 +833,17 @@ interface ParsedAssegnaPublicRichiestaInput {
   commercialeId: string;
 }
 
+interface ParsedConvertiPublicRichiestaInput {
+  actorUserId: number;
+  richiestaId: number;
+  deferStateChange: boolean;
+}
+
+interface ParsedFinalizzaConversionePublicRichiestaInput {
+  actorUserId: number;
+  richiestaId: number;
+}
+
 interface ParsedListClientiInput {
   page: number;
   limit: number;
@@ -949,6 +1010,7 @@ interface TestPublicRichiestaRecord {
   stato: "NUOVA" | "IN_LAVORAZIONE" | "CONVERTITA";
   nome: string;
   email: string;
+  telefono: string | null;
   problema: string;
   assegnataAUserId: string | null;
   consensoPrivacy: true;
@@ -2709,6 +2771,67 @@ function parseAssegnaPublicRichiestaInput(
       actorUserId,
       richiestaId,
       commercialeId,
+    },
+  };
+}
+
+function parseConvertiPublicRichiestaInput(
+  input: ConvertiPublicRichiestaInput,
+):
+  | { ok: true; data: ParsedConvertiPublicRichiestaInput }
+  | ValidationFailure {
+  const actorUserId = asPositiveInteger(input.actorUserId);
+  if (actorUserId === null) {
+    return buildValidationFailure({
+      field: "actorUserId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const richiestaId = asPositiveInteger(input.richiestaId);
+  if (richiestaId === null) {
+    return buildValidationFailure({
+      field: "richiestaId",
+      rule: "invalid_integer",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      actorUserId,
+      richiestaId,
+      deferStateChange: input.deferStateChange === true,
+    },
+  };
+}
+
+function parseFinalizzaConversionePublicRichiestaInput(
+  input: FinalizzaConversionePublicRichiestaInput,
+):
+  | { ok: true; data: ParsedFinalizzaConversionePublicRichiestaInput }
+  | ValidationFailure {
+  const actorUserId = asPositiveInteger(input.actorUserId);
+  if (actorUserId === null) {
+    return buildValidationFailure({
+      field: "actorUserId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const richiestaId = asPositiveInteger(input.richiestaId);
+  if (richiestaId === null) {
+    return buildValidationFailure({
+      field: "richiestaId",
+      rule: "invalid_integer",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      actorUserId,
+      richiestaId,
     },
   };
 }
@@ -6175,6 +6298,248 @@ async function listRichiesteBackoffice(
   };
 }
 
+function normalizeLeadLookupEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+async function findExistingClienteIdForPublicRichiestaConversion(input: {
+  email: string;
+  telefono: string | null;
+}): Promise<number | null> {
+  const normalizedEmail = normalizeLeadLookupEmail(input.email);
+  const normalizedTelefono =
+    typeof input.telefono === "string" && input.telefono.trim().length > 0
+      ? input.telefono.trim()
+      : null;
+
+  if (process.env.NODE_ENV === "test") {
+    const byEmail = testClienti.find(
+      (item) => item.email?.toLowerCase() === normalizedEmail,
+    );
+    if (byEmail) {
+      return byEmail.id;
+    }
+
+    if (normalizedTelefono) {
+      const byPhone = testClienti.find((item) => item.telefono === normalizedTelefono);
+      if (byPhone) {
+        return byPhone.id;
+      }
+    }
+
+    return null;
+  }
+
+  const byEmail = await getPrismaClient().cliente.findFirst({
+    where: {
+      email: {
+        equals: normalizedEmail,
+        mode: "insensitive",
+      },
+    },
+    select: { id: true },
+  });
+  if (byEmail) {
+    return byEmail.id;
+  }
+
+  if (!normalizedTelefono) {
+    return null;
+  }
+
+  const byPhone = await getPrismaClient().cliente.findFirst({
+    where: {
+      telefono: normalizedTelefono,
+    },
+    select: { id: true },
+  });
+  return byPhone?.id ?? null;
+}
+
+function buildCreateClientePayloadFromRichiesta(input: {
+  actorUserId: number;
+  richiesta: TestPublicRichiestaRecord;
+}): CreateClienteInput {
+  return {
+    actorUserId: input.actorUserId,
+    nome: input.richiesta.nome,
+    cognome: null,
+    ragioneSociale: null,
+    tipologia: "PRIVATO",
+    indirizzo: "Lead pubblico",
+    citta: "Roma",
+    cap: "00100",
+    provincia: "RM",
+    telefono: input.richiesta.telefono,
+    email: input.richiesta.email,
+    partitaIva: null,
+    codiceFiscale: null,
+  };
+}
+
+async function convertiPublicRichiesta(
+  input: ConvertiPublicRichiestaInput,
+): Promise<ConvertiPublicRichiestaResult> {
+  const parsed = parseConvertiPublicRichiestaInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  const richiesta = testPublicRichieste.find(
+    (item) => item.id === parsed.data.richiestaId,
+  );
+  if (!richiesta) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  if (richiesta.stato === "CONVERTITA") {
+    return {
+      ok: false,
+      code: "ALREADY_CONVERTED",
+    };
+  }
+
+  const normalizedEmail = normalizeLeadLookupEmail(richiesta.email);
+  const leadTelefono = richiesta.telefono;
+
+  let clienteId = await findExistingClienteIdForPublicRichiestaConversion({
+    email: normalizedEmail,
+    telefono: leadTelefono,
+  });
+  let reused = clienteId !== null;
+
+  if (clienteId === null) {
+    const createClienteResult = await createCliente(
+      buildCreateClientePayloadFromRichiesta({
+        actorUserId: parsed.data.actorUserId,
+        richiesta: {
+          ...richiesta,
+          email: normalizedEmail,
+        },
+      }),
+    );
+
+    if (createClienteResult.ok) {
+      clienteId = createClienteResult.data.id;
+      reused = false;
+    } else if (createClienteResult.code === "EMAIL_ALREADY_EXISTS") {
+      const concurrentMatch = await findExistingClienteIdForPublicRichiestaConversion({
+        email: normalizedEmail,
+        telefono: leadTelefono,
+      });
+      if (concurrentMatch === null) {
+        return {
+          ok: false,
+          code: "SERVICE_UNAVAILABLE",
+        };
+      }
+      clienteId = concurrentMatch;
+      reused = true;
+    } else {
+      return {
+        ok: false,
+        code: "SERVICE_UNAVAILABLE",
+      };
+    }
+  }
+
+  if (!parsed.data.deferStateChange) {
+    const previousState = richiesta.stato;
+    richiesta.stato = "CONVERTITA";
+
+    appendTestAuditLog({
+      userId: parsed.data.actorUserId,
+      action: "UPDATE",
+      modelName: "RichiestaPubblica",
+      objectId: String(richiesta.id),
+      dettagli: {
+        old: {
+          stato: previousState,
+        },
+        new: {
+          stato: richiesta.stato,
+        },
+      },
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      data: {
+        richiesta: {
+          id: richiesta.id,
+          stato: "CONVERTITA",
+        },
+        cliente: {
+          id: clienteId,
+          reused,
+        },
+        lead: {
+          id: richiesta.id,
+          tipo: richiesta.tipo,
+          nome: richiesta.nome,
+          email: normalizedEmail,
+          telefono: leadTelefono,
+          problema: richiesta.problema,
+        },
+      },
+    },
+  };
+}
+
+async function finalizzaConversionePublicRichiesta(
+  input: FinalizzaConversionePublicRichiestaInput,
+): Promise<FinalizzaConversionePublicRichiestaResult> {
+  const parsed = parseFinalizzaConversionePublicRichiestaInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  const richiesta = testPublicRichieste.find(
+    (item) => item.id === parsed.data.richiestaId,
+  );
+  if (!richiesta) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  if (richiesta.stato !== "CONVERTITA") {
+    const previousState = richiesta.stato;
+    richiesta.stato = "CONVERTITA";
+
+    appendTestAuditLog({
+      userId: parsed.data.actorUserId,
+      action: "UPDATE",
+      modelName: "RichiestaPubblica",
+      objectId: String(richiesta.id),
+      dettagli: {
+        old: {
+          stato: previousState,
+        },
+        new: {
+          stato: richiesta.stato,
+        },
+      },
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      data: {
+        id: richiesta.id,
+        stato: "CONVERTITA",
+      },
+    },
+  };
+}
+
 async function cambiaStatoPublicRichiesta(
   input: CambiaStatoPublicRichiestaInput,
 ): Promise<CambiaStatoPublicRichiestaResult> {
@@ -6679,6 +7044,7 @@ async function createPublicRichiesta(
       stato: "NUOVA",
       nome: parsed.data.nome,
       email: parsed.data.email,
+      telefono: null,
       problema: parsed.data.problema,
       assegnataAUserId: null,
       consensoPrivacy: true,
@@ -7063,6 +7429,8 @@ export {
   listRichiesteBackoffice,
   cambiaStatoPublicRichiesta,
   assegnaPublicRichiesta,
+  convertiPublicRichiesta,
+  finalizzaConversionePublicRichiesta,
   listClienti,
   listFornitori,
   listArticoli,
@@ -7110,6 +7478,10 @@ export {
   type CambiaStatoPublicRichiestaResult,
   type AssegnaPublicRichiestaInput,
   type AssegnaPublicRichiestaResult,
+  type ConvertiPublicRichiestaInput,
+  type ConvertiPublicRichiestaResult,
+  type FinalizzaConversionePublicRichiestaInput,
+  type FinalizzaConversionePublicRichiestaResult,
   type ListClientiInput,
   type ListClientiResult,
   type ListFornitoriInput,
