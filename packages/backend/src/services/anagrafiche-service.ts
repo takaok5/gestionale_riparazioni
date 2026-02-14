@@ -129,6 +129,11 @@ interface ListAuditLogsInput {
   page: unknown;
 }
 
+interface ListRichiesteBackofficeInput {
+  page: unknown;
+  limit: unknown;
+}
+
 interface ListClientiInput {
   page: unknown;
   limit: unknown;
@@ -204,6 +209,18 @@ interface CreatePublicRichiestaInput {
   problema: unknown;
   consensoPrivacy: unknown;
   antispamToken?: unknown;
+}
+
+interface CambiaStatoPublicRichiestaInput {
+  actorUserId: unknown;
+  richiestaId: unknown;
+  stato: unknown;
+}
+
+interface AssegnaPublicRichiestaInput {
+  actorUserId: unknown;
+  richiestaId: unknown;
+  commercialeId: unknown;
 }
 
 interface AuditLogDettagli {
@@ -305,6 +322,38 @@ interface PublicFaqItemPayload {
 
 interface PublicRichiestaCreatePayload {
   ticketId: string;
+}
+
+interface BackofficeRichiestaListItem {
+  id: number;
+  stato: "NUOVA" | "IN_LAVORAZIONE" | "CONVERTITA";
+  tipo: "PREVENTIVO" | "APPUNTAMENTO";
+  contatto: {
+    nome: string;
+    email: string;
+  };
+  createdAt: string;
+  assegnataAUserId: string | null;
+}
+
+interface BackofficeRichiestaListPayload {
+  data: BackofficeRichiestaListItem[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
+}
+
+interface CambiaStatoPublicRichiestaPayload {
+  id: number;
+  stato: "NUOVA" | "IN_LAVORAZIONE" | "CONVERTITA";
+}
+
+interface AssegnaPublicRichiestaPayload {
+  id: number;
+  assegnataAUserId: string;
 }
 
 interface ClienteListPayload {
@@ -530,6 +579,23 @@ type ListAuditLogsResult =
   | ValidationFailure
   | ServiceUnavailableFailure;
 
+type ListRichiesteBackofficeResult =
+  | { ok: true; data: BackofficeRichiestaListPayload }
+  | ValidationFailure
+  | ServiceUnavailableFailure;
+
+type CambiaStatoPublicRichiestaResult =
+  | { ok: true; data: { data: CambiaStatoPublicRichiestaPayload } }
+  | ValidationFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
+type AssegnaPublicRichiestaResult =
+  | { ok: true; data: { data: AssegnaPublicRichiestaPayload } }
+  | ValidationFailure
+  | NotFoundFailure
+  | ServiceUnavailableFailure;
+
 type ListClientiResult =
   | { ok: true; data: ClienteListPayload }
   | ValidationFailure
@@ -700,6 +766,23 @@ interface ParsedListAuditLogsInput {
   pageSize: number;
 }
 
+interface ParsedListRichiesteBackofficeInput {
+  page: number;
+  limit: number;
+}
+
+interface ParsedCambiaStatoPublicRichiestaInput {
+  actorUserId: number;
+  richiestaId: number;
+  stato: "IN_LAVORAZIONE";
+}
+
+interface ParsedAssegnaPublicRichiestaInput {
+  actorUserId: number;
+  richiestaId: number;
+  commercialeId: string;
+}
+
 interface ParsedListClientiInput {
   page: number;
   limit: number;
@@ -860,11 +943,14 @@ interface TestRiparazioneRecord {
 }
 
 interface TestPublicRichiestaRecord {
+  id: number;
   ticketId: string;
   tipo: "PREVENTIVO" | "APPUNTAMENTO";
+  stato: "NUOVA" | "IN_LAVORAZIONE" | "CONVERTITA";
   nome: string;
   email: string;
   problema: string;
+  assegnataAUserId: string | null;
   consensoPrivacy: true;
   antispamToken: string | null;
   createdAt: string;
@@ -877,6 +963,7 @@ const MAX_CODICE_FORNITORE_GENERATION_ATTEMPTS = 3;
 const MAX_NUMERO_ORDINE_GENERATION_ATTEMPTS = 3;
 const TEST_PUBLIC_LEAD_DATE_SEGMENT = "20260210";
 const PUBLIC_RICHIESTA_TYPES = new Set(["PREVENTIVO", "APPUNTAMENTO"]);
+const PUBLIC_RICHIESTA_STATI = new Set(["NUOVA", "IN_LAVORAZIONE", "CONVERTITA"]);
 const ORDINE_STATI: ReadonlySet<string> = new Set([
   "BOZZA",
   "EMESSO",
@@ -1194,6 +1281,7 @@ let nextTestMovimentoMagazzinoId = computeNextId(
   testMovimentiMagazzino.map((item) => item.id),
 );
 let nextTestAuditLogId = computeNextId(testAuditLogs.map((item) => item.id));
+let nextTestPublicRichiestaId = 1;
 let nextTestPublicRichiestaSequence = 1;
 
 let prismaClient: PrismaClient | null = null;
@@ -2475,6 +2563,152 @@ function parseListAuditLogsInput(
       modelName,
       page,
       pageSize: TEST_PAGE_SIZE,
+    },
+  };
+}
+
+function parseListRichiesteBackofficeInput(
+  input: ListRichiesteBackofficeInput,
+):
+  | { ok: true; data: ParsedListRichiesteBackofficeInput }
+  | ValidationFailure {
+  let page = 1;
+  if (input.page !== undefined) {
+    const parsedPage = asPositiveInteger(input.page);
+    if (parsedPage === null) {
+      return buildValidationFailure({
+        field: "page",
+        rule: "invalid_integer",
+      });
+    }
+    page = parsedPage;
+  }
+
+  let limit = 20;
+  if (input.limit !== undefined) {
+    const parsedLimit = asPositiveInteger(input.limit);
+    if (parsedLimit === null) {
+      return buildValidationFailure({
+        field: "limit",
+        rule: "invalid_integer",
+      });
+    }
+    if (parsedLimit > MAX_LIST_LIMIT) {
+      return buildValidationFailure({
+        field: "limit",
+        rule: "max_limit_exceeded",
+      });
+    }
+    limit = parsedLimit;
+  }
+
+  return {
+    ok: true,
+    data: {
+      page,
+      limit,
+    },
+  };
+}
+
+function parseCambiaStatoPublicRichiestaInput(
+  input: CambiaStatoPublicRichiestaInput,
+):
+  | { ok: true; data: ParsedCambiaStatoPublicRichiestaInput }
+  | ValidationFailure {
+  const actorUserId = asPositiveInteger(input.actorUserId);
+  if (actorUserId === null) {
+    return buildValidationFailure({
+      field: "actorUserId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const richiestaId = asPositiveInteger(input.richiestaId);
+  if (richiestaId === null) {
+    return buildValidationFailure({
+      field: "richiestaId",
+      rule: "invalid_integer",
+    });
+  }
+
+  if (typeof input.stato !== "string") {
+    return buildValidationFailure({
+      field: "stato",
+      rule: "invalid_enum",
+    });
+  }
+
+  const stato = input.stato.trim().toUpperCase();
+  if (!PUBLIC_RICHIESTA_STATI.has(stato)) {
+    return buildValidationFailure({
+      field: "stato",
+      rule: "invalid_enum",
+    });
+  }
+
+  if (stato !== "IN_LAVORAZIONE") {
+    return buildValidationFailure({
+      field: "stato",
+      rule: "invalid_transition",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      actorUserId,
+      richiestaId,
+      stato: "IN_LAVORAZIONE",
+    },
+  };
+}
+
+function parseAssegnaPublicRichiestaInput(
+  input: AssegnaPublicRichiestaInput,
+):
+  | { ok: true; data: ParsedAssegnaPublicRichiestaInput }
+  | ValidationFailure {
+  const actorUserId = asPositiveInteger(input.actorUserId);
+  if (actorUserId === null) {
+    return buildValidationFailure({
+      field: "actorUserId",
+      rule: "invalid_integer",
+    });
+  }
+
+  const richiestaId = asPositiveInteger(input.richiestaId);
+  if (richiestaId === null) {
+    return buildValidationFailure({
+      field: "richiestaId",
+      rule: "invalid_integer",
+    });
+  }
+
+  let commercialeId: string | null = null;
+  if (typeof input.commercialeId === "string" && input.commercialeId.trim()) {
+    commercialeId = input.commercialeId.trim();
+  } else if (
+    typeof input.commercialeId === "number" &&
+    Number.isInteger(input.commercialeId) &&
+    input.commercialeId > 0
+  ) {
+    commercialeId = String(input.commercialeId);
+  }
+
+  if (commercialeId === null) {
+    return buildValidationFailure({
+      field: "commercialeId",
+      rule: "invalid_string",
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      actorUserId,
+      richiestaId,
+      commercialeId,
     },
   };
 }
@@ -5903,6 +6137,177 @@ async function listAuditLogs(
   return listAuditLogsInDatabase(parsed.data);
 }
 
+async function listRichiesteBackoffice(
+  input: ListRichiesteBackofficeInput,
+): Promise<ListRichiesteBackofficeResult> {
+  const parsed = parseListRichiesteBackofficeInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  const sorted = [...testPublicRichieste].sort((left, right) => left.id - right.id);
+  const totalItems = sorted.length;
+  const offset = (parsed.data.page - 1) * parsed.data.limit;
+  const rows = sorted.slice(offset, offset + parsed.data.limit);
+
+  return {
+    ok: true,
+    data: {
+      data: rows.map((row) => ({
+        id: row.id,
+        stato: row.stato,
+        tipo: row.tipo,
+        contatto: {
+          nome: row.nome,
+          email: row.email,
+        },
+        createdAt: row.createdAt,
+        assegnataAUserId: row.assegnataAUserId,
+      })),
+      pagination: {
+        page: parsed.data.page,
+        pageSize: parsed.data.limit,
+        totalItems,
+        totalPages:
+          totalItems === 0 ? 0 : Math.ceil(totalItems / parsed.data.limit),
+      },
+    },
+  };
+}
+
+async function cambiaStatoPublicRichiesta(
+  input: CambiaStatoPublicRichiestaInput,
+): Promise<CambiaStatoPublicRichiestaResult> {
+  const parsed = parseCambiaStatoPublicRichiestaInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  const richiesta = testPublicRichieste.find(
+    (item) => item.id === parsed.data.richiestaId,
+  );
+  if (!richiesta) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  if (richiesta.stato === parsed.data.stato) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: `Richiesta gia in stato ${richiesta.stato}`,
+      details: {
+        field: "stato",
+        rule: "already_in_state",
+      },
+    };
+  }
+
+  if (richiesta.stato !== "NUOVA" || parsed.data.stato !== "IN_LAVORAZIONE") {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: `Transizione non consentita da ${richiesta.stato} a ${parsed.data.stato}`,
+      details: {
+        field: "stato",
+        rule: "invalid_transition",
+      },
+    };
+  }
+
+  const previousState = richiesta.stato;
+  richiesta.stato = parsed.data.stato;
+
+  appendTestAuditLog({
+    userId: parsed.data.actorUserId,
+    action: "UPDATE",
+    modelName: "RichiestaPubblica",
+    objectId: String(richiesta.id),
+    dettagli: {
+      old: {
+        stato: previousState,
+      },
+      new: {
+        stato: richiesta.stato,
+      },
+    },
+  });
+
+  return {
+    ok: true,
+    data: {
+      data: {
+        id: richiesta.id,
+        stato: richiesta.stato,
+      },
+    },
+  };
+}
+
+async function assegnaPublicRichiesta(
+  input: AssegnaPublicRichiestaInput,
+): Promise<AssegnaPublicRichiestaResult> {
+  const parsed = parseAssegnaPublicRichiestaInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  const richiesta = testPublicRichieste.find(
+    (item) => item.id === parsed.data.richiestaId,
+  );
+  if (!richiesta) {
+    return {
+      ok: false,
+      code: "NOT_FOUND",
+    };
+  }
+
+  if (
+    richiesta.assegnataAUserId !== null &&
+    richiesta.assegnataAUserId !== parsed.data.commercialeId
+  ) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "Richiesta gia assegnata",
+      details: {
+        field: "commercialeId",
+        rule: "already_assigned",
+      },
+    };
+  }
+
+  const oldAssignee = richiesta.assegnataAUserId;
+  richiesta.assegnataAUserId = parsed.data.commercialeId;
+
+  appendTestAuditLog({
+    userId: parsed.data.actorUserId,
+    action: "UPDATE",
+    modelName: "RichiestaPubblica",
+    objectId: String(richiesta.id),
+    dettagli: {
+      old: {
+        assegnataAUserId: oldAssignee,
+      },
+      new: {
+        assegnataAUserId: richiesta.assegnataAUserId,
+      },
+    },
+  });
+
+  return {
+    ok: true,
+    data: {
+      data: {
+        id: richiesta.id,
+        assegnataAUserId: richiesta.assegnataAUserId,
+      },
+    },
+  };
+}
+
 async function listClienti(
   input: ListClientiInput,
 ): Promise<ListClientiResult> {
@@ -6265,12 +6670,17 @@ async function createPublicRichiesta(
 
   try {
     const ticketId = nextPublicLeadTicketId();
+    const richiestaId = nextTestPublicRichiestaId;
+    nextTestPublicRichiestaId += 1;
     testPublicRichieste.push({
+      id: richiestaId,
       ticketId,
       tipo: parsed.data.tipo,
+      stato: "NUOVA",
       nome: parsed.data.nome,
       email: parsed.data.email,
       problema: parsed.data.problema,
+      assegnataAUserId: null,
       consensoPrivacy: true,
       antispamToken: parsed.data.antispamToken,
       createdAt: new Date().toISOString(),
@@ -6441,6 +6851,7 @@ function resetAnagraficheStoreForTests(): void {
   publicContactsPage = clonePublicContactsPage(basePublicContactsPage);
   publicFaqItems = clonePublicFaqItems(basePublicFaqItems);
   testPublicRichieste = [];
+  nextTestPublicRichiestaId = 1;
   nextTestPublicRichiestaSequence = 1;
 }
 
@@ -6642,6 +7053,9 @@ export {
   updateCliente,
   updateFornitore,
   listAuditLogs,
+  listRichiesteBackoffice,
+  cambiaStatoPublicRichiesta,
+  assegnaPublicRichiesta,
   listClienti,
   listFornitori,
   listArticoli,
@@ -6682,6 +7096,12 @@ export {
   type UpdateFornitoreResult,
   type ListAuditLogsInput,
   type ListAuditLogsResult,
+  type ListRichiesteBackofficeInput,
+  type ListRichiesteBackofficeResult,
+  type CambiaStatoPublicRichiestaInput,
+  type CambiaStatoPublicRichiestaResult,
+  type AssegnaPublicRichiestaInput,
+  type AssegnaPublicRichiestaResult,
   type ListClientiInput,
   type ListClientiResult,
   type ListFornitoriInput,

@@ -18,6 +18,7 @@ import { reportRouter } from "./routes/report.js";
 import { notificheRouter } from "./routes/notifiche.js";
 import { stripeWebhooksRouter } from "./routes/stripe-webhooks.js";
 import { publicRouter } from "./routes/public.js";
+import { richiesteRouter } from "./routes/richieste.js";
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -32,6 +33,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/portal/auth", portalAuthRouter);
 app.use("/api/portal", portalRouter);
 app.use("/api/public", publicRouter);
+app.use("/api/richieste", richiesteRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/clienti", clientiRouter);
 app.use("/api/fornitori", fornitoriRouter);

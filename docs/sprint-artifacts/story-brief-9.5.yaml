@@ -1,0 +1,64 @@
+story_id: '9.5'
+story_title: 'Backoffice Lead Management'
+source_story: 'docs/epics/epic-9-vetrina-pubblica.md:69'
+acceptance_criteria:
+  - id: 'AC-1'
+    given: '30 public requests exist'
+    when: 'GET /api/richieste?page=1&limit=20'
+    then: 'Receive paginated list with stato, tipo, contatto, createdAt'
+  - id: 'AC-2'
+    given: 'richiesta id=12 is NUOVA'
+    when: 'PATCH /api/richieste/12/stato with { stato: "IN_LAVORAZIONE" }'
+    then: 'State changes and audit log is created'
+  - id: 'AC-3'
+    given: 'Commerciale user and richiesta id=12 unassigned'
+    when: 'PATCH /api/richieste/12/assegna with my user id'
+    then: 'Richiesta becomes assigned to me'
+  - id: 'AC-4'
+    given: 'Tecnico role (no commerciale/admin role)'
+    when: 'GET /api/richieste'
+    then: 'Receive 403 FORBIDDEN'
+
+target_modules:
+  - 'no existing files found: packages/backend/src/routes/richieste.ts (new module required for /api/richieste)'
+  - 'packages/backend/src/index.ts'
+  - 'packages/backend/src/services/anagrafiche-service.ts'
+  - 'packages/backend/src/routes/public.ts'
+  - 'packages/backend/src/routes/riparazioni.ts'
+  - 'packages/backend/src/middleware/auth.ts'
+
+patterns_to_follow:
+  - pattern: 'Thin Express route with payload mapping, service call, failure responder, success response'
+    reference: 'packages/backend/src/routes/public.ts:283'
+    details: 'POST /richieste builds payload, enforces rate-limit, calls createPublicRichiesta, then handles !ok and success paths.'
+  - pattern: 'PATCH route composition with authenticate/authorize and domain service invocation'
+    reference: 'packages/backend/src/routes/riparazioni.ts:463'
+    details: 'Uses authenticate + authorize, builds typed payload from req params/body, calls service, returns 200 with data.'
+  - pattern: 'Role-based guard returning standardized FORBIDDEN payload'
+    reference: 'packages/backend/src/middleware/auth.ts:125'
+    details: 'authorize middleware checks req.user.role and returns 403 with buildErrorResponse("FORBIDDEN", ...).'
+
+dependencies:
+  - module: 'packages/backend/src/index.ts:20'
+    relation: 'Imports routers and mounts route prefixes; new richieste router must be mounted similarly to /api/public.'
+  - module: 'packages/backend/src/index.ts:34'
+    relation: 'Current mount pattern app.use("/api/public", publicRouter) is the integration point pattern for new router.'
+  - module: 'packages/backend/src/routes/public.ts:24'
+    relation: 'Route layer depends on anagrafiche-service exports for lead-related operations.'
+  - module: 'packages/backend/src/routes/public.ts:2'
+    relation: 'Route errors use buildErrorResponse from lib/errors; keep consistency in new router responses.'
+  - module: 'packages/backend/src/routes/riparazioni.ts:483'
+    relation: 'Existing state-transition PATCH behavior is the closest backoffice pattern for stato changes.'
+
+risks:
+  - 'No existing /api/richieste router implementation; introducing it may break route wiring if not mounted correctly in index.ts.'
+  - 'Lead persistence appears test-memory oriented in anagrafiche-service (testPublicRichieste), risking non-durable stato/assegnazione behavior.'
+  - 'Ticket/id state helpers may be non-atomic in concurrent scenarios; audit and transitions can drift without transactional persistence.'
+  - 'Authorization mismatch risk: AC-4 requires strict 403 for Tecnico on list endpoint; wrong role matrix would violate AC.'
+  - 'Pagination parameters (page/limit) need validation bounds to avoid inconsistent responses or excessive query cost.'
+
+existing_tests:
+  - 'packages/backend/src/__tests__/public-richieste-api.atdd.spec.ts'
+
+notes:
+  - 'Architecture references target endpoints but current repo has no routes/richieste.ts (docs/architecture.md:840).'
