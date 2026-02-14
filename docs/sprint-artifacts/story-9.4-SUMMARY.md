@@ -1,6 +1,6 @@
 ---
 story_id: '9.4'
-completed: '2026-02-14T01:14:14+01:00'
+completed: '2026-02-14T01:30:16+01:00'
 duration: 'current session'
 ---
 
@@ -13,7 +13,7 @@ duration: 'current session'
 - Lines added: 410
 - Lines removed: 9
 - Tests added: 2
-- Commits: 1
+- Commits: 3
 
 ## Decisions Made
 
