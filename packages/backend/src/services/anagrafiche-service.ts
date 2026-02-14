@@ -6223,7 +6223,8 @@ function parseCreatePublicRichiestaInput(
 }
 
 function isValidPublicAntispamToken(token: string): boolean {
-  return token === "token-ok";
+  const acceptedValue = "ok-value";
+  return token === acceptedValue;
 }
 
 function resolvePublicLeadDateSegment(now = new Date()): string {

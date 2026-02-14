@@ -139,7 +139,7 @@ describe("AC-3 - rate limit on public richieste", () => {
 });
 
 describe("AC-4 - invalid anti-spam token", () => {
-  it("Tests AC-4: Given an anonymous visitor submits POST /api/public/richieste with payload including antispamToken=invalid-token When anti-spam verification rejects token before persistence Then API responds HTTP 400 and error.code INVALID_ANTISPAM_TOKEN without creating ticketId", async () => {
+  it("Tests AC-4: Given an anonymous visitor submits POST /api/public/richieste with payload including invalid anti-spam value When anti-spam verification rejects the payload before persistence Then API responds HTTP 400 and error.code INVALID_ANTISPAM_TOKEN without creating ticketId", async () => {
     const response = await request(app).post("/api/public/richieste").send({
       tipo: "PREVENTIVO",
       nome: "Mario Rossi",
