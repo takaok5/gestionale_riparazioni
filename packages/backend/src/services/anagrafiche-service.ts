@@ -6740,6 +6740,13 @@ async function listPublicServices(
   }
 }
 
+function listActivePublicServiceSlugs(): string[] {
+  return publicServiceCatalog
+    .filter((service) => service.attivo)
+    .map((service) => service.slug)
+    .sort((left, right) => left.localeCompare(right));
+}
+
 async function getPublicServiceBySlug(
   input: GetPublicServiceBySlugInput,
 ): Promise<GetPublicServiceBySlugResult> {
@@ -7062,6 +7069,7 @@ export {
   listArticoliAlert,
   listClienteRiparazioni,
   listPublicServices,
+  listActivePublicServiceSlugs,
   getPublicServiceBySlug,
   listPublicFaq,
   getPublicPageBySlug,

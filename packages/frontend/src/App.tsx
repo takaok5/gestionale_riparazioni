@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 const highlightedServices = [
   {
     title: "Diagnosi smartphone e tablet",
@@ -83,6 +85,101 @@ type AppProps = {
   path?: string;
 };
 
+type SeoMeta = {
+  title: string;
+  description: string;
+  canonicalPath: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogType?: "website" | "article";
+};
+
+const defaultPublicBaseUrl = "http://localhost:5173";
+
+function resolvePublicBaseUrl(): string {
+  const fromEnv =
+    typeof process !== "undefined" && typeof process.env.PUBLIC_SITE_URL === "string"
+      ? process.env.PUBLIC_SITE_URL.trim()
+      : "";
+  const baseUrl = fromEnv.length > 0 ? fromEnv : defaultPublicBaseUrl;
+  return baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+}
+
+function upsertMetaTag(
+  attributeName: "name" | "property",
+  attributeValue: string,
+  content: string,
+): void {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const selector = `meta[${attributeName}="${attributeValue}"]`;
+  let element = document.head.querySelector(selector);
+  if (!element) {
+    element = document.createElement("meta");
+    element.setAttribute(attributeName, attributeValue);
+    document.head.appendChild(element);
+  }
+  element.setAttribute("content", content);
+}
+
+function upsertCanonicalLink(href: string): void {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  let linkElement = document.head.querySelector('link[rel="canonical"]');
+  if (!linkElement) {
+    linkElement = document.createElement("link");
+    linkElement.setAttribute("rel", "canonical");
+    document.head.appendChild(linkElement);
+  }
+  linkElement.setAttribute("href", href);
+}
+
+function SeoHead({ meta }: { meta: SeoMeta }): JSX.Element {
+  const canonicalUrl = `${resolvePublicBaseUrl()}${meta.canonicalPath}`;
+  const ogTitle = meta.ogTitle ?? meta.title;
+  const ogDescription = meta.ogDescription ?? meta.description;
+  const ogType = meta.ogType ?? "website";
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    document.title = meta.title;
+    upsertMetaTag("name", "description", meta.description);
+    upsertCanonicalLink(canonicalUrl);
+    upsertMetaTag("property", "og:title", ogTitle);
+    upsertMetaTag("property", "og:description", ogDescription);
+    upsertMetaTag("property", "og:type", ogType);
+    upsertMetaTag("property", "og:url", canonicalUrl);
+  }, [canonicalUrl, meta.description, meta.title, ogDescription, ogTitle, ogType]);
+
+  return (
+    <>
+      <title>{meta.title}</title>
+      <meta name="description" content={meta.description} />
+      <link rel="canonical" href={canonicalUrl} />
+      <meta property="og:title" content={ogTitle} />
+      <meta property="og:description" content={ogDescription} />
+      <meta property="og:type" content={ogType} />
+      <meta property="og:url" content={canonicalUrl} />
+    </>
+  );
+}
+
+function renderSeoLayout(meta: SeoMeta, content: JSX.Element): JSX.Element {
+  return (
+    <>
+      <SeoHead meta={meta} />
+      {content}
+    </>
+  );
+}
+
 function getServiceSlugFromPath(path: string): string | null {
   const match = /^\/servizi\/([^/]+)\/?$/.exec(path);
   if (!match) {
@@ -106,7 +203,12 @@ function App({ path = "/" }: AppProps) {
   if (detailSlug) {
     const detail = serviceDetails[detailSlug as keyof typeof serviceDetails];
     if (!detail) {
-      return (
+      return renderSeoLayout(
+        {
+          title: "Servizio non disponibile | Gestionale Riparazioni",
+          description: "Servizio pubblico non disponibile per lo slug richiesto.",
+          canonicalPath: normalizedPath,
+        },
         <div className="min-h-screen bg-slate-50 text-slate-900">
           <main className="mx-auto max-w-screen-md px-4 py-16 sm:px-6 lg:px-8">
             <section className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-100">
@@ -116,11 +218,17 @@ function App({ path = "/" }: AppProps) {
               </p>
             </section>
           </main>
-        </div>
+        </div>,
       );
     }
 
-    return (
+    return renderSeoLayout(
+      {
+        title: `${detail.title} | Gestionale Riparazioni`,
+        description: detail.summary,
+        canonicalPath: `/servizi/${detail.slug}`,
+        ogDescription: detail.summary,
+      },
       <div className="min-h-screen bg-slate-50 text-slate-900">
         <main className="mx-auto max-w-screen-md px-4 py-12 sm:px-6 lg:px-8">
           <section className="rounded-3xl bg-white p-7 shadow-sm ring-1 ring-slate-100 sm:p-10">
@@ -142,12 +250,17 @@ function App({ path = "/" }: AppProps) {
             </dl>
           </section>
         </main>
-      </div>
+      </div>,
     );
   }
 
   if (normalizedPath === "/contatti") {
-    return (
+    return renderSeoLayout(
+      {
+        title: "Contatti | Gestionale Riparazioni",
+        description: "Canali diretti per supporto rapido, contatti telefonici, email e orari.",
+        canonicalPath: "/contatti",
+      },
       <div className="min-h-screen bg-slate-50 text-slate-900">
         <main className="mx-auto max-w-screen-md px-4 py-10 sm:px-6 lg:px-8">
           <nav className="text-sm text-slate-500">
@@ -197,12 +310,17 @@ function App({ path = "/" }: AppProps) {
             </section>
           </section>
         </main>
-      </div>
+      </div>,
     );
   }
 
   if (normalizedPath === "/faq") {
-    return (
+    return renderSeoLayout(
+      {
+        title: "FAQ | Gestionale Riparazioni",
+        description: "Domande frequenti su diagnosi, tempi, garanzia e processo preventivo.",
+        canonicalPath: "/faq",
+      },
       <div className="min-h-screen bg-slate-50 text-slate-900">
         <main className="mx-auto max-w-screen-md px-4 py-10 sm:px-6 lg:px-8">
           <nav className="text-sm text-slate-500">
@@ -247,12 +365,18 @@ function App({ path = "/" }: AppProps) {
             </div>
           </section>
         </main>
-      </div>
+      </div>,
     );
   }
 
   if (normalizedPath === "/richiedi-preventivo") {
-    return (
+    return renderSeoLayout(
+      {
+        title: "Richiedi preventivo | Gestionale Riparazioni",
+        description:
+          "Richiedi preventivo o appuntamento online con conferma rapida e ticket.",
+        canonicalPath: "/richiedi-preventivo",
+      },
       <div className="min-h-screen bg-slate-50 text-slate-900">
         <main className="mx-auto max-w-screen-md px-4 py-10 sm:px-6 lg:px-8">
           <nav className="text-sm text-slate-500">
@@ -308,11 +432,17 @@ function App({ path = "/" }: AppProps) {
             </form>
           </section>
         </main>
-      </div>
+      </div>,
     );
   }
 
-  return (
+  return renderSeoLayout(
+    {
+      title: "Gestionale Riparazioni | Assistenza dispositivi",
+      description:
+        "Riparazioni rapide e trasparenti per smartphone, tablet e laptop con preventivo chiaro.",
+      canonicalPath: "/",
+    },
     <div className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-screen-xl max-w-screen items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
@@ -413,7 +543,7 @@ function App({ path = "/" }: AppProps) {
           </div>
         </section>
       </main>
-    </div>
+    </div>,
   );
 }
 

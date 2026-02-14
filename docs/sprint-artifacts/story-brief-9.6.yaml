@@ -1,0 +1,66 @@
+story_id: '9.6'
+story_title: 'SEO, Metadata e Sitemap'
+source_story: 'docs/epics/epic-9-vetrina-pubblica.md:85'
+acceptance_criteria:
+  - id: 'AC-1'
+    given: 'Visitor opens any public page'
+    when: 'Public page HTML is rendered'
+    then: 'HTML contains unique title and meta description tags'
+  - id: 'AC-2'
+    given: 'Visitor opens a service detail page'
+    when: 'Route /servizi/:slug is rendered'
+    then: 'Page includes canonical URL and Open Graph metadata'
+  - id: 'AC-3'
+    given: 'A client requests /sitemap.xml'
+    when: 'Server generates sitemap response'
+    then: 'Response includes public routes and active service slugs'
+  - id: 'AC-4'
+    given: 'A client requests /robots.txt'
+    when: 'Server resolves crawl policy'
+    then: 'Response returns public crawl policy with sitemap reference'
+
+target_modules:
+  - 'packages/frontend/src/App.tsx'
+  - 'packages/frontend/index.html'
+  - 'no existing files found: packages/backend/src/routes/seo.ts (new module required for /sitemap.xml and /robots.txt)'
+  - 'packages/backend/src/index.ts'
+  - 'packages/backend/src/services/anagrafiche-service.ts'
+
+patterns_to_follow:
+  - pattern: 'Path normalization and route-based rendering for public pages'
+    reference: 'packages/frontend/src/App.tsx:95'
+    details: 'normalizePath + getServiceSlugFromPath drive route branching for /servizi/:slug, /contatti, /faq, /richiedi-preventivo.'
+  - pattern: 'Thin Express route delegates to service layer and handles typed failures'
+    reference: 'packages/backend/src/routes/public.ts:229'
+    details: 'Route handler builds payload, calls service function, maps domain failure to HTTP response, then returns standardized JSON.'
+  - pattern: 'Public catalog generation filters active services and sorts by slug'
+    reference: 'packages/backend/src/services/anagrafiche-service.ts:6705'
+    details: 'listPublicServices filters attivo=true and orders by slug, suitable source for sitemap service URLs.'
+
+dependencies:
+  - module: 'packages/frontend/src/main.tsx:8'
+    relation: 'App receives current pathname from browser and is the only entrypoint for per-route metadata rendering.'
+  - module: 'packages/backend/src/index.ts:35'
+    relation: 'HTTP route mounting happens here; new SEO router must be mounted at root-level paths.'
+  - module: 'packages/backend/src/routes/public.ts:243'
+    relation: 'Service detail endpoint contract defines valid public service slugs used by /servizi/:slug URLs.'
+  - module: 'packages/backend/src/services/anagrafiche-service.ts:6743'
+    relation: 'Slug lookup and active-service constraints determine which service URLs are eligible for sitemap inclusion.'
+
+risks:
+  - 'React app currently renders page body only; adding metadata may require a head-management approach that works both in browser and tests.'
+  - 'If sitemap generation duplicates slug validation rules differently from public service APIs, sitemap may expose stale or inactive routes.'
+  - 'Mounting /robots.txt and /sitemap.xml behind API prefix would violate AC paths; router placement in index.ts is critical.'
+  - 'Canonical URL generation can drift across environments (localhost vs production domain) without centralized base URL configuration.'
+  - 'No existing SEO-specific ATDD tests currently guard metadata tags and crawler endpoints; regressions are likely without new tests.'
+
+existing_tests:
+  - 'packages/frontend/src/__tests__/public-home-vetrina.atdd.spec.ts'
+  - 'packages/frontend/src/__tests__/public-services-detail.atdd.spec.ts'
+  - 'packages/frontend/src/__tests__/public-contatti-faq-pages.atdd.spec.ts'
+  - 'packages/backend/src/__tests__/public-services-api.atdd.spec.ts'
+  - 'packages/backend/src/__tests__/public-contacts-faq-api.atdd.spec.ts'
+
+notes:
+  - 'No /sitemap.xml or /robots.txt route currently exists in backend index/router tree.'
+  - 'Frontend has static <title> in packages/frontend/index.html and no dynamic metadata handling in App.tsx.'

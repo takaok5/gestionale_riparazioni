@@ -19,6 +19,7 @@ import { notificheRouter } from "./routes/notifiche.js";
 import { stripeWebhooksRouter } from "./routes/stripe-webhooks.js";
 import { publicRouter } from "./routes/public.js";
 import { richiesteRouter } from "./routes/richieste.js";
+import { seoRouter } from "./routes/seo.js";
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -27,6 +28,7 @@ app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? "http://localhost:5173" }));
 app.use("/api/webhooks/stripe", express.raw({ type: "*/*" }), stripeWebhooksRouter);
 app.use(express.json());
+app.use("/", seoRouter);
 
 app.use("/api/health", healthRouter);
 app.use("/api/auth", authRouter);

@@ -1,0 +1,2 @@
+packages/frontend/src/__tests__/public-seo-metadata.atdd.spec.ts
+packages/backend/src/__tests__/public-seo-routes.atdd.spec.ts
