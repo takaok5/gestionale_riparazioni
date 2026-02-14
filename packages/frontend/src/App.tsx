@@ -251,6 +251,67 @@ function App({ path = "/" }: AppProps) {
     );
   }
 
+  if (normalizedPath === "/richiedi-preventivo") {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900">
+        <main className="mx-auto max-w-screen-md px-4 py-10 sm:px-6 lg:px-8">
+          <nav className="text-sm text-slate-500">
+            <a href="/" className="hover:text-slate-700">
+              Home
+            </a>{" "}
+            / Richiedi preventivo
+          </nav>
+
+          <section className="mt-5 rounded-3xl bg-white p-7 shadow-sm ring-1 ring-slate-100 sm:p-10">
+            <h1 className="text-3xl font-bold">Richiedi preventivo o appuntamento</h1>
+            <p className="mt-3 text-sm text-slate-600">
+              Invia i dati principali e ti contatteremo con conferma e ticket.
+            </p>
+
+            <form className="mt-6 grid gap-4">
+              <label className="grid gap-1 text-sm">
+                <span className="font-semibold text-slate-700">Nome e cognome</span>
+                <input
+                  type="text"
+                  name="nome"
+                  className="rounded-xl border border-slate-300 px-3 py-2"
+                  placeholder="Mario Rossi"
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="font-semibold text-slate-700">Email</span>
+                <input
+                  type="email"
+                  name="email"
+                  className="rounded-xl border border-slate-300 px-3 py-2"
+                  placeholder="mario@test.it"
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="font-semibold text-slate-700">Problema</span>
+                <textarea
+                  name="problema"
+                  className="min-h-24 rounded-xl border border-slate-300 px-3 py-2"
+                  placeholder="Descrivi il guasto principale"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" name="consensoPrivacy" />
+                Acconsento al trattamento privacy
+              </label>
+              <button
+                type="submit"
+                className="inline-flex w-fit items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+              >
+                Invia richiesta
+              </button>
+            </form>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur">

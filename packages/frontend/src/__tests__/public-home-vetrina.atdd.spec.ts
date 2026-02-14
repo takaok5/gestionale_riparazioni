@@ -8,6 +8,10 @@ function renderHomeMarkup(): string {
   return renderToStaticMarkup(React.createElement(App));
 }
 
+function renderPathMarkup(path: string): string {
+  return renderToStaticMarkup(React.createElement(App, { path }));
+}
+
 function countOccurrences(source: string, token: string): number {
   return source.split(token).length - 1;
 }
@@ -108,5 +112,25 @@ describe("AC-5 Sad path query non supportata", () => {
     expect(html).toContain('/richiedi-preventivo');
     expect(html).toContain('/portale/login');
     expect(html).not.toContain("Errore di rendering");
+  });
+});
+
+describe("AC-6 Pagina /richiedi-preventivo", () => {
+  it("Tests AC-6: Given visitor follows CTA Richiedi preventivo When /richiedi-preventivo renders Then page contains form title and submit action", () => {
+    const html = renderPathMarkup("/richiedi-preventivo");
+
+    expect(html).toContain("Richiedi preventivo o appuntamento");
+    expect(html).toContain("Invia richiesta");
+    expect(html).toContain("consensoPrivacy");
+  });
+
+  it("Tests AC-6: Given /richiedi-preventivo route When inspecting fields Then nome/email/problema inputs are present with expected placeholders", () => {
+    const html = renderPathMarkup("/richiedi-preventivo");
+
+    expect(html).toContain('name="nome"');
+    expect(html).toContain('name="email"');
+    expect(html).toContain('name="problema"');
+    expect(html).toContain("Mario Rossi");
+    expect(html).toContain("mario@test.it");
   });
 });

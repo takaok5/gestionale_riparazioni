@@ -197,6 +197,15 @@ interface GetPublicPageBySlugInput {
   slug: unknown;
 }
 
+interface CreatePublicRichiestaInput {
+  tipo: unknown;
+  nome: unknown;
+  email: unknown;
+  problema: unknown;
+  consensoPrivacy: unknown;
+  antispamToken?: unknown;
+}
+
 interface AuditLogDettagli {
   old: Record<string, unknown>;
   new: Record<string, unknown>;
@@ -292,6 +301,10 @@ interface PublicFaqItemPayload {
   category: string;
   question: string;
   answer: string;
+}
+
+interface PublicRichiestaCreatePayload {
+  ticketId: string;
 }
 
 interface ClienteListPayload {
@@ -588,6 +601,17 @@ type GetPublicPageBySlugResult =
   | NotFoundFailure
   | ServiceUnavailableFailure;
 
+type InvalidAntispamTokenFailure = {
+  ok: false;
+  code: "INVALID_ANTISPAM_TOKEN";
+};
+
+type CreatePublicRichiestaResult =
+  | { ok: true; data: { data: PublicRichiestaCreatePayload } }
+  | ValidationFailure
+  | InvalidAntispamTokenFailure
+  | ServiceUnavailableFailure;
+
 type ListFornitoreOrdiniResult =
   | { ok: true; data: { data: FornitoreOrdineItem[] } }
   | ValidationFailure
@@ -736,6 +760,15 @@ interface ParsedGetPublicPageBySlugInput {
   slug: string;
 }
 
+interface ParsedCreatePublicRichiestaInput {
+  tipo: "PREVENTIVO" | "APPUNTAMENTO";
+  nome: string;
+  email: string;
+  problema: string;
+  consensoPrivacy: true;
+  antispamToken: string | null;
+}
+
 interface TestClienteRecord {
   id: number;
   nome: string;
@@ -826,11 +859,24 @@ interface TestRiparazioneRecord {
   tipoDispositivo: string;
 }
 
+interface TestPublicRichiestaRecord {
+  ticketId: string;
+  tipo: "PREVENTIVO" | "APPUNTAMENTO";
+  nome: string;
+  email: string;
+  problema: string;
+  consensoPrivacy: true;
+  antispamToken: string | null;
+  createdAt: string;
+}
+
 const TEST_PAGE_SIZE = 10;
 const MAX_LIST_LIMIT = 100;
 const MAX_CODICE_CLIENTE_GENERATION_ATTEMPTS = 3;
 const MAX_CODICE_FORNITORE_GENERATION_ATTEMPTS = 3;
 const MAX_NUMERO_ORDINE_GENERATION_ATTEMPTS = 3;
+const TEST_PUBLIC_LEAD_DATE_SEGMENT = "20260210";
+const PUBLIC_RICHIESTA_TYPES = new Set(["PREVENTIVO", "APPUNTAMENTO"]);
 const ORDINE_STATI: ReadonlySet<string> = new Set([
   "BOZZA",
   "EMESSO",
@@ -1136,6 +1182,7 @@ let testRiparazioni = cloneTestRiparazioni(baseTestRiparazioni);
 let testAuditLogs = cloneAuditLogs(baseTestAuditLogs);
 let publicContactsPage = clonePublicContactsPage(basePublicContactsPage);
 let publicFaqItems = clonePublicFaqItems(basePublicFaqItems);
+let testPublicRichieste: TestPublicRichiestaRecord[] = [];
 
 let nextTestClienteId = computeNextId(testClienti.map((item) => item.id));
 let nextTestClienteCodeSequence = computeNextClienteCodeSequence(testClienti);
@@ -1147,6 +1194,7 @@ let nextTestMovimentoMagazzinoId = computeNextId(
   testMovimentiMagazzino.map((item) => item.id),
 );
 let nextTestAuditLogId = computeNextId(testAuditLogs.map((item) => item.id));
+let nextTestPublicRichiestaSequence = 1;
 
 let prismaClient: PrismaClient | null = null;
 
@@ -6100,6 +6148,149 @@ function parseGetPublicPageBySlugInput(
   };
 }
 
+function normalizePublicRichiestaTipo(
+  value: unknown,
+): "PREVENTIVO" | "APPUNTAMENTO" | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toUpperCase();
+  if (!PUBLIC_RICHIESTA_TYPES.has(normalized)) {
+    return null;
+  }
+
+  return normalized as "PREVENTIVO" | "APPUNTAMENTO";
+}
+
+function parseCreatePublicRichiestaInput(
+  input: CreatePublicRichiestaInput,
+):
+  | { ok: true; data: ParsedCreatePublicRichiestaInput }
+  | ValidationFailure {
+  const tipo = normalizePublicRichiestaTipo(input.tipo);
+  if (!tipo) {
+    return buildValidationFailure({
+      field: "tipo",
+      rule: "invalid_enum",
+    });
+  }
+
+  const nome = asRequiredString(input.nome);
+  if (!nome) {
+    return buildValidationFailure({
+      field: "nome",
+      rule: "required",
+    });
+  }
+
+  const email = asRequiredString(input.email);
+  if (!email || !isValidEmail(email)) {
+    return buildValidationFailure({
+      field: "email",
+      rule: "invalid_email",
+    });
+  }
+
+  const problema = asRequiredString(input.problema);
+  if (!problema) {
+    return buildValidationFailure({
+      field: "problema",
+      rule: "required",
+    });
+  }
+
+  if (input.consensoPrivacy !== true) {
+    return buildValidationFailure({
+      field: "consensoPrivacy",
+      rule: "required_true",
+    });
+  }
+
+  const antispamToken = asOptionalString(input.antispamToken);
+
+  return {
+    ok: true,
+    data: {
+      tipo,
+      nome,
+      email,
+      problema,
+      consensoPrivacy: true,
+      antispamToken,
+    },
+  };
+}
+
+function isValidPublicAntispamToken(token: string): boolean {
+  return token === "token-ok";
+}
+
+function resolvePublicLeadDateSegment(now = new Date()): string {
+  if (process.env.NODE_ENV === "test") {
+    return TEST_PUBLIC_LEAD_DATE_SEGMENT;
+  }
+
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}${month}${day}`;
+}
+
+function nextPublicLeadTicketId(now = new Date()): string {
+  const dateSegment = resolvePublicLeadDateSegment(now);
+  const sequence = String(nextTestPublicRichiestaSequence).padStart(4, "0");
+  nextTestPublicRichiestaSequence += 1;
+  return `LEAD-${dateSegment}-${sequence}`;
+}
+
+async function createPublicRichiesta(
+  input: CreatePublicRichiestaInput,
+): Promise<CreatePublicRichiestaResult> {
+  const parsed = parseCreatePublicRichiestaInput(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (
+    parsed.data.antispamToken !== null &&
+    !isValidPublicAntispamToken(parsed.data.antispamToken)
+  ) {
+    return {
+      ok: false,
+      code: "INVALID_ANTISPAM_TOKEN",
+    };
+  }
+
+  try {
+    const ticketId = nextPublicLeadTicketId();
+    testPublicRichieste.push({
+      ticketId,
+      tipo: parsed.data.tipo,
+      nome: parsed.data.nome,
+      email: parsed.data.email,
+      problema: parsed.data.problema,
+      consensoPrivacy: true,
+      antispamToken: parsed.data.antispamToken,
+      createdAt: new Date().toISOString(),
+    });
+
+    return {
+      ok: true,
+      data: {
+        data: {
+          ticketId,
+        },
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    };
+  }
+}
+
 async function listPublicServices(
   input: ListPublicServicesInput,
 ): Promise<ListPublicServicesResult> {
@@ -6248,6 +6439,8 @@ function resetAnagraficheStoreForTests(): void {
   nextTestAuditLogId = computeNextId(testAuditLogs.map((item) => item.id));
   publicContactsPage = clonePublicContactsPage(basePublicContactsPage);
   publicFaqItems = clonePublicFaqItems(basePublicFaqItems);
+  testPublicRichieste = [];
+  nextTestPublicRichiestaSequence = 1;
 }
 
 function seedPublicPageContentForTests(
@@ -6457,6 +6650,7 @@ export {
   getPublicServiceBySlug,
   listPublicFaq,
   getPublicPageBySlug,
+  createPublicRichiesta,
   resetAnagraficheStoreForTests,
   seedPublicPageContentForTests,
   seedClienteForTests,
@@ -6507,4 +6701,6 @@ export {
   type ListPublicFaqResult,
   type GetPublicPageBySlugInput,
   type GetPublicPageBySlugResult,
+  type CreatePublicRichiestaInput,
+  type CreatePublicRichiestaResult,
 };

@@ -1,0 +1,50 @@
+story_title: "Form Richiesta Preventivo/Appuntamento Pubblico"
+acceptance_criteria:
+  - id: AC-1
+    text: "Given I submit valid payload to POST /api/public/richieste with { tipo: \"PREVENTIVO\", nome: \"Mario Rossi\", email: \"mario@test.it\", problema: \"Display rotto\", consensoPrivacy: true } Then I receive 201 with ticketId \"LEAD-20260210-0001\""
+  - id: AC-2
+    text: "Given required field consensoPrivacy is false or missing When request is submitted Then I receive 400 with validation error"
+  - id: AC-3
+    text: "Given too many requests from same IP in short interval When POST /api/public/richieste is called Then I receive 429"
+  - id: AC-4
+    text: "Given anti-spam token is invalid When request is submitted Then I receive 400 with error INVALID_ANTISPAM_TOKEN"
+target_modules:
+  - packages/backend/src/routes/public.ts
+  - packages/backend/src/services/anagrafiche-service.ts
+  - packages/backend/src/services/login-rate-limit.ts
+  - packages/backend/src/__tests__/public-contacts-faq-api.atdd.spec.ts
+  - packages/backend/src/__tests__/auth-login.spec.ts
+  - packages/frontend/src/App.tsx
+  - packages/frontend/src/__tests__/public-home-vetrina.atdd.spec.ts
+patterns_to_follow:
+  - file: packages/backend/src/routes/public.ts
+    line: 37-208
+    pattern: "Handle each endpoint with dedicated failure responders that map domain codes to deterministic HTTP status and buildErrorResponse payloads; keep success shape as res.status(...).json(result.data)."
+  - file: packages/backend/src/services/anagrafiche-service.ts
+    line: 6026-6228
+    pattern: "Use parse*Input validators plus service functions that return { ok: true|false, code } with try/catch fallback to SERVICE_UNAVAILABLE, so route handlers can stay thin and predictable."
+  - file: packages/backend/src/services/login-rate-limit.ts
+    line: 1-75
+    pattern: "Implement IP-keyed sliding-window rate limiting with retry-after seconds computed from oldest in-window attempt; expose reset helper for tests."
+  - file: packages/backend/src/__tests__/auth-login.spec.ts
+    line: 78-115
+    pattern: "Validate 429 behavior with repeated requests from same X-Forwarded-For and assert retryAfter header boundaries for deterministic throttling checks."
+  - file: packages/frontend/src/App.tsx
+    line: 254-301
+    pattern: "Public page routing is path-driven in a single component and CTA links are hard-coded anchors; new quote-request page should keep this route-switching and CTA contract stable."
+dependencies:
+  - "packages/backend/src/index.ts mounts /api/public with publicRouter, so POST /api/public/richieste must be attached to the existing public router to stay reachable."
+  - "packages/backend/src/routes/public.ts imports public service/page use-cases from packages/backend/src/services/anagrafiche-service.ts and centralizes response mapping for anonymous endpoints."
+  - "packages/backend/src/routes/auth.ts + packages/backend/src/services/login-rate-limit.ts provide the established Retry-After and 429 handling pattern to mirror for public lead throttling."
+  - "packages/frontend/src/main.tsx bootstraps App path rendering, so any /richiedi-preventivo UI flow must be represented in App route branching."
+risks:
+  - "No existing Richiesta/Lead persistence model is present in backend schema/services; introducing ticketId generation without atomic sequencing can create duplicate IDs under concurrent requests."
+  - "IP-based throttling can over-block shared networks (office/mobile NAT) if limits are too strict; policy tuning and clear error messaging are needed to avoid false positives."
+  - "Anti-spam token verification has no existing integration in the codebase; adding a placeholder validator can pass tests but diverge from production token provider behavior."
+  - "Adding POST logic into the already large anagrafiche-service.ts can increase coupling and make regressions harder to isolate unless responsibilities are clearly scoped."
+existing_tests:
+  - packages/backend/src/__tests__/public-services-api.atdd.spec.ts
+  - packages/backend/src/__tests__/public-contacts-faq-api.atdd.spec.ts
+  - packages/backend/src/__tests__/auth-login.spec.ts
+  - packages/frontend/src/__tests__/public-home-vetrina.atdd.spec.ts
+  - packages/frontend/src/__tests__/public-contatti-faq-pages.atdd.spec.ts
